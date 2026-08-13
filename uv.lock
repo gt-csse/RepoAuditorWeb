@@ -515,6 +515,11 @@ wheels = [
 name = "repoauditorweb"
 version = "0.0.0"
 source = { editable = "." }
+dependencies = [
+    { name = "dbrownell-common" },
+    { name = "pluggy" },
+    { name = "typer" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -528,6 +533,11 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "dbrownell-common", specifier = ">=0.16.8" },
+    { name = "pluggy", specifier = ">=1.6.0" },
+    { name = "typer", specifier = ">=0.27.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [

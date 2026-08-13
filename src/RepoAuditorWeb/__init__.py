@@ -1,6 +1,5 @@
-# noqa: CPY001, D104
-
 from importlib.metadata import version
 
+APP_NAME = "RepoAuditorWeb"
 
-__version__ = version("RepoAuditorWeb")
+__version__ = version(APP_NAME)
