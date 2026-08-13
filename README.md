@@ -1,5 +1,5 @@
 **Project:**
-[![License](https://img.shields.io/github/license/gt-csse/RepoAuditorWeb?color=dark-green)](https://github.com/gt-csse/RepoAuditorWeb/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/gt-csse/RepoAuditorWeb?color=dark-green)](https://github.com/gt-csse/RepoAuditorWeb/blob/main/LICENSE)
 
 **Package:**
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/RepoAuditorWeb?color=dark-green)](https://pypi.org/project/RepoAuditorWeb/)
