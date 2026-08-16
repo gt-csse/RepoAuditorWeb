@@ -1,3 +1,13 @@
+"""Contains functionality useful when working with parameters and arguments."""
+
+# ----------------------------------------------------------------------
+#
+# Terminology:
+#   - Argument: A value passed to a function when it is called.
+#   - Parameter: A variable in a function definition that receives an argument.
+#
+# ----------------------------------------------------------------------
+
 import inspect
 
 from dataclasses import dataclass

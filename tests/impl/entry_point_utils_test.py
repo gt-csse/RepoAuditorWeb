@@ -19,7 +19,7 @@ from RepoAuditorWeb.impl.entry_point_utils import (
     ResolveToken,
     VersionCallback,
 )
-from RepoAuditorWeb.lib.typer_parameter import TyperParameter
+from RepoAuditorWeb.lib.parameters import TyperParameter
 
 
 # ----------------------------------------------------------------------
@@ -105,10 +105,13 @@ class TestCreateTyperParameters:
     # ----------------------------------------------------------------------
     def test_Names(self):
         assert set(CreateTyperParameters().keys()) == {
+            "GitHub_include",
             "GitHub_three",
             "GitHub_four",
+            "CommunityStandards_include",
             "CommunityStandards_one",
             "CommunityStandards_two",
+            "ScientificSoftware_include",
             "ScientificSoftware_five",
             "ScientificSoftware_six",
         }
@@ -121,6 +124,17 @@ class TestCreateTyperParameters:
         assert parameters["GitHub_three"].default == 30
         assert parameters["ScientificSoftware_six"].type is bool
         assert parameters["ScientificSoftware_six"].default is False
+
+    # ----------------------------------------------------------------------
+    def test_IncludeContributedByModule(self):
+        # Every registered module requires an explicit include, so each contributes an 'include'
+        # parameter that the module itself does not declare.
+        parameter = CreateTyperParameters()["GitHub_include"]
+
+        assert parameter.type is bool
+        assert parameter.default is False
+        assert parameter.info is not None
+        assert parameter.info.help == "Include 'GitHub' module in the run."
 
 
 # ----------------------------------------------------------------------

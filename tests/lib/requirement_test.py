@@ -4,25 +4,12 @@ import pytest
 
 from typer.models import OptionInfo
 
-from RepoAuditorWeb.lib.module import Module
 from RepoAuditorWeb.lib.parameters import TyperParameter
-from RepoAuditorWeb.lib.query import Query
 from RepoAuditorWeb.lib.requirement import Requirement
 
 
 # ----------------------------------------------------------------------
 class MyRequirement(Requirement):
-    @override
-    def Evaluate(self, query_results: dict) -> bool:
-        return True
-
-    @override
-    def _GetParametersImpl(self) -> dict[str, TyperParameter]:
-        return {}
-
-
-# ----------------------------------------------------------------------
-class MyModule(Module):
     def __init__(
         self,
         *args,
@@ -36,37 +23,41 @@ class MyModule(Module):
         )
 
     @override
+    def Evaluate(self, query_results: dict) -> bool:
+        return query_results.get("result", False)
+
+    @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return self.parameters
 
 
 # ----------------------------------------------------------------------
 def test_Construct():
-    module = MyModule("MyName", "My description.", [])
+    requirement = MyRequirement("MyName", "My description.")
 
-    assert module.name == "MyName"
-    assert module.description == "My description."
-    assert module.queries == []
-    assert module.requires_explicit_include is False
-
-
-# ----------------------------------------------------------------------
-def test_Queries():
-    queries = [Query("MyQuery", [MyRequirement("MyRequirement", "My requirement description.")])]
-
-    assert MyModule("MyName", "My description.", queries).queries is queries
+    assert requirement.name == "MyName"
+    assert requirement.description == "My description."
+    assert requirement.requires_explicit_include is False
 
 
 # ----------------------------------------------------------------------
 def test_RequiresExplicitInclude():
-    module = MyModule("MyName", "My description.", [], requires_explicit_include=True)
+    requirement = MyRequirement("MyName", "My description.", requires_explicit_include=True)
 
-    assert module.requires_explicit_include is True
+    assert requirement.requires_explicit_include is True
+
+
+# ----------------------------------------------------------------------
+def test_Evaluate():
+    requirement = MyRequirement("MyName", "My description.")
+
+    assert requirement.Evaluate({"result": True}) is True
+    assert requirement.Evaluate({}) is False
 
 
 # ----------------------------------------------------------------------
 def test_GetParameters():
-    parameters = MyModule("MyName", "My description.", []).GetParameters()
+    parameters = MyRequirement("MyName", "My description.").GetParameters()
 
     assert list(parameters.keys()) == ["skip", "value"]
     assert parameters["value"].type is int
@@ -75,32 +66,31 @@ def test_GetParameters():
 
 # ----------------------------------------------------------------------
 def test_GetParametersSkip():
-    parameter = MyModule("MyName", "My description.", []).GetParameters()["skip"]
+    parameter = MyRequirement("MyName", "My description.").GetParameters()["skip"]
 
     assert parameter.type is bool
     assert parameter.default is False
     assert parameter.info is not None
-    assert parameter.info.help == "Skip 'MyName' module in the run."
+    assert parameter.info.help == "Skip 'MyName' requirement in the run."
 
 
 # ----------------------------------------------------------------------
 def test_GetParametersInclude():
-    parameter = MyModule(
+    parameter = MyRequirement(
         "MyName",
         "My description.",
-        [],
         requires_explicit_include=True,
     ).GetParameters()["include"]
 
     assert parameter.type is bool
     assert parameter.default is False
     assert parameter.info is not None
-    assert parameter.info.help == "Include 'MyName' module in the run."
+    assert parameter.info.help == "Include 'MyName' requirement in the run."
 
 
 # ----------------------------------------------------------------------
 def test_GetParametersIncludeIsExclusiveWithSkip():
-    parameters = MyModule("MyName", "My description.", [], requires_explicit_include=True).GetParameters()
+    parameters = MyRequirement("MyName", "My description.", requires_explicit_include=True).GetParameters()
 
     assert list(parameters.keys()) == ["include", "value"]
 
@@ -111,19 +101,18 @@ def test_GetParametersIncludeIsExclusiveWithSkip():
     [("skip", False), ("include", True)],
 )
 def test_ErrorReservedParameterName(reserved_name, requires_explicit_include):
-    module = MyModule(
+    requirement = MyRequirement(
         "MyName",
         "My description.",
-        [],
         parameters={reserved_name: TyperParameter(int, 10, OptionInfo(help="Value"))},
         requires_explicit_include=requires_explicit_include,
     )
 
     with pytest.raises(
         ValueError,
-        match=f"Parameter '{reserved_name}' is reserved by Module and may not be used.",
+        match=f"Parameter '{reserved_name}' is reserved by Requirement and may not be used.",
     ):
-        module.GetParameters()
+        requirement.GetParameters()
 
 
 # ----------------------------------------------------------------------
@@ -137,10 +126,9 @@ def test_ErrorReservedParameterName(reserved_name, requires_explicit_include):
 def test_ParameterNamesAreOnlyReservedWhenTheyAreUsed(
     unreserved_name, requires_explicit_include, expected_keys
 ):
-    parameters = MyModule(
+    parameters = MyRequirement(
         "MyName",
         "My description.",
-        [],
         parameters={unreserved_name: TyperParameter(int, 10, OptionInfo(help="Value"))},
         requires_explicit_include=requires_explicit_include,
     ).GetParameters()
@@ -151,4 +139,4 @@ def test_ParameterNamesAreOnlyReservedWhenTheyAreUsed(
 # ----------------------------------------------------------------------
 def test_ErrorAbstract():
     with pytest.raises(TypeError):
-        Module("MyName", "My description.", [])
+        Requirement("MyName", "My description.")
