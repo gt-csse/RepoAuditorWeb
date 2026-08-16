@@ -37,10 +37,13 @@ def test_DynamicModuleOptionsAppearInHelp():
     assert result.exit_code == 0, result.output
 
     assert {
+        "--GitHub-include",
         "--GitHub-three",
         "--GitHub-four",
+        "--CommunityStandards-include",
         "--CommunityStandards-one",
         "--CommunityStandards-two",
+        "--ScientificSoftware-include",
         "--ScientificSoftware-five",
         "--ScientificSoftware-six",
     } <= _GetOptionNames(app)
@@ -68,11 +71,19 @@ def test_DefaultsAreResolved():
     assert result.exit_code == 0, result.output
 
     for expected in [
-        "'GitHub': {'three': 30, 'four': '4'}",
-        "'CommunityStandards': {'one': 10, 'two': '2'}",
-        "'ScientificSoftware': {'five': 50, 'six': False}",
+        "'GitHub': {'include': False, 'three': 30, 'four': '4'}",
+        "'CommunityStandards': {'include': False, 'one': 10, 'two': '2'}",
+        "'ScientificSoftware': {'include': False, 'five': 50, 'six': False}",
     ]:
         assert expected in result.output
+
+
+# ----------------------------------------------------------------------
+def test_ModuleIncludeOptionIsResolved():
+    result = CliRunner().invoke(app, ["--GitHub-include"])
+
+    assert result.exit_code == 0, result.output
+    assert "'GitHub': {'include': True, 'three': 30, 'four': '4'}" in result.output
 
 
 # ----------------------------------------------------------------------

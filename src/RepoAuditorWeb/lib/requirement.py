@@ -1,37 +1,31 @@
-"""Contains the Module object."""
+"""Contains the Requirement object."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.parameters import TyperParameter
 
-if TYPE_CHECKING:
-    from RepoAuditorWeb.lib.query import Query
-
 
 # ----------------------------------------------------------------------
-class Module(ABC):
-    """Abstract base class for a collection of Queries that operate on a consistent set of data."""
+class Requirement(ABC):
+    """Abstract base class for a single requirement that can be evaluated based on data collected by a Query."""
 
     # ----------------------------------------------------------------------
     def __init__(
         self,
         name: str,
         description: str,
-        queries: list[Query],
         *,
-        requires_explicit_include: bool = False,  # If True, the module will not be run unless explicitly included by the user
+        requires_explicit_include: bool = False,  # If True, the requirement will not be run unless explicitly included by the user
     ) -> None:
         self.name = name
         self.description = description
-        self.queries = queries
         self.requires_explicit_include = requires_explicit_include
 
     # ----------------------------------------------------------------------
     def GetParameters(self) -> dict[str, TyperParameter]:
-        """Return a dictionary of parameters that the module accepts."""
+        """Return a dictionary of parameters that the requirement accepts."""
 
         base_parameters = {}
 
@@ -39,27 +33,32 @@ class Module(ABC):
             base_parameters["include"] = TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help=f"Include '{self.name}' module in the run."),
+                OptionInfo(help=f"Include '{self.name}' requirement in the run."),
             )
         else:
             base_parameters["skip"] = TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help=f"Skip '{self.name}' module in the run."),
+                OptionInfo(help=f"Skip '{self.name}' requirement in the run."),
             )
 
         derived_parameters = self._GetParametersImpl()
 
         for param_name in derived_parameters:
             if param_name in base_parameters:
-                msg = f"Parameter '{param_name}' is reserved by Module and may not be used."
+                msg = f"Parameter '{param_name}' is reserved by Requirement and may not be used."
                 raise ValueError(msg)
 
         return {**base_parameters, **derived_parameters}
+
+    # ----------------------------------------------------------------------
+    @abstractmethod
+    def Evaluate(self, query_results: dict) -> bool:
+        """Evaluate the requirement based on the results of the query."""
 
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     @abstractmethod
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
-        """Return a dictionary of parameters customized to the module itself."""
+        """Return a dictionary of parameters customized to the requirement itself."""

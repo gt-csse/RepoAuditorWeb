@@ -3,7 +3,7 @@ from typing import override
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.module import Module
-from RepoAuditorWeb.lib.typer_parameter import TyperParameter
+from RepoAuditorWeb.lib.parameters import TyperParameter
 
 
 # ----------------------------------------------------------------------
@@ -15,12 +15,13 @@ class GitHubModule(Module):
         super().__init__(
             "GitHub",
             "Validates GitHub configuration settings.",
+            [],
             requires_explicit_include=True,
         )
 
     # ----------------------------------------------------------------------
     @override
-    def GetParameters(self) -> dict[str, TyperParameter]:
+    def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
             "three": TyperParameter(int, 30, OptionInfo(help="Three", min=10, max=100)),
             "four": TyperParameter(str, "4", OptionInfo(help="Four")),

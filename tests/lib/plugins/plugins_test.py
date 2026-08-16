@@ -15,21 +15,21 @@ from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import Scientifi
             GitHubModule,
             "GitHub",
             "Validates GitHub configuration settings.",
-            ["three", "four"],
+            ["include", "three", "four"],
         ),
         (
             community_standards_plugin,
             CommunityStandardsModule,
             "CommunityStandards",
             "Validates files that are considered community standards.",
-            ["one", "two"],
+            ["include", "one", "two"],
         ),
         (
             scientific_software_plugin,
             ScientificSoftwareModule,
             "ScientificSoftware",
             "Validates files that are required for scientific software.",
-            ["five", "six"],
+            ["include", "five", "six"],
         ),
     ],
 )
@@ -47,9 +47,9 @@ def test_GetModule(plugin, module_type, name, description, parameter_names):
 @pytest.mark.parametrize(
     ("module_type", "expected"),
     [
-        (GitHubModule, {"three": (int, 30), "four": (str, "4")}),
-        (CommunityStandardsModule, {"one": (int, 10), "two": (str, "2")}),
-        (ScientificSoftwareModule, {"five": (int, 50), "six": (bool, False)}),
+        (GitHubModule, {"include": (bool, False), "three": (int, 30), "four": (str, "4")}),
+        (CommunityStandardsModule, {"include": (bool, False), "one": (int, 10), "two": (str, "2")}),
+        (ScientificSoftwareModule, {"include": (bool, False), "five": (int, 50), "six": (bool, False)}),
     ],
 )
 def test_GetParameters(module_type, expected):

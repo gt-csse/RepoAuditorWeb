@@ -4,7 +4,7 @@ import pytest
 
 from typer.models import OptionInfo
 
-from RepoAuditorWeb.lib.typer_parameter import TyperParameter
+from RepoAuditorWeb.lib.parameters import TyperParameter
 
 
 # ----------------------------------------------------------------------

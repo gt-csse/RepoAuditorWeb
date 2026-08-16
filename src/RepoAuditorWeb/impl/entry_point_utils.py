@@ -11,7 +11,7 @@ import typer
 
 from RepoAuditorWeb import __version__
 from RepoAuditorWeb.lib.modules import MODULES
-from RepoAuditorWeb.lib.typer_parameter import TyperParameter
+from RepoAuditorWeb.lib.parameters import TyperParameter
 
 if TYPE_CHECKING:
     from collections.abc import Callable
