@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING
 
 from typer.models import OptionInfo
 
-from RepoAuditorWeb.lib.parameters import TyperParameter
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.query import Query
+    from RepoAuditorWeb.lib.requirement import Requirement
 
 
 # ----------------------------------------------------------------------
@@ -24,6 +25,18 @@ class Module(ABC):
         *,
         requires_explicit_include: bool = False,  # If True, the module will not be run unless explicitly included by the user
     ) -> None:
+        # Ensure that requirement names are unique across all queries
+        requirement_names: dict[str, Requirement] = {}
+
+        for query in queries:
+            for requirement in query.requirements:
+                prev_requirement = requirement_names.get(requirement.name)
+                if prev_requirement is not None:
+                    msg = f"The requirement name '{requirement.name}' is used in both '{prev_requirement.__class__.__name__}' and '{requirement.__class__.__name__}'. Requirement names must be unique across all queries in a module."
+                    raise ValueError(msg)
+
+                requirement_names[requirement.name] = requirement
+
         self.name = name
         self.description = description
         self.queries = queries

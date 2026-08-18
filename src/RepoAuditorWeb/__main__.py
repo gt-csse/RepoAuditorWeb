@@ -6,6 +6,8 @@ from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManag
 from typer.core import TyperGroup
 
 from RepoAuditorWeb.impl import entry_point_utils
+from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
+from RepoAuditorWeb.lib.modules import MODULES
 
 
 # ----------------------------------------------------------------------
@@ -26,11 +28,11 @@ app = typer.Typer(
 
 
 # ----------------------------------------------------------------------
-_dynamic_parameters = entry_point_utils.CreateTyperParameters()
+_dynamic_parameters = DynamicParameters(MODULES)
 
 
 # ----------------------------------------------------------------------
-@entry_point_utils.dynamic_command(app, _dynamic_parameters, no_args_is_help=False)
+@entry_point_utils.dynamic_command(app, _dynamic_parameters.dynamic_parameters, no_args_is_help=False)
 def EntryPoint(
     port: Annotated[
         int | None,
@@ -63,12 +65,12 @@ def EntryPoint(
 
     port = entry_point_utils.ResolvePort(port)
     token = entry_point_utils.ResolveToken(token)
-    parameter_values = entry_point_utils.ResolveParameterValues(_dynamic_parameters, kwargs)
+    parameter_values = _dynamic_parameters.Parse(kwargs)
 
     with DoneManager.CreateCommandLine(
         flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
-    ) as dm:  # noqa: F841
-        print("BugBug", parameter_values)  # noqa: T201
+    ) as dm:
+        dm.WriteInfo(str(parameter_values))
 
 
 # ----------------------------------------------------------------------
