@@ -1,6 +1,5 @@
 import copy
 import inspect
-import re
 import secrets
 import socket
 import sys
@@ -10,8 +9,7 @@ from typing import Annotated, get_args, get_origin, TYPE_CHECKING
 import typer
 
 from RepoAuditorWeb import __version__
-from RepoAuditorWeb.lib.modules import MODULES
-from RepoAuditorWeb.lib.parameters import TyperParameter
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -123,66 +121,6 @@ def dynamic_command(
     # ----------------------------------------------------------------------
 
     return Wrapper
-
-
-# ----------------------------------------------------------------------
-def CreateTyperParameters() -> dict[str, TyperParameter]:
-    """Create a dictionary of TyperParameters for all modules."""
-
-    parameters: dict[str, TyperParameter] = {}
-
-    for module in MODULES:
-        for k, v in module.GetParameters().items():
-            parameters[f"{module.name}_{k}"] = v
-
-    return parameters
-
-
-# ----------------------------------------------------------------------
-def ResolveParameterValues(
-    dynamic_parameters: dict[str, TyperParameter],
-    kwargs: dict[str, object],
-) -> dict[str, dict[str, object]]:
-    """Resolve the module parameter values to serve to the web client.
-
-    Command line arguments take precedence; anything not supplied falls back to the default the
-    plugin declared.
-    """
-
-    results: dict[str | None, dict[str, object]] = {}
-
-    # Process the command line arguments
-    name_regex = re.compile(r"^(?P<module_name>[^_]+)_(?P<parameter_name>.+)$")
-    module_names = {module.name for module in MODULES}
-
-    for k, v in kwargs.items():
-        match = name_regex.match(k)
-
-        if match and match.group("module_name") in module_names:
-            module_name = match.group("module_name")
-            parameter_name = match.group("parameter_name")
-        else:
-            module_name = None
-            parameter_name = k
-
-        results.setdefault(module_name, {})[parameter_name] = v
-
-    # Augment the results with the default values for any missing parameters
-    for param_name, param in dynamic_parameters.items():
-        match = name_regex.match(param_name)
-        assert match is not None, param_name
-
-        module_name = match.group("module_name")
-        parameter_name = match.group("parameter_name")
-
-        module_parameters = results.setdefault(module_name, {})
-
-        if param.default is not inspect.Parameter.empty and parameter_name not in module_parameters:
-            module_parameters[parameter_name] = param.default
-
-    # Arguments without a module prefix are filed under None; they belong to the command line
-    # itself rather than to a module, so they are not forwarded.
-    return {module_name: parameters for module_name, parameters in results.items() if module_name is not None}
 
 
 # ----------------------------------------------------------------------

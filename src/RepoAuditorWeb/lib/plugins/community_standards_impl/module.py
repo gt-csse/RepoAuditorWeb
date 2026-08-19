@@ -2,8 +2,8 @@ from typing import override
 
 from typer.models import OptionInfo
 
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.module import Module
-from RepoAuditorWeb.lib.parameters import TyperParameter
 
 
 # ----------------------------------------------------------------------

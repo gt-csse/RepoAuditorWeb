@@ -11,15 +11,13 @@ from typer.testing import CliRunner
 
 from RepoAuditorWeb import __version__
 from RepoAuditorWeb.impl.entry_point_utils import (
-    CreateTyperParameters,
     dynamic_command,
     GetUnusedPort,
-    ResolveParameterValues,
     ResolvePort,
     ResolveToken,
     VersionCallback,
 )
-from RepoAuditorWeb.lib.parameters import TyperParameter
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 
 
 # ----------------------------------------------------------------------
@@ -98,157 +96,6 @@ class TestVersionCallback:
             VersionCallback(True)  # noqa: FBT003
 
         assert capsys.readouterr().out == f"{__version__}\n"
-
-
-# ----------------------------------------------------------------------
-class TestCreateTyperParameters:
-    # ----------------------------------------------------------------------
-    def test_Names(self):
-        assert set(CreateTyperParameters().keys()) == {
-            "GitHub_include",
-            "GitHub_three",
-            "GitHub_four",
-            "CommunityStandards_include",
-            "CommunityStandards_one",
-            "CommunityStandards_two",
-            "ScientificSoftware_include",
-            "ScientificSoftware_five",
-            "ScientificSoftware_six",
-        }
-
-    # ----------------------------------------------------------------------
-    def test_Values(self):
-        parameters = CreateTyperParameters()
-
-        assert parameters["GitHub_three"].type is int
-        assert parameters["GitHub_three"].default == 30
-        assert parameters["ScientificSoftware_six"].type is bool
-        assert parameters["ScientificSoftware_six"].default is False
-
-    # ----------------------------------------------------------------------
-    def test_IncludeContributedByModule(self):
-        # Every registered module requires an explicit include, so each contributes an 'include'
-        # parameter that the module itself does not declare.
-        parameter = CreateTyperParameters()["GitHub_include"]
-
-        assert parameter.type is bool
-        assert parameter.default is False
-        assert parameter.info is not None
-        assert parameter.info.help == "Include 'GitHub' module in the run."
-
-
-# ----------------------------------------------------------------------
-class TestResolveParameterValues:
-    # Command line values are only recognized for modules registered in MODULES, so these tests
-    # use real plugin names rather than synthetic ones.
-
-    # ----------------------------------------------------------------------
-    def test_CommandLineValues(self):
-        assert ResolveParameterValues(
-            {"GitHub_three": TyperParameter(int, 1, OptionInfo())},
-            {"GitHub_three": 100},
-        ) == {"GitHub": {"three": 100}}
-
-    # ----------------------------------------------------------------------
-    def test_Defaults(self):
-        assert ResolveParameterValues(
-            {"GitHub_three": TyperParameter(int, 1, OptionInfo())},
-            {},
-        ) == {"GitHub": {"three": 1}}
-
-    # ----------------------------------------------------------------------
-    def test_CommandLineTakesPrecedence(self):
-        assert ResolveParameterValues(
-            {
-                "GitHub_three": TyperParameter(int, 1, OptionInfo()),
-                "GitHub_four": TyperParameter(str, "2", OptionInfo()),
-            },
-            {"GitHub_three": 100},
-        ) == {"GitHub": {"three": 100, "four": "2"}}
-
-    # ----------------------------------------------------------------------
-    def test_NoDefault(self):
-        assert ResolveParameterValues(
-            {"GitHub_three": TyperParameter(int, info=OptionInfo())},
-            {},
-        ) == {"GitHub": {}}
-
-    # ----------------------------------------------------------------------
-    def test_UnprefixedValuesAreNotForwarded(self):
-        assert ResolveParameterValues({}, {"port": 1234, "verbose": True}) == {}
-
-    # ----------------------------------------------------------------------
-    def test_ParameterNamesWithUnderscores(self):
-        assert ResolveParameterValues(
-            {"GitHub_one_two_three": TyperParameter(int, 1, OptionInfo())},
-            {"GitHub_one_two_three": 100},
-        ) == {"GitHub": {"one_two_three": 100}}
-
-    # ----------------------------------------------------------------------
-    def test_MultipleModules(self):
-        assert ResolveParameterValues(
-            {
-                "GitHub_three": TyperParameter(int, 1, OptionInfo()),
-                "CommunityStandards_one": TyperParameter(str, "2", OptionInfo()),
-            },
-            {"CommunityStandards_one": "value"},
-        ) == {"GitHub": {"three": 1}, "CommunityStandards": {"one": "value"}}
-
-    # ----------------------------------------------------------------------
-    def test_UnregisteredModuleValuesAreNotForwarded(self):
-        # 'Module' is not a registered plugin, so the value is treated as a command line argument
-        # rather than a module parameter. The declared default still populates the entry.
-        assert ResolveParameterValues(
-            {"Module_one": TyperParameter(int, 1, OptionInfo())},
-            {"Module_one": 100},
-        ) == {"Module": {"one": 1}}
-
-    # ----------------------------------------------------------------------
-    def test_UnderscoredValuesForUnknownModulesAreNotForwarded(self):
-        assert ResolveParameterValues(
-            {"GitHub_three": TyperParameter(int, 1, OptionInfo())},
-            {"output_dir": "value"},
-        ) == {"GitHub": {"three": 1}}
-
-    # ----------------------------------------------------------------------
-    def test_UnknownModuleDoesNotCreateAnEntry(self):
-        assert ResolveParameterValues({}, {"output_dir": "value"}) == {}
-
-    # ----------------------------------------------------------------------
-    def test_UnknownModuleDoesNotShadowKnownModule(self):
-        assert ResolveParameterValues(
-            {"GitHub_three": TyperParameter(int, 1, OptionInfo())},
-            {"GitHub_three": 100, "Other_two": "value"},
-        ) == {"GitHub": {"three": 100}}
-
-    # ----------------------------------------------------------------------
-    def test_RegisteredModuleNameIsMatchedOnThePrefixOnly(self):
-        # The module name is the segment before the first underscore, so an undeclared parameter
-        # on a registered module is still forwarded.
-        assert ResolveParameterValues(
-            {"GitHub_three": TyperParameter(int, 1, OptionInfo())},
-            {"GitHub_extra": "value"},
-        ) == {"GitHub": {"extra": "value", "three": 1}}
-
-    # ----------------------------------------------------------------------
-    def test_AllRegisteredModulesAreRecognized(self):
-        assert ResolveParameterValues(
-            {},
-            {
-                "GitHub_three": 1,
-                "CommunityStandards_one": 2,
-                "ScientificSoftware_five": 3,
-            },
-        ) == {
-            "GitHub": {"three": 1},
-            "CommunityStandards": {"one": 2},
-            "ScientificSoftware": {"five": 3},
-        }
-
-    # ----------------------------------------------------------------------
-    def test_ErrorInvalidDynamicParameterName(self):
-        with pytest.raises(AssertionError, match="noModulePrefix"):
-            ResolveParameterValues({"noModulePrefix": TyperParameter(int, 1, OptionInfo())}, {})
 
 
 # ----------------------------------------------------------------------

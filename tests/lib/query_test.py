@@ -1,6 +1,6 @@
 from typing import override
 
-from RepoAuditorWeb.lib.parameters import TyperParameter
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.query import Query
 from RepoAuditorWeb.lib.requirement import Requirement
 

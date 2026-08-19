@@ -4,8 +4,8 @@ import pytest
 
 from typer.models import OptionInfo
 
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.module import Module
-from RepoAuditorWeb.lib.parameters import TyperParameter
 from RepoAuditorWeb.lib.query import Query
 from RepoAuditorWeb.lib.requirement import Requirement
 
@@ -19,6 +19,11 @@ class MyRequirement(Requirement):
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {}
+
+
+# ----------------------------------------------------------------------
+class MyOtherRequirement(MyRequirement):
+    """Distinct class name, so duplicate-name errors assert which class landed in which slot."""
 
 
 # ----------------------------------------------------------------------
@@ -146,6 +151,53 @@ def test_ParameterNamesAreOnlyReservedWhenTheyAreUsed(
     ).GetParameters()
 
     assert list(parameters.keys()) == expected_keys
+
+
+# ----------------------------------------------------------------------
+def test_UniqueRequirementNamesAcrossQueries():
+    queries = [
+        Query("Query1", [MyRequirement("Requirement1", "Description 1.")]),
+        Query("Query2", [MyRequirement("Requirement2", "Description 2.")]),
+    ]
+
+    assert MyModule("MyName", "My description.", queries).queries is queries
+
+
+# ----------------------------------------------------------------------
+def test_ErrorDuplicateRequirementNameInSameQuery():
+    queries = [
+        Query(
+            "MyQuery",
+            [
+                MyRequirement("MyRequirement", "Description 1."),
+                MyOtherRequirement("MyRequirement", "Description 2."),
+            ],
+        ),
+    ]
+
+    with pytest.raises(ValueError) as exc_info:
+        MyModule("MyName", "My description.", queries)
+
+    assert str(exc_info.value) == (
+        "The requirement name 'MyRequirement' is used in both 'MyRequirement' and 'MyOtherRequirement'."
+        " Requirement names must be unique across all queries in a module."
+    )
+
+
+# ----------------------------------------------------------------------
+def test_ErrorDuplicateRequirementNameAcrossQueries():
+    queries = [
+        Query("Query1", [MyRequirement("MyRequirement", "Description 1.")]),
+        Query("Query2", [MyOtherRequirement("MyRequirement", "Description 2.")]),
+    ]
+
+    with pytest.raises(ValueError) as exc_info:
+        MyModule("MyName", "My description.", queries)
+
+    assert str(exc_info.value) == (
+        "The requirement name 'MyRequirement' is used in both 'MyRequirement' and 'MyOtherRequirement'."
+        " Requirement names must be unique across all queries in a module."
+    )
 
 
 # ----------------------------------------------------------------------

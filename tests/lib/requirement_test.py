@@ -4,7 +4,7 @@ import pytest
 
 from typer.models import OptionInfo
 
-from RepoAuditorWeb.lib.parameters import TyperParameter
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.requirement import Requirement
 
 
