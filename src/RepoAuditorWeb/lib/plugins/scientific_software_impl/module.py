@@ -26,3 +26,10 @@ class ScientificSoftwareModule(Module):
             "five": TyperParameter(int, 50, OptionInfo(help="Five", min=10, max=100)),
             "six": TyperParameter(bool, default=False, info=OptionInfo(help="Six")),
         }
+
+    # ----------------------------------------------------------------------
+    @override
+    def _GetModuleDataImpl(
+        self, arguments: dict[str | None, dict[str, object]]
+    ) -> dict[str | None, dict[str, object]]:
+        return arguments

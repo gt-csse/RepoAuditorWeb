@@ -26,3 +26,10 @@ class CommunityStandardsModule(Module):
             "one": TyperParameter(int, 10, OptionInfo(help="One", min=10, max=100)),
             "two": TyperParameter(str, "2", OptionInfo(help="Two")),
         }
+
+    # ----------------------------------------------------------------------
+    @override
+    def _GetModuleDataImpl(
+        self, arguments: dict[str | None, dict[str, object]]
+    ) -> dict[str | None, dict[str, object]]:
+        return arguments

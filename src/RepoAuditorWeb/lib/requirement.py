@@ -1,10 +1,37 @@
 """Contains the Requirement object."""
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from enum import auto, Enum
 
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
+
+
+# ----------------------------------------------------------------------
+class EvaluateResultValue(Enum):
+    """Result of evaluating a Requirement against a set of data."""
+
+    Skipped = auto()
+    DoesNotApply = auto()
+    Success = auto()
+    Warning = auto()
+    Error = auto()
+
+
+# ----------------------------------------------------------------------
+@dataclass(frozen=True)
+class EvaluateResult:
+    """Information associated with evaluating a Requirement against a set of data."""
+
+    result: EvaluateResultValue
+    context: str | None
+
+    resolution: str | None
+    rationale: str | None
+
+    requirement: Requirement
 
 
 # ----------------------------------------------------------------------
@@ -52,9 +79,15 @@ class Requirement(ABC):
         return {**base_parameters, **derived_parameters}
 
     # ----------------------------------------------------------------------
-    @abstractmethod
-    def Evaluate(self, query_results: dict) -> bool:
+    def Evaluate(self, query_data: dict[str, object], requirement_data: dict[str, object]) -> EvaluateResult:
         """Evaluate the requirement based on the results of the query."""
+
+        if (self.requires_explicit_include and not requirement_data["include"]) or (
+            not self.requires_explicit_include and requirement_data["skip"]
+        ):
+            return EvaluateResult(EvaluateResultValue.Skipped, None, None, None, self)
+
+        return self._EvaluateImpl(query_data, requirement_data)
 
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
@@ -62,3 +95,12 @@ class Requirement(ABC):
     @abstractmethod
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         """Return a dictionary of parameters customized to the requirement itself."""
+
+    # ----------------------------------------------------------------------
+    @abstractmethod
+    def _EvaluateImpl(
+        self,
+        query_data: dict[str, object],
+        requirement_data: dict[str, object],
+    ) -> EvaluateResult:
+        """Evaluate the requirement based on the results of the query."""
