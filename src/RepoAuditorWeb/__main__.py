@@ -7,6 +7,7 @@ from typer.core import TyperGroup
 
 from RepoAuditorWeb.impl import entry_point_utils
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
+from RepoAuditorWeb.lib.execute import Execute
 from RepoAuditorWeb.lib.modules import MODULES
 
 
@@ -63,14 +64,14 @@ def EntryPoint(
 ) -> None:
     """Invoke RepoAuditor."""
 
-    port = entry_point_utils.ResolvePort(port)
-    token = entry_point_utils.ResolveToken(token)
-    parameter_values = _dynamic_parameters.Parse(kwargs)
-
     with DoneManager.CreateCommandLine(
         flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
     ) as dm:
-        dm.WriteInfo(str(parameter_values))
+        port = entry_point_utils.ResolvePort(port)
+        token = entry_point_utils.ResolveToken(token)
+        arguments = _dynamic_parameters.Parse(kwargs)
+
+        Execute(dm, MODULES, arguments)
 
 
 # ----------------------------------------------------------------------

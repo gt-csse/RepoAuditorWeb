@@ -1,25 +1,15 @@
-from typing import override
+import pytest
 
-from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.query import Query
 from RepoAuditorWeb.lib.requirement import Requirement
 
-
-# ----------------------------------------------------------------------
-class MyRequirement(Requirement):
-    @override
-    def Evaluate(self, query_results: dict) -> bool:
-        return True
-
-    @override
-    def _GetParametersImpl(self) -> dict[str, TyperParameter]:
-        return {}
+from conftest import MyQuery, MyRequirement
 
 
 # ----------------------------------------------------------------------
 def test_Construct():
     requirements: list[Requirement] = [MyRequirement("MyRequirement", "My requirement description.")]
-    query = Query("MyName", requirements)
+    query = MyQuery("MyName", requirements)
 
     assert query.name == "MyName"
     assert query.requirements is requirements
@@ -27,4 +17,27 @@ def test_Construct():
 
 # ----------------------------------------------------------------------
 def test_NoRequirements():
-    assert Query("MyName", []).requirements == []
+    assert MyQuery("MyName", []).requirements == []
+
+
+# ----------------------------------------------------------------------
+def test_GetQueryData():
+    query_data: dict[str, object] = {"value": 10}
+
+    assert MyQuery("MyName", [], query_data=query_data).GetQueryData({}) is query_data
+
+
+# ----------------------------------------------------------------------
+def test_GetQueryDataReceivesModuleData():
+    query = MyQuery("MyName", [])
+    module_data: dict[str, object] = {"session": object()}
+
+    query.GetQueryData(module_data)
+
+    assert query.module_data is module_data
+
+
+# ----------------------------------------------------------------------
+def test_ErrorAbstract():
+    with pytest.raises(TypeError):
+        Query("MyName", [])

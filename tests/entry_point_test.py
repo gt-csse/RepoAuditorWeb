@@ -36,6 +36,11 @@ def _InvokeAndCapture(args: list[str]) -> tuple[Result, str]:
 
 
 # ----------------------------------------------------------------------
+# The GitHub module is skipped so that no network calls are made.
+_SKIP_GITHUB = ["--GitHub-skip"]
+
+
+# ----------------------------------------------------------------------
 def test_Version():
     result = CliRunner().invoke(app, ["--version"])
 
@@ -59,9 +64,10 @@ def test_DynamicModuleOptionsAppearInHelp():
     assert result.exit_code == 0, result.output
 
     assert {
-        "--GitHub-include",
-        "--GitHub-three",
-        "--GitHub-four",
+        "--GitHub-skip",
+        "--GitHub-url",
+        "--GitHub-pat",
+        "--GitHub-branch",
         "--CommunityStandards-include",
         "--CommunityStandards-one",
         "--CommunityStandards-two",
@@ -72,41 +78,67 @@ def test_DynamicModuleOptionsAppearInHelp():
 
 
 # ----------------------------------------------------------------------
+def test_DynamicRequirementOptionsAppearInHelp():
+    result = CliRunner().invoke(app, ["--help"])
+
+    assert result.exit_code == 0, result.output
+
+    assert {
+        "--GitHub-Description-skip",
+        "--GitHub-Description-value",
+        "--GitHub-License-skip",
+        "--GitHub-License-value",
+        "--GitHub-Template-skip",
+        "--GitHub-Template-require",
+        "--GitHub-WebCommitSignoff-skip",
+        "--GitHub-WebCommitSignoff-no",
+    } <= _GetOptionNames(app)
+
+
+# ----------------------------------------------------------------------
 def test_NoArguments():
-    result = CliRunner().invoke(app, [])
+    result, _ = _InvokeAndCapture(_SKIP_GITHUB)
 
     assert result.exit_code == 0, result.output
 
 
 # ----------------------------------------------------------------------
-def test_DynamicOptionValueIsResolved():
-    result, output = _InvokeAndCapture(["--GitHub-three", "50"])
-
-    assert result.exit_code == 0, output
-    assert "'three': 50" in output
-
-
-# ----------------------------------------------------------------------
-def test_DefaultsAreResolved():
-    result, output = _InvokeAndCapture([])
+def test_ModulesAreExecuted():
+    result, output = _InvokeAndCapture(_SKIP_GITHUB)
 
     assert result.exit_code == 0, output
 
-    # Module-level parameters are filed under a None requirement name.
     for expected in [
-        "'GitHub': {None: {'include': False, 'three': 30, 'four': '4'}}",
-        "'CommunityStandards': {None: {'include': False, 'one': 10, 'two': '2'}}",
-        "'ScientificSoftware': {None: {'include': False, 'five': 50, 'six': False}}",
+        "Executing module 'GitHub' (1 of 3)...",
+        "Executing module 'CommunityStandards' (2 of 3)...",
+        "Executing module 'ScientificSoftware' (3 of 3)...",
     ]:
         assert expected in output
 
 
 # ----------------------------------------------------------------------
+# Modules that are not explicitly included are reported as skipped.
+def test_ModulesAreSkipped():
+    _, output = _InvokeAndCapture(_SKIP_GITHUB)
+
+    assert output.count("SKIPPED.") == 3
+
+
+# ----------------------------------------------------------------------
 def test_ModuleIncludeOptionIsResolved():
-    result, output = _InvokeAndCapture(["--GitHub-include"])
+    result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--CommunityStandards-include"])
 
     assert result.exit_code == 0, output
-    assert "'GitHub': {None: {'include': True, 'three': 30, 'four': '4'}}" in output
+    assert output.count("SKIPPED.") == 2
+
+
+# ----------------------------------------------------------------------
+# The GitHub module requires a url, so it fails when it is executed without one.
+def test_ErrorGitHubModuleWithoutUrl():
+    result, output = _InvokeAndCapture([])
+
+    assert result.exit_code != 0
+    assert "'url' is required argument for this module." in output
 
 
 # ----------------------------------------------------------------------
@@ -118,6 +150,6 @@ def test_InvalidPort():
 
 # ----------------------------------------------------------------------
 def test_Verbose():
-    result = CliRunner().invoke(app, ["--verbose"])
+    result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--verbose"])
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 0, output

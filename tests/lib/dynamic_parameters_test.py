@@ -1,54 +1,14 @@
 import inspect
 import re
 
-from typing import override
-
 import pytest
 
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
-from RepoAuditorWeb.lib.module import Module
-from RepoAuditorWeb.lib.query import Query
 from RepoAuditorWeb.lib.requirement import Requirement
 
-
-# ----------------------------------------------------------------------
-class MyRequirement(Requirement):
-    def __init__(
-        self,
-        *args,
-        parameters: dict[str, TyperParameter] | None = None,
-        **kwargs,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.parameters = {} if parameters is None else parameters
-
-    @override
-    def Evaluate(self, query_results: dict) -> bool:
-        return True
-
-    @override
-    def _GetParametersImpl(self) -> dict[str, TyperParameter]:
-        return self.parameters
-
-
-# ----------------------------------------------------------------------
-class MyModule(Module):
-    def __init__(
-        self,
-        *args,
-        parameters: dict[str, TyperParameter] | None = None,
-        **kwargs,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.parameters = {} if parameters is None else parameters
-
-    @override
-    def _GetParametersImpl(self) -> dict[str, TyperParameter]:
-        return self.parameters
+from conftest import MyModule, MyQuery, MyRequirement
 
 
 # ----------------------------------------------------------------------
@@ -60,7 +20,7 @@ def _CreateModule(
     return MyModule(
         name,
         "My description.",
-        [Query("MyQuery", requirements or [])],
+        [MyQuery("MyQuery", requirements or [])],
         parameters=parameters,
     )
 
@@ -224,7 +184,7 @@ class TestDynamicParameters:
                     MyModule(
                         "MyModule",
                         "My description.",
-                        [Query("MyQuery", [])],
+                        [MyQuery("MyQuery", [])],
                         parameters={"one": parameter},
                     ),
                     # The same module name produces the same prefix, so the parameter collides. A
@@ -233,7 +193,7 @@ class TestDynamicParameters:
                     MyModule(
                         "MyModule",
                         "My description.",
-                        [Query("MyQuery", [])],
+                        [MyQuery("MyQuery", [])],
                         parameters={"one": parameter},
                         requires_explicit_include=True,
                     ),
@@ -262,7 +222,7 @@ class TestDynamicParameters:
                         "MyModule",
                         "My description.",
                         [
-                            Query(
+                            MyQuery(
                                 "MyQuery",
                                 [
                                     MyRequirement(
@@ -278,7 +238,7 @@ class TestDynamicParameters:
                         "MyModule",
                         "My description.",
                         [
-                            Query(
+                            MyQuery(
                                 "MyQuery",
                                 [
                                     MyRequirement(

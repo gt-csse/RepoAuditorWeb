@@ -71,8 +71,53 @@ class Module(ABC):
         return {**base_parameters, **derived_parameters}
 
     # ----------------------------------------------------------------------
+    def GetModuleData(
+        self,
+        arguments: dict[
+            str | None,  # requirement name
+            dict[
+                str,  # parameter name
+                object,
+            ],
+        ],
+    ) -> (
+        dict[
+            str | None,  # requirement name
+            dict[
+                str,  # parameter name
+                object,
+            ],
+        ]
+        | None
+    ):
+        """Return a dictionary of initial data that will be used by queries in the module based on arguments passed on the command line.
+
+        Derived classes may return the provided arguments unmodified, add values, or return a completely different
+        dictionary of data. The module will be skipped if None is returned.
+        """
+
+        if (self.requires_explicit_include and not arguments[None]["include"]) or (
+            not self.requires_explicit_include and arguments[None]["skip"]
+        ):
+            return None
+
+        return self._GetModuleDataImpl(arguments)
+
+    # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     @abstractmethod
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         """Return a dictionary of parameters customized to the module itself."""
+
+    # ----------------------------------------------------------------------
+    @abstractmethod
+    def _GetModuleDataImpl(
+        self,
+        arguments: dict[str | None, dict[str, object]],
+    ) -> dict[str | None, dict[str, object]]:
+        """Return a dictionary of initial data that will be used by queries in the module based on arguments passed on the command line.
+
+        Derived classes may return the provided arguments unmodified, add values, or return a completely different
+        dictionary of data. The module will be skipped if None is returned.
+        """
