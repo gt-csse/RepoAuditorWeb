@@ -8,6 +8,7 @@ from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
+    from RepoAuditorWeb.lib.module import Module
     from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 
 
@@ -37,6 +38,7 @@ class LicenseRequirement(Requirement):
     @override
     def _EvaluateImpl(
         self,
+        module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
@@ -94,6 +96,13 @@ class LicenseRequirement(Requirement):
                 else f"The license '{license_value}' is not in the list of acceptable licenses ({acceptable_values_str})."
             )
 
-            return EvaluateResult(EvaluateResultValue.Error, context, resolution, rationale, self)
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                context,
+                resolution,
+                rationale,
+                self,
+                module,
+            )
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self)
+        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

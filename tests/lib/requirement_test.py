@@ -5,7 +5,7 @@ from typer.models import OptionInfo
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
-from conftest import MyRequirement
+from conftest import EvaluateValues, MyModule, MyQuery, MyRequirement
 
 
 # ----------------------------------------------------------------------
@@ -14,7 +14,7 @@ def _CreateRequirement(
     parameters: dict[str, TyperParameter] | None = None,
     *,
     requires_explicit_include: bool = False,
-    evaluate_result: EvaluateResult | None = None,
+    evaluate_values: EvaluateValues | None = None,
 ) -> MyRequirement:
     return MyRequirement(
         name,
@@ -22,9 +22,14 @@ def _CreateRequirement(
         parameters={"value": TyperParameter(int, 10, OptionInfo(help="Value"))}
         if parameters is None
         else parameters,
-        evaluate_result=evaluate_result,
+        evaluate_values=evaluate_values,
         requires_explicit_include=requires_explicit_include,
     )
+
+
+# ----------------------------------------------------------------------
+def _CreateModule(requirement: MyRequirement) -> MyModule:
+    return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
 
 
 # ----------------------------------------------------------------------
@@ -134,6 +139,7 @@ def test_EvaluateResultValueMembers():
 # ----------------------------------------------------------------------
 def test_EvaluateResultConstruct():
     requirement = _CreateRequirement()
+    module = _CreateModule(requirement)
 
     result = EvaluateResult(
         EvaluateResultValue.Warning,
@@ -141,6 +147,7 @@ def test_EvaluateResultConstruct():
         "My resolution.",
         "My rationale.",
         requirement,
+        module,
     )
 
     assert result.result == EvaluateResultValue.Warning
@@ -148,11 +155,21 @@ def test_EvaluateResultConstruct():
     assert result.resolution == "My resolution."
     assert result.rationale == "My rationale."
     assert result.requirement is requirement
+    assert result.module is module
 
 
 # ----------------------------------------------------------------------
 def test_EvaluateResultFrozen():
-    result = EvaluateResult(EvaluateResultValue.Success, None, None, None, _CreateRequirement())
+    requirement = _CreateRequirement()
+
+    result = EvaluateResult(
+        EvaluateResultValue.Success,
+        None,
+        None,
+        None,
+        requirement,
+        _CreateModule(requirement),
+    )
 
     with pytest.raises(AttributeError):
         result.result = EvaluateResultValue.Error  # ty: ignore[invalid-assignment]
@@ -163,56 +180,85 @@ class TestEvaluate:
     # ----------------------------------------------------------------------
     def test_Invoked(self):
         requirement = _CreateRequirement()
+        module = _CreateModule(requirement)
         query_data: dict[str, object] = {"response": {}}
         requirement_data: dict[str, object] = {"skip": False}
 
-        result = requirement.Evaluate(query_data, requirement_data)
+        result = requirement.Evaluate(module, query_data, requirement_data)
 
         assert result.result == EvaluateResultValue.Success
         assert result.requirement is requirement
+        assert result.module is module
 
     # ----------------------------------------------------------------------
     def test_ForwardsDataToImpl(self):
         requirement = _CreateRequirement()
+        module = _CreateModule(requirement)
         query_data: dict[str, object] = {"response": {}}
         requirement_data: dict[str, object] = {"skip": False}
 
-        requirement.Evaluate(query_data, requirement_data)
+        requirement.Evaluate(module, query_data, requirement_data)
 
         assert requirement.evaluate_args is not None
-        assert requirement.evaluate_args[0] is query_data
-        assert requirement.evaluate_args[1] is requirement_data
+        assert requirement.evaluate_args[0] is module
+        assert requirement.evaluate_args[1] is query_data
+        assert requirement.evaluate_args[2] is requirement_data
 
     # ----------------------------------------------------------------------
     def test_ReturnsImplResult(self):
-        expected = EvaluateResult(EvaluateResultValue.Error, "My context.", None, None, None)  # ty: ignore[invalid-argument-type]
-        requirement = _CreateRequirement(evaluate_result=expected)
+        requirement = _CreateRequirement(
+            evaluate_values=EvaluateValues(EvaluateResultValue.Error, "My context."),
+        )
+        module = _CreateModule(requirement)
 
-        assert requirement.Evaluate({}, {"skip": False}) is expected
+        assert requirement.Evaluate(module, {}, {"skip": False}) == EvaluateResult(
+            EvaluateResultValue.Error,
+            "My context.",
+            None,
+            None,
+            requirement,
+            module,
+        )
 
     # ----------------------------------------------------------------------
     def test_Skip(self):
         requirement = _CreateRequirement()
+        module = _CreateModule(requirement)
 
-        result = requirement.Evaluate({}, {"skip": True})
+        result = requirement.Evaluate(module, {}, {"skip": True})
 
-        assert result == EvaluateResult(EvaluateResultValue.Skipped, None, None, None, requirement)
+        assert result == EvaluateResult(
+            EvaluateResultValue.Skipped,
+            None,
+            None,
+            None,
+            requirement,
+            module,
+        )
         assert requirement.evaluate_args is None
 
     # ----------------------------------------------------------------------
     def test_IncludeNotSpecified(self):
         requirement = _CreateRequirement(requires_explicit_include=True)
+        module = _CreateModule(requirement)
 
-        result = requirement.Evaluate({}, {"include": False})
+        result = requirement.Evaluate(module, {}, {"include": False})
 
-        assert result == EvaluateResult(EvaluateResultValue.Skipped, None, None, None, requirement)
+        assert result == EvaluateResult(
+            EvaluateResultValue.Skipped,
+            None,
+            None,
+            None,
+            requirement,
+            module,
+        )
         assert requirement.evaluate_args is None
 
     # ----------------------------------------------------------------------
     def test_IncludeSpecified(self):
         requirement = _CreateRequirement(requires_explicit_include=True)
 
-        result = requirement.Evaluate({}, {"include": True})
+        result = requirement.Evaluate(_CreateModule(requirement), {}, {"include": True})
 
         assert result.result == EvaluateResultValue.Success
         assert requirement.evaluate_args is not None
@@ -223,17 +269,17 @@ class TestEvaluate:
     def test_SkipIsIgnoredWhenIncludeIsRequired(self):
         requirement = _CreateRequirement(requires_explicit_include=True)
 
-        assert requirement.Evaluate({}, {"include": True, "skip": True}).result == (
-            EvaluateResultValue.Success
-        )
+        assert requirement.Evaluate(
+            _CreateModule(requirement), {}, {"include": True, "skip": True}
+        ).result == (EvaluateResultValue.Success)
 
     # ----------------------------------------------------------------------
     def test_IncludeIsIgnoredWhenSkipIsRequired(self):
         requirement = _CreateRequirement()
 
-        assert requirement.Evaluate({}, {"skip": False, "include": False}).result == (
-            EvaluateResultValue.Success
-        )
+        assert requirement.Evaluate(
+            _CreateModule(requirement), {}, {"skip": False, "include": False}
+        ).result == (EvaluateResultValue.Success)
 
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize(
@@ -244,4 +290,4 @@ class TestEvaluate:
         requirement = _CreateRequirement(requires_explicit_include=requires_explicit_include)
 
         with pytest.raises(KeyError, match=missing_key):
-            requirement.Evaluate({}, {})
+            requirement.Evaluate(_CreateModule(requirement), {}, {})

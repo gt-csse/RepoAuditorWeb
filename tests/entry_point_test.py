@@ -37,8 +37,10 @@ def _InvokeAndCapture(args: list[str]) -> tuple[Result, str]:
 
 
 # ----------------------------------------------------------------------
-# The GitHub module is skipped so that no network calls are made.
-_SKIP_GITHUB = ["--GitHub-skip"]
+# The GitHub module is skipped so that no network calls are made. The console experience is
+# requested explicitly because the default experience opens a window and does not return until it
+# is closed.
+_SKIP_GITHUB = ["--GitHub-skip", "--experience", "console"]
 
 
 # ----------------------------------------------------------------------
@@ -59,6 +61,7 @@ def test_Help():
         "--port",
         "--token",
         "--experience",
+        "--execute",
         "--no-resolution",
         "--no-rationale",
         "--verbose",
@@ -145,7 +148,7 @@ def test_ModuleIncludeOptionIsResolved():
 # ----------------------------------------------------------------------
 # The GitHub module requires a url, so it fails when it is executed without one.
 def test_ErrorGitHubModuleWithoutUrl():
-    result, output = _InvokeAndCapture([])
+    result, output = _InvokeAndCapture(["--experience", "console"])
 
     assert result.exit_code != 0
     assert "'url' is required argument for this module." in output
@@ -197,6 +200,24 @@ class TestExperience:
         assert "Skipped:" in output
 
     # ----------------------------------------------------------------------
+    # The web experience is the default, and it does not return until the window it opens is closed,
+    # so it is replaced by a double rather than being invoked.
+    def test_WebIsTheDefault(self):
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
+            result, output = _InvokeAndCapture(["--GitHub-skip"])
+
+        assert result.exit_code == 0, output
+        assert experience_mock.call_count == 1
+
+    # ----------------------------------------------------------------------
+    def test_Web(self):
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
+            result, output = _InvokeAndCapture(["--GitHub-skip", "--experience", "web"])
+
+        assert result.exit_code == 0, output
+        assert experience_mock.call_count == 1
+
+    # ----------------------------------------------------------------------
     def test_InvalidExperience(self):
         result = CliRunner().invoke(app, [*_SKIP_GITHUB, "--experience", "invalid"])
 
@@ -204,10 +225,11 @@ class TestExperience:
 
 
 # ----------------------------------------------------------------------
-class TestResolutionAndRationale:
+class TestForwardedOptions:
     # ----------------------------------------------------------------------
-    # The display flags are inverted before being forwarded, so the values that the experience
-    # receives are asserted rather than the output it would produce.
+    # Some options are transformed before being forwarded (the display flags are inverted) and
+    # others are acted upon by the experience itself, so the values that the experience receives are
+    # asserted rather than the output it would produce.
     @staticmethod
     def _InvokeAndCaptureKwargs(args: list[str]) -> Mapping[str, object]:
         with mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock:
@@ -245,3 +267,11 @@ class TestResolutionAndRationale:
 
         assert kwargs["port"] == 8080
         assert kwargs["token"] == "my_token"
+
+    # ----------------------------------------------------------------------
+    def test_NoExecuteByDefault(self):
+        assert self._InvokeAndCaptureKwargs(_SKIP_GITHUB)["execute"] is False
+
+    # ----------------------------------------------------------------------
+    def test_Execute(self):
+        assert self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--execute"])["execute"] is True

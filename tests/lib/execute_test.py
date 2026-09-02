@@ -5,7 +5,7 @@ from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManag
 from RepoAuditorWeb.lib.execute import Execute
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
-from conftest import MyModule, MyQuery, MyRequirement
+from conftest import EvaluateValues, MyModule, MyQuery, MyRequirement
 
 
 # ----------------------------------------------------------------------
@@ -14,10 +14,11 @@ def _CreateRequirement(
     result: EvaluateResultValue = EvaluateResultValue.Success,
     context: str | None = None,
 ) -> MyRequirement:
-    requirement = MyRequirement(name, "My requirement description.")
-    requirement.evaluate_result = EvaluateResult(result, context, None, None, requirement)
-
-    return requirement
+    return MyRequirement(
+        name,
+        "My requirement description.",
+        evaluate_values=EvaluateValues(result, context),
+    )
 
 
 # ----------------------------------------------------------------------
@@ -138,6 +139,25 @@ def test_MultipleModules():
 
 
 # ----------------------------------------------------------------------
+# Each result is attributed to the module that produced it so that its source can be displayed.
+def test_ResultsAreAttributedToTheirModule():
+    modules = [
+        _CreateModule([MyQuery("Query1", [_CreateRequirement("One")], query_data={})], "ModuleA"),
+        _CreateModule([MyQuery("Query2", [_CreateRequirement("Two")], query_data={})], "ModuleB"),
+    ]
+
+    results, _, _ = _Execute(
+        modules,
+        {
+            "ModuleA": {None: {"skip": False}, "One": {"skip": False}},
+            "ModuleB": {None: {"skip": False}, "Two": {"skip": False}},
+        },
+    )
+
+    assert [result.module for result in results] == modules
+
+
+# ----------------------------------------------------------------------
 def test_ModuleNamesAppearInOutput():
     module = _CreateModule([MyQuery("MyQuery", [_CreateRequirement()], query_data={})])
 
@@ -198,6 +218,7 @@ class TestSkip:
         )
 
         assert [result.result for result in results] == [EvaluateResultValue.Skipped]
+        assert [result.module for result in results] == [module]
         assert "SKIPPED" in output
         assert result_code == 0
 
@@ -376,8 +397,9 @@ class TestDataFlow:
         _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": requirement_arguments}})
 
         assert requirement.evaluate_args is not None
-        assert requirement.evaluate_args[0] is query_data
-        assert requirement.evaluate_args[1] is requirement_arguments
+        assert requirement.evaluate_args[0] is module
+        assert requirement.evaluate_args[1] is query_data
+        assert requirement.evaluate_args[2] is requirement_arguments
 
     # ----------------------------------------------------------------------
     # Modules with no corresponding arguments fall back to an empty dictionary, which the module

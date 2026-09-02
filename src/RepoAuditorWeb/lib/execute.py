@@ -74,7 +74,11 @@ def Execute(
                             ) as requirement_dm:
                                 requirement_data = module_data.get(requirement.name, {})
 
-                                eval_result = requirement.Evaluate(this_query_data, requirement_data)
+                                eval_result = requirement.Evaluate(
+                                    module,
+                                    this_query_data,
+                                    requirement_data,
+                                )
                                 eval_results.append(eval_result)
 
                                 if eval_result.result == EvaluateResultValue.Skipped:

@@ -35,6 +35,16 @@ class TyperParameter:
 
 
 # ----------------------------------------------------------------------
+@dataclass(frozen=True)
+class ArgumentInfo:
+    """The origin of a dynamic parameter."""
+
+    module_name: str
+    requirement_name: str | None
+    parameter_name: str
+
+
+# ----------------------------------------------------------------------
 class DynamicParameters:
     """A class that captures and organizes dynamic parameters."""
 
@@ -58,14 +68,7 @@ class DynamicParameters:
         # ----------------------------------------------------------------------
 
         dynamic_parameters: dict[str, TyperParameter] = {}
-        argument_lookup: dict[
-            str,  # argument name
-            tuple[
-                str,  # module name
-                str | None,  # requirement name
-                str,  # parameter name
-            ],
-        ] = {}
+        argument_lookup: dict[str, ArgumentInfo] = {}
 
         for module in modules:
             module_name = ValidateName(module.name)
@@ -80,7 +83,7 @@ class DynamicParameters:
                 dynamic_parameters[full_parameter_name] = parameter
 
                 assert full_parameter_name not in argument_lookup, full_parameter_name
-                argument_lookup[full_parameter_name] = (module.name, None, parameter_name)
+                argument_lookup[full_parameter_name] = ArgumentInfo(module.name, None, parameter_name)
 
             for query in module.queries:
                 for requirement in query.requirements:
@@ -96,10 +99,12 @@ class DynamicParameters:
                         dynamic_parameters[full_parameter_name] = parameter
 
                         assert full_parameter_name not in argument_lookup, full_parameter_name
-                        argument_lookup[full_parameter_name] = (module.name, requirement.name, parameter_name)
+                        argument_lookup[full_parameter_name] = ArgumentInfo(
+                            module.name, requirement.name, parameter_name
+                        )
 
         self.dynamic_parameters = dynamic_parameters
-        self._argument_lookup = argument_lookup
+        self.argument_lookup = argument_lookup
 
     # ----------------------------------------------------------------------
     def Parse(
@@ -120,13 +125,13 @@ class DynamicParameters:
         results: dict[str, dict[str | None, dict[str, object]]] = {}
 
         for arg_name, arg_value in kwargs.items():
-            argument_info = self._argument_lookup.get(arg_name)
+            argument_info = self.argument_lookup.get(arg_name)
             if argument_info is None:
                 msg = f"'{arg_name}' does not correspond to a valid parameter."
                 raise ValueError(msg)
 
-            module_name, requirement_name, parameter_name = argument_info
-
-            results.setdefault(module_name, {}).setdefault(requirement_name, {})[parameter_name] = arg_value
+            results.setdefault(argument_info.module_name, {}).setdefault(argument_info.requirement_name, {})[
+                argument_info.parameter_name
+            ] = arg_value
 
         return results

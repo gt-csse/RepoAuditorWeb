@@ -4,9 +4,10 @@ import textwrap
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
 from RepoAuditorWeb.console_experience import ExecuteExperience
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
+from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
+from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 
-from conftest import MyModule, MyQuery, MyRequirement
+from conftest import EvaluateValues, MyModule, MyQuery, MyRequirement
 
 
 # ----------------------------------------------------------------------
@@ -17,10 +18,11 @@ def _CreateRequirement(
     resolution: str | None = None,
     rationale: str | None = None,
 ) -> MyRequirement:
-    requirement = MyRequirement(name, "My requirement description.")
-    requirement.evaluate_result = EvaluateResult(result, context, resolution, rationale, requirement)
-
-    return requirement
+    return MyRequirement(
+        name,
+        "My requirement description.",
+        evaluate_values=EvaluateValues(result, context, resolution, rationale),
+    )
 
 
 # ----------------------------------------------------------------------
@@ -48,6 +50,7 @@ def _Execute(
             1234,
             "my_token",
             [module],
+            DynamicParameters([module]),
             arguments,
             display_resolution=display_resolution,
             display_rationale=display_rationale,
@@ -187,6 +190,27 @@ class TestRequirementOutput:
         output = _Execute([_CreateRequirement("MyRequirement", EvaluateResultValue.Error)])
 
         assert "Requirement 'MyRequirement'" in output
+
+    # ----------------------------------------------------------------------
+    # The module is displayed alongside the requirement so that the source of each result is clear.
+    def test_ModuleIsDisplayed(self):
+        output = _Execute(
+            [_CreateRequirement("MyRequirement", EvaluateResultValue.Error, "My context.")],
+        )
+
+        assert "Module 'MyModule' | Requirement 'MyRequirement'" in output
+
+    # ----------------------------------------------------------------------
+    # The underline spans the module-qualified header.
+    def test_ModuleIsUnderlined(self):
+        output = _Execute(
+            [_CreateRequirement("MyRequirement", EvaluateResultValue.Error, "My context.")],
+        )
+
+        header = "Module 'MyModule' | Requirement 'MyRequirement'"
+
+        assert f"{header}\n" in output.replace("  ", "")
+        assert "=" * len(header) in output
 
     # ----------------------------------------------------------------------
     def test_MultipleRequirementsAreDisplayed(self):
