@@ -36,6 +36,8 @@ def test_AcceptableLicense():
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
+    assert result.resolution is not None
+    assert result.rationale is not None
 
 
 # ----------------------------------------------------------------------
