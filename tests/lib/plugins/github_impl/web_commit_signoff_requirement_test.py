@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.plugins.github_impl.web_commit_signoff_requirement import (
     WebCommitSignoffRequirement,
 )
@@ -11,23 +12,52 @@ from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
     """\
-    The default behavior is to require contributors to sign off on web-based commits.
+    The default behavior is to require contributors to sign off on web-based commits, which
+    causes GitHub to append a `Signed-off-by` trailer to every commit made through its web
+    interface.
 
-    Reasons for this Default
-    ------------------------
-    - All changes (regardless of where they were made) should go through the same validation process.
+    ## Reasons for this Default
 
-    Reasons to Override this Default
-    --------------------------------
-    - Changes made via the web interface are considered to be benign and should not be subject to
-      the standard validation process.
+    - Projects that enforce a signoff policy typically verify it with a status check that fails
+      when a trailer is missing. Contributors editing through the web interface have no
+      opportunity to pass `--signoff`, so the check fails after the fact and recovering from it
+      requires rewriting history.
+    - The trailer is the same one produced by `git commit --signoff`, so enabling this keeps the
+      history uniform regardless of where a commit originated.
+
+    ## Reasons to Override this Default
+
+    - The project has no signoff policy, in which case the trailer asserts a certification
+      (commonly the [Developer Certificate of Origin](https://developercertificate.org/)) that
+      the project does not actually require.
+    - The project requires that contributors add the trailer deliberately rather than have it
+      applied on their behalf, because doing so certifies that they hold the rights to submit
+      the change and accepts that the record is retained indefinitely.
+
+    Note that this setting governs only the web interface; commits made from the command line
+    are unaffected, so it does not by itself guarantee that every commit is signed off.
     """,
 )
 
 
 # ----------------------------------------------------------------------
-def _Evaluate(response: dict, *, no: bool = False) -> EvaluateResult:
-    return WebCommitSignoffRequirement().Evaluate({"response": response}, {"skip": False, "no": no})
+_DOCUMENTATION_URL = (
+    "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features"
+    "/managing-repository-settings/managing-the-commit-signoff-policy-for-your-repository"
+)
+
+
+# ----------------------------------------------------------------------
+def _Evaluate(
+    response: dict,
+    *,
+    no: bool = False,
+    url: str = "https://github.com/gt-csse/RepoAuditorWeb",
+) -> EvaluateResult:
+    return WebCommitSignoffRequirement().Evaluate(
+        {"response": response, "session": GitHubSession(url, None)},
+        {"skip": False, "no": no},
+    )
 
 
 # ----------------------------------------------------------------------
@@ -75,8 +105,34 @@ def test_SuccessRationale():
 def test_ErrorResolutionAndRationale():
     result = _Evaluate({"web_commit_signoff_required": False})
 
-    assert result.resolution is not None
+    assert result.resolution == textwrap.dedent(
+        f"""\
+        1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
+        2) Scroll to the **Commits** section.
+        3) Check the **Require contributors to sign off on web-based commits** checkbox.
+
+        See [Managing the commit signoff policy for your repository]({_DOCUMENTATION_URL})
+        for more information.
+        """,
+    )
     assert result.rationale == _RATIONALE
+
+
+# ----------------------------------------------------------------------
+# The resolution directs the user to uncheck the setting when signoff is not required.
+def test_ErrorResolutionWhenNotRequired():
+    result = _Evaluate({"web_commit_signoff_required": True}, no=True)
+
+    assert result.resolution == textwrap.dedent(
+        f"""\
+        1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
+        2) Scroll to the **Commits** section.
+        3) Uncheck the **Require contributors to sign off on web-based commits** checkbox.
+
+        See [Managing the commit signoff policy for your repository]({_DOCUMENTATION_URL})
+        for more information.
+        """,
+    )
 
 
 # ----------------------------------------------------------------------
@@ -126,3 +182,16 @@ def test_Skip():
     result = WebCommitSignoffRequirement().Evaluate({}, {"skip": True, "no": False})
 
     assert result.result == EvaluateResultValue.Skipped
+
+
+# ----------------------------------------------------------------------
+# The settings url is derived from the repository under audit rather than hard-coded, so it points
+# at an Enterprise host when one is being audited.
+def test_ResolutionUsesEnterpriseUrl():
+    result = _Evaluate(
+        {"web_commit_signoff_required": False},
+        url="https://github.example.com/my-org/my-repo",
+    )
+
+    assert result.resolution is not None
+    assert "(https://github.example.com/my-org/my-repo/settings)" in result.resolution

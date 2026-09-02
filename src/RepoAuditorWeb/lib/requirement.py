@@ -9,6 +9,11 @@ from typer.models import OptionInfo
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 
 
+# Content authored as Markdown so that a single value renders in every experience; the console
+# renders it via rich and a web page can render it natively.
+type Markdown = str
+
+
 # ----------------------------------------------------------------------
 class EvaluateResultValue(Enum):
     """Result of evaluating a Requirement against a set of data."""
@@ -26,10 +31,10 @@ class EvaluateResult:
     """Information associated with evaluating a Requirement against a set of data."""
 
     result: EvaluateResultValue
-    context: str | None
+    context: Markdown | None
 
-    resolution: str | None
-    rationale: str | None
+    resolution: Markdown | None
+    rationale: Markdown | None
 
     requirement: Requirement
 

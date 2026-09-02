@@ -352,6 +352,150 @@ class TestRationale:
 
 
 # ----------------------------------------------------------------------
+class TestMarkdownRendering:
+    # ----------------------------------------------------------------------
+    # Urls must remain visible so that they survive redirection to a file.
+    def test_HyperlinkUrlIsVisible(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="Visit [the settings page](https://github.com/o/r/settings).",
+                ),
+            ],
+        )
+
+        assert "the settings page (https://github.com/o/r/settings)" in output
+
+    # ----------------------------------------------------------------------
+    def test_TableIsRendered(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    context="| Setting | Value |\n| --- | --- |\n| signoff | missing |",
+                ),
+            ],
+        )
+
+        assert "Setting" in output
+        assert "signoff" in output
+        assert "─" in output
+
+    # ----------------------------------------------------------------------
+    # Bold names the control the user must interact with; quotes preserve that emphasis once the
+    # styling that would have conveyed it is stripped for the console.
+    def test_BoldIsQuoted(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="Check the **Settings** tab.",
+                ),
+            ],
+        )
+
+        assert 'Check the "Settings" tab.' in output
+        assert "**Settings**" not in output
+
+    # ----------------------------------------------------------------------
+    def test_BoldWithinCodeSpanIsNotQuoted(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="Run `git config **x**` now.",
+                ),
+            ],
+        )
+
+        assert "Run git config **x** now." in output
+
+    # ----------------------------------------------------------------------
+    def test_BulletIsNotQuoted(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="- One item.\n- Two items.\n",
+                ),
+            ],
+        )
+
+        assert "• One item." in output
+        assert '"•"' not in output
+        assert '" • "' not in output
+
+    # ----------------------------------------------------------------------
+    # Requirements author steps as '1)'; the delimiter must survive rendering.
+    def test_OrderedListDelimiterIsPreserved(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="1) First step.\n2) Second step.\n",
+                ),
+            ],
+        )
+
+        assert "1) First step." in output
+        assert "2) Second step." in output
+
+    # ----------------------------------------------------------------------
+    def test_OrderedListPeriodDelimiterIsPreserved(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="1. First step.\n2. Second step.\n",
+                ),
+            ],
+        )
+
+        assert "1. First step." in output
+        assert "2. Second step." in output
+
+    # ----------------------------------------------------------------------
+    # The prefix width accommodates the widest numeral so that content stays aligned.
+    def test_OrderedListAlignsWiderNumerals(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="".join(f"{index}) Item.\n" for index in range(1, 11)),
+                ),
+            ],
+        )
+
+        assert "1)  Item." in output
+        assert "10) Item." in output
+
+    # ----------------------------------------------------------------------
+    # rich pads each line to the console width; that padding must not reach the output.
+    def test_NoTrailingWhitespace(self):
+        output = _Execute(
+            [
+                _CreateRequirement(
+                    "MyRequirement",
+                    EvaluateResultValue.Error,
+                    resolution="A short line.",
+                ),
+            ],
+        )
+
+        assert "A short line." in output
+        assert "A short line.  " not in output
+
+
+# ----------------------------------------------------------------------
 # The execution output produced by Execute is written before the summary.
 def test_ExecutionOutputIsWritten():
     output = _Execute([_CreateRequirement()])
