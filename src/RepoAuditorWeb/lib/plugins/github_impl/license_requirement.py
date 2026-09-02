@@ -52,4 +52,10 @@ class LicenseRequirement(Requirement):
                 self,
             )
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, None, self)
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            "BugBug: This is the resolution!",
+            "BugBug: This is the rationale!",
+            self,
+        )

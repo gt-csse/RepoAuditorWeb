@@ -1,3 +1,5 @@
+import textwrap
+
 from typing import cast, override
 
 from typer.models import OptionInfo
@@ -40,13 +42,28 @@ class WebCommitSignoffRequirement(Requirement):
         )
         acceptable_value = not requirement_data["no"]
 
+        rationale = textwrap.dedent(
+            """\
+            The default behavior is to require contributors to sign off on web-based commits.
+
+            Reasons for this Default
+            ------------------------
+            - All changes (regardless of where they were made) should go through the same validation process.
+
+            Reasons to Override this Default
+            --------------------------------
+            - Changes made via the web interface are considered to be benign and should not be subject to
+              the standard validation process.
+            """,
+        )
+
         if web_commit_signoff_value != acceptable_value:
             return EvaluateResult(
                 EvaluateResultValue.Error,
                 f"The repository's web commit signoff value is '{web_commit_signoff_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                None,
-                None,
+                "BugBug: This is the resolution!",
+                rationale,
                 self,
             )
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, None, self)
+        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self)

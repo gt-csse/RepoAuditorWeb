@@ -1,3 +1,4 @@
+from enum import StrEnum
 from typing import Annotated
 
 import typer
@@ -5,9 +6,9 @@ import typer
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 from typer.core import TyperGroup
 
+from RepoAuditorWeb.console_experience import ExecuteExperience as ExecuteConsoleExperience
 from RepoAuditorWeb.impl import entry_point_utils
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
-from RepoAuditorWeb.lib.execute import Execute
 from RepoAuditorWeb.lib.modules import MODULES
 
 
@@ -29,6 +30,13 @@ app = typer.Typer(
 
 
 # ----------------------------------------------------------------------
+class Experience(StrEnum):
+    """The user's experience interacting with the application."""
+
+    Console = "console"
+
+
+# ----------------------------------------------------------------------
 _dynamic_parameters = DynamicParameters(MODULES)
 
 
@@ -43,6 +51,22 @@ def EntryPoint(
         str | None,
         typer.Option("--token", help="The token required to access protected endpoints."),
     ] = None,
+    experience: Annotated[
+        Experience,
+        typer.Option(
+            "--experience",
+            case_sensitive=False,
+            help=Experience.__doc__,
+        ),
+    ] = Experience.Console,
+    no_resolution: Annotated[  # noqa: FBT002
+        bool,
+        typer.Option("--no-resolution", help="Do not display the resolution for each requirement."),
+    ] = False,
+    no_rationale: Annotated[  # noqa: FBT002
+        bool,
+        typer.Option("--no-rationale", help="Do not display the rationale for each requirement."),
+    ] = False,
     verbose: Annotated[  # noqa: FBT002
         bool,
         typer.Option("--verbose", help="Write verbose information to the terminal."),
@@ -71,7 +95,20 @@ def EntryPoint(
         token = entry_point_utils.ResolveToken(token)
         arguments = _dynamic_parameters.Parse(kwargs)
 
-        Execute(dm, MODULES, arguments)
+        experience_kwargs = {
+            "dm": dm,
+            "port": port,
+            "token": token,
+            "modules": MODULES,
+            "arguments": arguments,
+            "display_resolution": not no_resolution,
+            "display_rationale": not no_rationale,
+        }
+
+        if experience == Experience.Console:
+            ExecuteConsoleExperience(**experience_kwargs)
+        else:
+            assert False, experience  # noqa: B011, PT015  # pragma: no cover
 
 
 # ----------------------------------------------------------------------

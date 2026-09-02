@@ -1,9 +1,28 @@
+import textwrap
+
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.web_commit_signoff_requirement import (
     WebCommitSignoffRequirement,
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
+
+
+# ----------------------------------------------------------------------
+_RATIONALE = textwrap.dedent(
+    """\
+    The default behavior is to require contributors to sign off on web-based commits.
+
+    Reasons for this Default
+    ------------------------
+    - All changes (regardless of where they were made) should go through the same validation process.
+
+    Reasons to Override this Default
+    --------------------------------
+    - Changes made via the web interface are considered to be benign and should not be subject to
+      the standard validation process.
+    """,
+)
 
 
 # ----------------------------------------------------------------------
@@ -40,6 +59,24 @@ def test_MatchingValue(web_commit_signoff_required, no):
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
+
+
+# ----------------------------------------------------------------------
+# The rationale explains the default regardless of the outcome, so it is present on success even
+# though there is nothing to resolve.
+def test_SuccessRationale():
+    result = _Evaluate({"web_commit_signoff_required": True})
+
+    assert result.resolution is None
+    assert result.rationale == _RATIONALE
+
+
+# ----------------------------------------------------------------------
+def test_ErrorResolutionAndRationale():
+    result = _Evaluate({"web_commit_signoff_required": False})
+
+    assert result.resolution is not None
+    assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------

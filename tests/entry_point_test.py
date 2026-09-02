@@ -1,5 +1,6 @@
 import io
 
+from collections.abc import Mapping
 from unittest import mock
 
 import typer
@@ -54,7 +55,16 @@ def test_Help():
 
     assert result.exit_code == 0, result.output
 
-    assert {"--port", "--token", "--verbose", "--debug", "--version"} <= _GetOptionNames(app)
+    assert {
+        "--port",
+        "--token",
+        "--experience",
+        "--no-resolution",
+        "--no-rationale",
+        "--verbose",
+        "--debug",
+        "--version",
+    } <= _GetOptionNames(app)
 
 
 # ----------------------------------------------------------------------
@@ -153,3 +163,85 @@ def test_Verbose():
     result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--verbose"])
 
     assert result.exit_code == 0, output
+
+
+# ----------------------------------------------------------------------
+class TestExperience:
+    # ----------------------------------------------------------------------
+    def test_SummaryIsWritten(self):
+        result, output = _InvokeAndCapture(_SKIP_GITHUB)
+
+        assert result.exit_code == 0, output
+
+        for expected in [
+            "Skipped:",
+            "Does Not Apply:",
+            "Success:",
+            "Warning:",
+            "Error:",
+        ]:
+            assert expected in output
+
+    # ----------------------------------------------------------------------
+    def test_Console(self):
+        result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--experience", "console"])
+
+        assert result.exit_code == 0, output
+        assert "Skipped:" in output
+
+    # ----------------------------------------------------------------------
+    def test_ConsoleIsCaseInsensitive(self):
+        result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--experience", "CONSOLE"])
+
+        assert result.exit_code == 0, output
+        assert "Skipped:" in output
+
+    # ----------------------------------------------------------------------
+    def test_InvalidExperience(self):
+        result = CliRunner().invoke(app, [*_SKIP_GITHUB, "--experience", "invalid"])
+
+        assert result.exit_code != 0
+
+
+# ----------------------------------------------------------------------
+class TestResolutionAndRationale:
+    # ----------------------------------------------------------------------
+    # The display flags are inverted before being forwarded, so the values that the experience
+    # receives are asserted rather than the output it would produce.
+    @staticmethod
+    def _InvokeAndCaptureKwargs(args: list[str]) -> Mapping[str, object]:
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock:
+            result, output = _InvokeAndCapture(args)
+
+        assert result.exit_code == 0, output
+        assert experience_mock.call_count == 1
+
+        return experience_mock.call_args.kwargs
+
+    # ----------------------------------------------------------------------
+    def test_DisplayedByDefault(self):
+        kwargs = self._InvokeAndCaptureKwargs(_SKIP_GITHUB)
+
+        assert kwargs["display_resolution"] is True
+        assert kwargs["display_rationale"] is True
+
+    # ----------------------------------------------------------------------
+    def test_NoResolution(self):
+        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--no-resolution"])
+
+        assert kwargs["display_resolution"] is False
+        assert kwargs["display_rationale"] is True
+
+    # ----------------------------------------------------------------------
+    def test_NoRationale(self):
+        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--no-rationale"])
+
+        assert kwargs["display_resolution"] is True
+        assert kwargs["display_rationale"] is False
+
+    # ----------------------------------------------------------------------
+    def test_PortAndTokenAreForwarded(self):
+        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--port", "8080", "--token", "my_token"])
+
+        assert kwargs["port"] == 8080
+        assert kwargs["token"] == "my_token"
