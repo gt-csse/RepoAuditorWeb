@@ -9,6 +9,7 @@ from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
+    from RepoAuditorWeb.lib.module import Module
     from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 
 
@@ -47,6 +48,7 @@ class DescriptionRequirement(Requirement):
     @override
     def _EvaluateImpl(
         self,
+        module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
@@ -115,4 +117,4 @@ class DescriptionRequirement(Requirement):
                 """,
             )
 
-        return EvaluateResult(result, context, resolution, rationale, self)
+        return EvaluateResult(result, context, resolution, rationale, self, module)

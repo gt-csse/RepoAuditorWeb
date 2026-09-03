@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from dbrownell_Common.Streams.DoneManager import DoneManager
     from markdown_it.token import Token
 
+    from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
     from RepoAuditorWeb.lib.module import Module
 
     from RepoAuditorWeb.lib.requirement import Markdown
@@ -27,12 +28,16 @@ def ExecuteExperience(  # noqa: C901
     port: int,  # noqa: ARG001
     token: str,  # noqa: ARG001
     modules: list[Module],
+    dynamic_parameters: DynamicParameters,  # noqa: ARG001
     arguments: dict[str, dict[str | None, dict[str, object]]],
     *,
+    execute: bool = False,  # noqa: ARG001
     display_resolution: bool = True,
     display_rationale: bool = True,
 ) -> None:
     """Execute the application in a console experience."""
+
+    # The console experience has no control to invoke, so `execute` is implied.
 
     results = Execute(dm, modules, arguments)
 
@@ -68,7 +73,7 @@ def ExecuteExperience(  # noqa: C901
             else:
                 assert False, result.result  # noqa: B011, PT015  # pragma: no cover
 
-            header = f"Requirement '{result.requirement.name}'"
+            header = f"Module '{result.module.name}' | Requirement '{result.requirement.name}'"
             write_func(header)
             write_func("=" * len(header))
 

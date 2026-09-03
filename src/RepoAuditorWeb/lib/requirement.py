@@ -3,10 +3,14 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import auto, Enum
+from typing import TYPE_CHECKING
 
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
+
+if TYPE_CHECKING:
+    from RepoAuditorWeb.lib.module import Module
 
 
 # Content authored as Markdown so that a single value renders in every experience; the console
@@ -37,6 +41,7 @@ class EvaluateResult:
     rationale: Markdown | None
 
     requirement: Requirement
+    module: Module
 
 
 # ----------------------------------------------------------------------
@@ -84,15 +89,20 @@ class Requirement(ABC):
         return {**base_parameters, **derived_parameters}
 
     # ----------------------------------------------------------------------
-    def Evaluate(self, query_data: dict[str, object], requirement_data: dict[str, object]) -> EvaluateResult:
+    def Evaluate(
+        self,
+        module: Module,
+        query_data: dict[str, object],
+        requirement_data: dict[str, object],
+    ) -> EvaluateResult:
         """Evaluate the requirement based on the results of the query."""
 
         if (self.requires_explicit_include and not requirement_data["include"]) or (
             not self.requires_explicit_include and requirement_data["skip"]
         ):
-            return EvaluateResult(EvaluateResultValue.Skipped, None, None, None, self)
+            return EvaluateResult(EvaluateResultValue.Skipped, None, None, None, self, module)
 
-        return self._EvaluateImpl(query_data, requirement_data)
+        return self._EvaluateImpl(module, query_data, requirement_data)
 
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
@@ -105,6 +115,7 @@ class Requirement(ABC):
     @abstractmethod
     def _EvaluateImpl(
         self,
+        module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
     ) -> EvaluateResult:

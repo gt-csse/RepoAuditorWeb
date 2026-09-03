@@ -6,6 +6,8 @@ from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.plugins.github_impl.template_requirement import TemplateRequirement
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
+from conftest import MyModule, MyQuery
+
 
 # ----------------------------------------------------------------------
 _DOCUMENTATION_URL = (
@@ -43,13 +45,21 @@ _RATIONALE = textwrap.dedent(
 
 
 # ----------------------------------------------------------------------
+def _CreateModule(requirement: TemplateRequirement) -> MyModule:
+    return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
+
+
+# ----------------------------------------------------------------------
 def _Evaluate(
     response: dict,
     *,
     require: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
-    return TemplateRequirement().Evaluate(
+    requirement = TemplateRequirement()
+
+    return requirement.Evaluate(
+        _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
         {"skip": False, "require": require},
     )
@@ -186,6 +196,8 @@ def test_MissingStatusWhenRequired():
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    result = TemplateRequirement().Evaluate({}, {"skip": True, "require": False})
+    requirement = TemplateRequirement()
+
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "require": False})
 
     assert result.result == EvaluateResultValue.Skipped

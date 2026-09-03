@@ -8,6 +8,7 @@ from typer.core import TyperGroup
 
 from RepoAuditorWeb.console_experience import ExecuteExperience as ExecuteConsoleExperience
 from RepoAuditorWeb.impl import entry_point_utils
+from RepoAuditorWeb.web_experience import ExecuteExperience as ExecuteWebExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
 from RepoAuditorWeb.lib.modules import MODULES
 
@@ -34,6 +35,7 @@ class Experience(StrEnum):
     """The user's experience interacting with the application."""
 
     Console = "console"
+    Web = "web"
 
 
 # ----------------------------------------------------------------------
@@ -58,7 +60,14 @@ def EntryPoint(
             case_sensitive=False,
             help=Experience.__doc__,
         ),
-    ] = Experience.Console,
+    ] = Experience.Web,
+    execute: Annotated[  # noqa: FBT002
+        bool,
+        typer.Option(
+            "--execute",
+            help="Execute the experience immediately rather than waiting for the user to invoke it.",
+        ),
+    ] = False,
     no_resolution: Annotated[  # noqa: FBT002
         bool,
         typer.Option("--no-resolution", help="Do not display the resolution for each requirement."),
@@ -100,13 +109,17 @@ def EntryPoint(
             "port": port,
             "token": token,
             "modules": MODULES,
+            "dynamic_parameters": _dynamic_parameters,
             "arguments": arguments,
+            "execute": execute,
             "display_resolution": not no_resolution,
             "display_rationale": not no_rationale,
         }
 
         if experience == Experience.Console:
             ExecuteConsoleExperience(**experience_kwargs)
+        elif experience == Experience.Web:
+            ExecuteWebExperience(**experience_kwargs)
         else:
             assert False, experience  # noqa: B011, PT015  # pragma: no cover
 

@@ -1,11 +1,28 @@
 """Test doubles for the abstract Module, Query, and Requirement classes."""
 
+from dataclasses import dataclass
 from typing import override
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.module import Module
 from RepoAuditorWeb.lib.query import Query
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import (
+    EvaluateResult,
+    EvaluateResultValue,
+    Markdown,
+    Requirement,
+)
+
+
+# ----------------------------------------------------------------------
+@dataclass(frozen=True)
+class EvaluateValues:
+    """The values a MyRequirement produces, minus the module that is only known once evaluated."""
+
+    result: EvaluateResultValue = EvaluateResultValue.Success
+    context: Markdown | None = None
+    resolution: Markdown | None = None
+    rationale: Markdown | None = None
 
 
 # ----------------------------------------------------------------------
@@ -14,17 +31,17 @@ class MyRequirement(Requirement):
         self,
         *args,
         parameters: dict[str, TyperParameter] | None = None,
-        evaluate_result: EvaluateResult | None = None,
+        evaluate_values: EvaluateValues | None = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self.parameters = {} if parameters is None else parameters
-        self.evaluate_result = evaluate_result
+        self.evaluate_values = evaluate_values
 
         # Captures the arguments of the most recent _EvaluateImpl invocation so tests can assert
         # what Evaluate forwarded to the derived class.
-        self.evaluate_args: tuple[dict[str, object], dict[str, object]] | None = None
+        self.evaluate_args: tuple[Module, dict[str, object], dict[str, object]] | None = None
 
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
@@ -33,15 +50,22 @@ class MyRequirement(Requirement):
     @override
     def _EvaluateImpl(
         self,
+        module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
-        self.evaluate_args = (query_data, requirement_data)
+        self.evaluate_args = (module, query_data, requirement_data)
 
-        if self.evaluate_result is not None:
-            return self.evaluate_result
+        values = EvaluateValues() if self.evaluate_values is None else self.evaluate_values
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, None, self)
+        return EvaluateResult(
+            values.result,
+            values.context,
+            values.resolution,
+            values.rationale,
+            self,
+            module,
+        )
 
 
 # ----------------------------------------------------------------------

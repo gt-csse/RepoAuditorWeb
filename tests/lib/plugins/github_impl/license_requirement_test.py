@@ -6,6 +6,8 @@ from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRe
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
+from conftest import MyModule, MyQuery
+
 
 # ----------------------------------------------------------------------
 _DOCUMENTATION_URL = (
@@ -43,12 +45,20 @@ _RATIONALE = textwrap.dedent(
 
 
 # ----------------------------------------------------------------------
+def _CreateModule(requirement: LicenseRequirement) -> MyModule:
+    return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
+
+
+# ----------------------------------------------------------------------
 def _Evaluate(
     response: dict,
     acceptable_values: list[str] | None = None,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
-    return LicenseRequirement().Evaluate(
+    requirement = LicenseRequirement()
+
+    return requirement.Evaluate(
+        _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
         {"skip": False, "value": ["MIT License"] if acceptable_values is None else acceptable_values},
     )
@@ -211,6 +221,8 @@ def test_EmptyAcceptableValues():
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    result = LicenseRequirement().Evaluate({}, {"skip": True, "value": ["MIT License"]})
+    requirement = LicenseRequirement()
+
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "value": ["MIT License"]})
 
     assert result.result == EvaluateResultValue.Skipped

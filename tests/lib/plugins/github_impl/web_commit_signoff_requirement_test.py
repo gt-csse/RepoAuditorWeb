@@ -8,6 +8,8 @@ from RepoAuditorWeb.lib.plugins.github_impl.web_commit_signoff_requirement impor
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
+from conftest import MyModule, MyQuery
+
 
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
@@ -48,13 +50,21 @@ _DOCUMENTATION_URL = (
 
 
 # ----------------------------------------------------------------------
+def _CreateModule(requirement: WebCommitSignoffRequirement) -> MyModule:
+    return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
+
+
+# ----------------------------------------------------------------------
 def _Evaluate(
     response: dict,
     *,
     no: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
-    return WebCommitSignoffRequirement().Evaluate(
+    requirement = WebCommitSignoffRequirement()
+
+    return requirement.Evaluate(
+        _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
         {"skip": False, "no": no},
     )
@@ -179,7 +189,9 @@ def test_MissingValueWhenNotRequired():
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    result = WebCommitSignoffRequirement().Evaluate({}, {"skip": True, "no": False})
+    requirement = WebCommitSignoffRequirement()
+
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "no": False})
 
     assert result.result == EvaluateResultValue.Skipped
 

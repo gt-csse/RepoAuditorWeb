@@ -6,6 +6,8 @@ from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import Descr
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
+from conftest import MyModule, MyQuery
+
 
 # ----------------------------------------------------------------------
 _DOCUMENTATION_URL = (
@@ -37,12 +39,20 @@ _RATIONALE = textwrap.dedent(
 
 
 # ----------------------------------------------------------------------
+def _CreateModule(requirement: DescriptionRequirement) -> MyModule:
+    return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
+
+
+# ----------------------------------------------------------------------
 def _EvaluateResponse(
     response: dict,
     value: Values,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
-    return DescriptionRequirement().Evaluate(
+    requirement = DescriptionRequirement()
+
+    return requirement.Evaluate(
+        _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
         {"skip": False, "value": value},
     )
@@ -195,6 +205,7 @@ def test_ResultAttributes():
     requirement = DescriptionRequirement()
 
     result = requirement.Evaluate(
+        _CreateModule(requirement),
         {
             "response": {"description": "My description."},
             "session": GitHubSession("https://github.com/gt-csse/RepoAuditorWeb", None),
@@ -226,6 +237,12 @@ def test_ErrorRationale():
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    result = DescriptionRequirement().Evaluate({}, {"skip": True, "value": Values.Populated})
+    requirement = DescriptionRequirement()
+
+    result = requirement.Evaluate(
+        _CreateModule(requirement),
+        {},
+        {"skip": True, "value": Values.Populated},
+    )
 
     assert result.result == EvaluateResultValue.Skipped
