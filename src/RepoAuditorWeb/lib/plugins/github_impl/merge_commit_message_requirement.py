@@ -6,12 +6,14 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.plugins.github_impl.restricted_value import GetRestrictedValue
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.plugins.github_impl.commit_message_value import (
+    CommitMessageSetting,
+    EvaluateCommitMessage,
+)
+from RepoAuditorWeb.lib.requirement import EvaluateResult, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
-    from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 
 
 # ----------------------------------------------------------------------
@@ -21,18 +23,6 @@ class Values(StrEnum):
     DefaultMessage = "default_message"
     PullRequestTitle = "pull_request_title"
     PullRequestTitleAndDescription = "pull_request_title_and_description"
-
-
-# ----------------------------------------------------------------------
-def _GetUILabel(title: object, message: object) -> str:
-    """Return the quoted dropdown label for a pairing of the two API fields."""
-
-    # A pairing that the dropdown cannot produce has no label to report, so the API values are
-    # named directly rather than being forced onto the nearest option. The quoting is applied here
-    # so that this case is not wrapped in quotes that suggest it is a label.
-    label = _UI_LABELS_BY_API_VALUES.get(cast(tuple[str, str], (title, message)))
-
-    return f"'{label}'" if label is not None else f"title '{title}' with message '{message}'"
 
 
 # ----------------------------------------------------------------------
@@ -67,8 +57,6 @@ class MergeCommitMessageRequirement(Requirement):
         query_data: dict[str, object],
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
-        value = cast(Values, requirement_data["value"])
-
         rationale = textwrap.dedent(
             """\
             The default behavior is to require that the merge commit's subject is the pull request
@@ -113,109 +101,37 @@ class MergeCommitMessageRequirement(Requirement):
             """,
         )
 
-        expected_title, expected_message = _API_VALUES[value]
-
-        # The dropdown configures the message GitHub pre-fills when a pull request is merged with a
-        # merge commit, so it has nothing to govern in a repository that disallows the method. The
-        # setting is retained by GitHub while the checkbox is unchecked, which means an unrelated
-        # value here is inert rather than a misconfiguration.
-        allow_merge_commit_value = GetRestrictedValue(
+        return EvaluateCommitMessage(
+            _SETTING,
+            cast(Values, requirement_data["value"]),
+            rationale,
             module,
             self,
             query_data,
-            "allow_merge_commit",
-            "merge commit message settings",
         )
 
-        if isinstance(allow_merge_commit_value, EvaluateResult):
-            return allow_merge_commit_value
-
-        if not allow_merge_commit_value:
-            return EvaluateResult(
-                EvaluateResultValue.DoesNotApply,
-                "The repository does not allow merge commits, so no default merge commit message is offered.",
-                None,
-                rationale,
-                self,
-                module,
-            )
-
-        # The two fields are reported together, so a single visibility check covers both.
-        merge_commit_title_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            "merge_commit_title",
-            "merge commit message settings",
-        )
-
-        if isinstance(merge_commit_title_value, EvaluateResult):
-            return merge_commit_title_value
-
-        merge_commit_message_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            "merge_commit_message",
-            "merge commit message settings",
-        )
-
-        if isinstance(merge_commit_message_value, EvaluateResult):
-            return merge_commit_message_value
-
-        if merge_commit_title_value != expected_title or merge_commit_message_value != expected_message:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Pull Requests** section.
-                3) Ensure that the **Allow merge commits** checkbox is checked.
-                4) Select **{_UI_LABELS[value]}** in the dropdown beneath it.
-
-                See [Configuring commit merging for pull requests](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-merging-for-pull-requests)
-                for more information.
-                """,
-            )
-
-            # The dropdown label is reported rather than the API values, because the label is what
-            # the user sees in the settings page and what the resolution asks them to select.
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's default merge commit message is {_GetUILabel(merge_commit_title_value, merge_commit_message_value)}, but the requirement specifies it must be '{_UI_LABELS[value]}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)
-
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-# GitHub presents this setting as a single dropdown, but the API models it as a pair of fields whose
-# values do not resemble the dropdown labels. Only these three pairings are reachable through the
-# UI, so a repository reporting any other pairing was configured through the API.
-_API_VALUES: dict[Values, tuple[str, str]] = {
-    Values.DefaultMessage: ("MERGE_MESSAGE", "PR_TITLE"),
-    Values.PullRequestTitle: ("PR_TITLE", "BLANK"),
-    Values.PullRequestTitleAndDescription: ("PR_TITLE", "PR_BODY"),
-}
-
-
-# ----------------------------------------------------------------------
-# The dropdown label GitHub shows for each value, used to describe what the user must select.
-_UI_LABELS: dict[Values, str] = {
-    Values.DefaultMessage: "Default message",
-    Values.PullRequestTitle: "Pull request title",
-    Values.PullRequestTitleAndDescription: "Pull request title and description",
-}
-
-
-# ----------------------------------------------------------------------
-_UI_LABELS_BY_API_VALUES: dict[tuple[str, str], str] = {
-    api_values: _UI_LABELS[value] for value, api_values in _API_VALUES.items()
-}
+_SETTING = CommitMessageSetting(
+    {
+        Values.DefaultMessage: ("MERGE_MESSAGE", "PR_TITLE"),
+        Values.PullRequestTitle: ("PR_TITLE", "BLANK"),
+        Values.PullRequestTitleAndDescription: ("PR_TITLE", "PR_BODY"),
+    },
+    {
+        Values.DefaultMessage: "Default message",
+        Values.PullRequestTitle: "Pull request title",
+        Values.PullRequestTitleAndDescription: "Pull request title and description",
+    },
+    "allow_merge_commit",
+    "merge_commit_title",
+    "merge_commit_message",
+    "merge commit",
+    "merge commits",
+    "Allow merge commits",
+    "Configuring commit merging for pull requests",
+    "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-merging-for-pull-requests",
+)
