@@ -36,7 +36,7 @@ class GitHubModule(Module):
                 OptionInfo(help="[REQUIRED] GitHub  URL (e.g. https://github.com/gt-csse/RepoAuditorWeb)."),
             ),
             "pat": TyperParameter(
-                str | None,  # ty: ignore[invalid-argument-type]
+                str | None,
                 None,
                 OptionInfo(
                     help="GitHub Personal Access Token (PAT) or path to a local file containing the PAT.",
@@ -44,7 +44,7 @@ class GitHubModule(Module):
                 ),
             ),
             "branch": TyperParameter(
-                str | None,  # ty: ignore[invalid-argument-type]
+                str | None,
                 None,
                 OptionInfo(help="Branch to evaluate. The default branch will be used if not specified."),
             ),

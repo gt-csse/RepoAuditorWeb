@@ -147,6 +147,8 @@ def ParseValues(
 _INCLUDE_PARAMETER_NAME = "include"
 _SKIP_PARAMETER_NAME = "skip"
 
+_LIST_DELIMITER = ","
+
 # A parameter that a module requires but declares a default for (so that its absence is reported by
 # the module rather than by the command line) says so at the beginning of its help text.
 _REQUIRED_HELP_PREFIX = "[REQUIRED]"
@@ -204,7 +206,9 @@ def _CreateField(
         choices = [member.value for member in resolved_type]
         value = value.value if isinstance(value, enum.Enum) else value
     elif field_type == FieldType.List:
-        value = list(value) if isinstance(value, list | tuple) else []
+        # A control is addressed by a single string, so the items of a list are displayed and
+        # submitted as one comma-delimited value.
+        value = _LIST_DELIMITER.join(str(item) for item in value) if isinstance(value, list | tuple) else ""
     elif field_type == FieldType.Boolean:
         value = bool(value)
     elif value is None:
@@ -225,7 +229,7 @@ def _CreateField(
 
 
 # ----------------------------------------------------------------------
-def _ResolveType(parameter_type: type) -> type:
+def _ResolveType(parameter_type: type | UnionType) -> type:
     """Return the meaningful type of an optional parameter (e.g. 'str' for 'str | None')."""
 
     if isinstance(parameter_type, UnionType):
@@ -266,13 +270,24 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
         return bool(value)
 
     if field_type == FieldType.List:
-        if not isinstance(value, list | tuple):
-            return parameter.default
+        items = (
+            list(value)
+            if isinstance(value, list | tuple)
+            else [item for item in (item.strip() for item in str(value).split(_LIST_DELIMITER)) if item]
+        )
+
+        # An empty control means the value was not provided, which is distinct from an empty list.
+        if not items:
+            if _AllowsNone(parameter.type):
+                return None
+
+            if parameter.default is not inspect.Parameter.empty:
+                return parameter.default
 
         item_types = get_args(resolved_type)
         item_type = item_types[0] if item_types else str
 
-        return [item_type(item) for item in value]
+        return [item_type(item) for item in items]
 
     if field_type == FieldType.Choice:
         return resolved_type(value)
@@ -299,5 +314,5 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
 
 
 # ----------------------------------------------------------------------
-def _AllowsNone(parameter_type: type) -> bool:
+def _AllowsNone(parameter_type: type | UnionType) -> bool:
     return isinstance(parameter_type, UnionType) and type(None) in get_args(parameter_type)
