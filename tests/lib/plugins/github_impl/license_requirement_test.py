@@ -69,7 +69,10 @@ def test_Construct():
     requirement = LicenseRequirement()
 
     assert requirement.name == "License"
-    assert requirement.description == "Requirement to validate a repository's license."
+    assert (
+        requirement.description
+        == "Validates the license GitHub detects from the repository's LICENSE file; without one, default copyright law reserves all rights to the author."
+    )
     assert requirement.requires_explicit_include is False
 
 

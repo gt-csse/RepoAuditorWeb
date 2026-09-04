@@ -68,7 +68,10 @@ def test_Construct():
     requirement = DescriptionRequirement()
 
     assert requirement.name == "Description"
-    assert requirement.description == "Requirement to validate a repository's description."
+    assert (
+        requirement.description
+        == "Validates the repository's description, the About section text searched alongside the name and topics when no qualifier is given."
+    )
     assert requirement.requires_explicit_include is False
 
 

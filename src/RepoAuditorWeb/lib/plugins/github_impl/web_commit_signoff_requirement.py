@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class WebCommitSignoffRequirement(Requirement):
-    """Requirement to validate a repository's web commit signoff status."""
+    """Validates whether contributors must sign off on commits made through GitHub's web interface; commits made from the command line are unaffected."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
@@ -27,10 +27,10 @@ class WebCommitSignoffRequirement(Requirement):
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
-            "no": TyperParameter(
+            "enforce": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help="Do not require web commit signoffs."),
+                OptionInfo(help="Require contributors to sign off on web-based commits."),
             ),
         }
 
@@ -45,34 +45,34 @@ class WebCommitSignoffRequirement(Requirement):
         web_commit_signoff_value = cast(
             bool, cast(dict, query_data["response"]).get("web_commit_signoff_required", False)
         )
-        acceptable_value = not requirement_data["no"]
+        acceptable_value = requirement_data["enforce"]
 
         rationale = textwrap.dedent(
             """\
-            The default behavior is to require contributors to sign off on web-based commits, which
-            causes GitHub to append a `Signed-off-by` trailer to every commit made through its web
-            interface.
+            The default behavior is to not require contributors to sign off on web-based commits. When
+            the requirement is enabled, GitHub's web interface tells the contributor that committing
+            also constitutes signing off, and appends a `Signed-off-by` trailer on their behalf.
 
             ## Reasons for this Default
-
-            - Projects that enforce a signoff policy typically verify it with a status check that fails
-              when a trailer is missing. Contributors editing through the web interface have no
-              opportunity to pass `--signoff`, so the check fails after the fact and recovering from it
-              requires rewriting history.
-            - The trailer is the same one produced by `git commit --signoff`, so enabling this keeps the
-              history uniform regardless of where a commit originated.
-
-            ## Reasons to Override this Default
 
             - The project has no signoff policy, in which case the trailer asserts a certification
               (commonly the [Developer Certificate of Origin](https://developercertificate.org/)) that
               the project does not actually require.
-            - The project requires that contributors add the trailer deliberately rather than have it
-              applied on their behalf, because doing so certifies that they hold the rights to submit
-              the change and accepts that the record is retained indefinitely.
+            - The project wants signing off to be a separate, deliberate act rather than a side effect
+              of committing, because the trailer certifies that the contributor holds the rights to
+              submit the change and the record is retained indefinitely.
 
-            Note that this setting governs only the web interface; commits made from the command line
-            are unaffected, so it does not by itself guarantee that every commit is signed off.
+            ## Reasons to Override this Default
+
+            - Projects that enforce a signoff policy typically verify it with a status check that fails
+              when a trailer is missing. Contributors editing through the web interface cannot pass
+              `--signoff`, so the check fails after the fact and recovering from it requires rewriting
+              history.
+            - The trailer is the same one produced by `git commit --signoff`, so requiring it makes
+              web-based commits consistent with signed-off commits made from the command line.
+
+            Note that this requirement governs only the web interface; commits made from the command
+            line are unaffected, so it does not by itself guarantee that every commit is signed off.
             """,
         )
 
@@ -94,7 +94,7 @@ class WebCommitSignoffRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The repository's web commit signoff value is '{web_commit_signoff_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                f"The repository's value is '{web_commit_signoff_value}', but the requirement specifies it must be '{acceptable_value}'.",
                 resolution,
                 rationale,
                 self,

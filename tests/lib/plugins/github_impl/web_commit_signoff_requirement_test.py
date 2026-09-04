@@ -14,30 +14,30 @@ from conftest import MyModule, MyQuery
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
     """\
-    The default behavior is to require contributors to sign off on web-based commits, which
-    causes GitHub to append a `Signed-off-by` trailer to every commit made through its web
-    interface.
+    The default behavior is to not require contributors to sign off on web-based commits. When
+    the requirement is enabled, GitHub's web interface tells the contributor that committing
+    also constitutes signing off, and appends a `Signed-off-by` trailer on their behalf.
 
     ## Reasons for this Default
-
-    - Projects that enforce a signoff policy typically verify it with a status check that fails
-      when a trailer is missing. Contributors editing through the web interface have no
-      opportunity to pass `--signoff`, so the check fails after the fact and recovering from it
-      requires rewriting history.
-    - The trailer is the same one produced by `git commit --signoff`, so enabling this keeps the
-      history uniform regardless of where a commit originated.
-
-    ## Reasons to Override this Default
 
     - The project has no signoff policy, in which case the trailer asserts a certification
       (commonly the [Developer Certificate of Origin](https://developercertificate.org/)) that
       the project does not actually require.
-    - The project requires that contributors add the trailer deliberately rather than have it
-      applied on their behalf, because doing so certifies that they hold the rights to submit
-      the change and accepts that the record is retained indefinitely.
+    - The project wants signing off to be a separate, deliberate act rather than a side effect
+      of committing, because the trailer certifies that the contributor holds the rights to
+      submit the change and the record is retained indefinitely.
 
-    Note that this setting governs only the web interface; commits made from the command line
-    are unaffected, so it does not by itself guarantee that every commit is signed off.
+    ## Reasons to Override this Default
+
+    - Projects that enforce a signoff policy typically verify it with a status check that fails
+      when a trailer is missing. Contributors editing through the web interface cannot pass
+      `--signoff`, so the check fails after the fact and recovering from it requires rewriting
+      history.
+    - The trailer is the same one produced by `git commit --signoff`, so requiring it makes
+      web-based commits consistent with signed-off commits made from the command line.
+
+    Note that this requirement governs only the web interface; commits made from the command
+    line are unaffected, so it does not by itself guarantee that every commit is signed off.
     """,
 )
 
@@ -58,7 +58,7 @@ def _CreateModule(requirement: WebCommitSignoffRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    no: bool = False,
+    enforce: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
     requirement = WebCommitSignoffRequirement()
@@ -66,7 +66,7 @@ def _Evaluate(
     return requirement.Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
-        {"skip": False, "no": no},
+        {"skip": False, "enforce": enforce},
     )
 
 
@@ -75,7 +75,10 @@ def test_Construct():
     requirement = WebCommitSignoffRequirement()
 
     assert requirement.name == "WebCommitSignoff"
-    assert requirement.description == "Requirement to validate a repository's web commit signoff status."
+    assert (
+        requirement.description
+        == "Validates whether contributors must sign off on commits made through GitHub's web interface; commits made from the command line are unaffected."
+    )
     assert requirement.requires_explicit_include is False
 
 
@@ -83,19 +86,21 @@ def test_Construct():
 def test_GetParameters():
     parameters = WebCommitSignoffRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "no"]
-    assert parameters["no"].type is bool
-    assert parameters["no"].default is False
+    assert list(parameters.keys()) == ["skip", "enforce"]
+    assert parameters["enforce"].type is bool
+    assert parameters["enforce"].default is False
 
 
 # ----------------------------------------------------------------------
-# 'no' inverts the expected value, so signoff is required by default.
 @pytest.mark.parametrize(
-    ("web_commit_signoff_required", "no"),
-    [(True, False), (False, True)],
+    ("web_commit_signoff_required", "enforce"),
+    [(False, False), (True, True)],
 )
-def test_MatchingValue(web_commit_signoff_required, no):
-    result = _Evaluate({"web_commit_signoff_required": web_commit_signoff_required}, no=no)
+def test_MatchingValue(web_commit_signoff_required, enforce):
+    result = _Evaluate(
+        {"web_commit_signoff_required": web_commit_signoff_required},
+        enforce=enforce,
+    )
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -105,7 +110,7 @@ def test_MatchingValue(web_commit_signoff_required, no):
 # The rationale explains the default regardless of the outcome, so it is present on success even
 # though there is nothing to resolve.
 def test_SuccessRationale():
-    result = _Evaluate({"web_commit_signoff_required": True})
+    result = _Evaluate({"web_commit_signoff_required": False})
 
     assert result.resolution is None
     assert result.rationale == _RATIONALE
@@ -113,25 +118,7 @@ def test_SuccessRationale():
 
 # ----------------------------------------------------------------------
 def test_ErrorResolutionAndRationale():
-    result = _Evaluate({"web_commit_signoff_required": False})
-
-    assert result.resolution == textwrap.dedent(
-        f"""\
-        1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
-        2) Scroll to the **Commits** section.
-        3) Check the **Require contributors to sign off on web-based commits** checkbox.
-
-        See [Managing the commit signoff policy for your repository]({_DOCUMENTATION_URL})
-        for more information.
-        """,
-    )
-    assert result.rationale == _RATIONALE
-
-
-# ----------------------------------------------------------------------
-# The resolution directs the user to uncheck the setting when signoff is not required.
-def test_ErrorResolutionWhenNotRequired():
-    result = _Evaluate({"web_commit_signoff_required": True}, no=True)
+    result = _Evaluate({"web_commit_signoff_required": True})
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -143,55 +130,70 @@ def test_ErrorResolutionWhenNotRequired():
         for more information.
         """,
     )
+    assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
-def test_SignoffNotEnabledWhenRequired():
-    result = _Evaluate({"web_commit_signoff_required": False})
+# The resolution directs the user to check the setting when signoff is enforced.
+def test_ErrorResolutionWhenEnforced():
+    result = _Evaluate({"web_commit_signoff_required": False}, enforce=True)
 
-    assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's web commit signoff value is 'False', but the requirement specifies it must be"
-        " 'True'."
+    assert result.resolution == textwrap.dedent(
+        f"""\
+        1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
+        2) Scroll to the **Commits** section.
+        3) Check the **Require contributors to sign off on web-based commits** checkbox.
+
+        See [Managing the commit signoff policy for your repository]({_DOCUMENTATION_URL})
+        for more information.
+        """,
     )
 
 
 # ----------------------------------------------------------------------
-def test_SignoffEnabledWhenNotRequired():
-    result = _Evaluate({"web_commit_signoff_required": True}, no=True)
+def test_SignoffNotEnabledWhenEnforced():
+    result = _Evaluate({"web_commit_signoff_required": False}, enforce=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's web commit signoff value is 'True', but the requirement specifies it must be"
-        " 'False'."
+        "The repository's value is 'False', but the requirement specifies it must be 'True'."
     )
 
 
 # ----------------------------------------------------------------------
-# An absent key is treated as False, so it fails when signoff is required.
+def test_SignoffEnabledWhenNotEnforced():
+    result = _Evaluate({"web_commit_signoff_required": True})
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The repository's value is 'True', but the requirement specifies it must be 'False'."
+    )
+
+
+# ----------------------------------------------------------------------
+# An absent key is treated as False, so it satisfies a requirement of False.
 def test_MissingValue():
     result = _Evaluate({})
-
-    assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's web commit signoff value is 'False', but the requirement specifies it must be"
-        " 'True'."
-    )
-
-
-# ----------------------------------------------------------------------
-def test_MissingValueWhenNotRequired():
-    result = _Evaluate({}, no=True)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
 
 
 # ----------------------------------------------------------------------
+def test_MissingValueWhenEnforced():
+    result = _Evaluate({}, enforce=True)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+    )
+
+
+# ----------------------------------------------------------------------
 def test_Skip():
     requirement = WebCommitSignoffRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "no": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "enforce": False})
 
     assert result.result == EvaluateResultValue.Skipped
 
@@ -201,7 +203,7 @@ def test_Skip():
 # at an Enterprise host when one is being audited.
 def test_ResolutionUsesEnterpriseUrl():
     result = _Evaluate(
-        {"web_commit_signoff_required": False},
+        {"web_commit_signoff_required": True},
         url="https://github.example.com/my-org/my-repo",
     )
 

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class LicenseRequirement(Requirement):
-    """Requirement to validate a repository's license."""
+    """Validates the license GitHub detects from the repository's LICENSE file; without one, default copyright law reserves all rights to the author."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

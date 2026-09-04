@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class TemplateRequirement(Requirement):
-    """Requirement to validate a repository's template status."""
+    """Validates whether the repository is a template, which generates new repositories with unrelated histories rather than forks."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
@@ -89,7 +89,7 @@ class TemplateRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The repository's template status is '{is_template_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                f"The repository's value is '{is_template_value}', but the requirement specifies it must be '{acceptable_value}'.",
                 resolution,
                 rationale,
                 self,

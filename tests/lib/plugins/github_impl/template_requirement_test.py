@@ -70,7 +70,10 @@ def test_Construct():
     requirement = TemplateRequirement()
 
     assert requirement.name == "Template"
-    assert requirement.description == "Requirement to validate a repository's template status."
+    assert (
+        requirement.description
+        == "Validates whether the repository is a template, which generates new repositories with unrelated histories rather than forks."
+    )
     assert requirement.requires_explicit_include is False
 
 
@@ -161,7 +164,7 @@ def test_TemplateWhenNotRequired():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's template status is 'True', but the requirement specifies it must be 'False'."
+        "The repository's value is 'True', but the requirement specifies it must be 'False'."
     )
 
 
@@ -171,7 +174,7 @@ def test_NotTemplateWhenRequired():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's template status is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement specifies it must be 'True'."
     )
 
 
@@ -190,7 +193,7 @@ def test_MissingStatusWhenRequired():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's template status is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement specifies it must be 'True'."
     )
 
 
