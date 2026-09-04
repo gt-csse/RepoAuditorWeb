@@ -245,7 +245,7 @@ _STYLE = textwrap.dedent(
     .module-fields > summary .pill.skipped,
     .requirement-fields > summary .pill.skipped { color: var(--skipped); }
 
-    input[type="text"], input[type="number"], select, textarea {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       /* Widening a control past what its value can occupy makes it harder to read, not easier. */
       max-width: 60ch;
@@ -256,8 +256,6 @@ _STYLE = textwrap.dedent(
       color: var(--fg);
       font: inherit;
     }
-
-    textarea { min-height: 64px; resize: vertical; font-family: ui-monospace, monospace; }
 
     input[type="checkbox"] { width: 16px; height: 16px; margin-top: 6px; }
 
@@ -542,20 +540,14 @@ _SCRIPT = textwrap.dedent(
         return select;
       }
 
-      if (field.type === "list") {
-        const textarea = document.createElement("textarea");
-        textarea.value = (field.value || []).join("\\n");
-        textarea.placeholder = "One value per line";
-        readers.set(
-          field.name,
-          () => textarea.value.split("\\n").map((v) => v.trim()).filter((v) => v.length > 0),
-        );
-        return textarea;
-      }
-
       const input = document.createElement("input");
 
-      if (field.type === "integer" || field.type === "number") {
+      if (field.type === "list") {
+        input.type = "text";
+        // The value is split on commas by the server, so what separates the items is displayed
+        // rather than left to be inferred from the value the field started with.
+        input.placeholder = "Comma-delimited values";
+      } else if (field.type === "integer" || field.type === "number") {
         input.type = "number";
         if (field.type === "integer") input.step = "1";
         if (field.minimum !== null) input.min = field.minimum;

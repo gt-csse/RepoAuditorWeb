@@ -437,22 +437,29 @@ class TestFieldValues:
         assert field.value == "one"
 
     # ----------------------------------------------------------------------
+    # A control is addressed by a single string, so the items are displayed comma-delimited.
     def test_ListValue(self):
         field = _CreateField(TyperParameter(list[str], ["a", "b"]))
 
-        assert field.value == ["a", "b"]
+        assert field.value == "a,b"
 
     # ----------------------------------------------------------------------
-    def test_TupleValueBecomesAList(self):
+    def test_TupleValueIsDelimited(self):
         field = _CreateField(TyperParameter(tuple[str, ...], ("a", "b")))
 
-        assert field.value == ["a", "b"]
+        assert field.value == "a,b"
+
+    # ----------------------------------------------------------------------
+    def test_ListItemsThatAreNotStrings(self):
+        field = _CreateField(TyperParameter(list[int], [1, 2]))
+
+        assert field.value == "1,2"
 
     # ----------------------------------------------------------------------
     def test_ListValueThatIsNotASequence(self):
         field = _CreateField(TyperParameter(list[str], None))
 
-        assert field.value == []
+        assert field.value == ""
 
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize(("default", "expected"), [(True, True), (False, False), (None, False)])
@@ -517,24 +524,51 @@ class TestParseValues:
         assert _ParseValue(TyperParameter(bool, False), {"MyModule_one": submitted}) == expected
 
     # ----------------------------------------------------------------------
+    # The form submits a list as a single string, so the items are split from it.
+    def test_ListIsSplitOnCommas(self):
+        assert _ParseValue(TyperParameter(list[str], []), {"MyModule_one": "a,b"}) == ["a", "b"]
+
+    # ----------------------------------------------------------------------
+    # Delimiting the items does not require that they be written without spaces around them.
+    def test_ListItemsAreStripped(self):
+        assert _ParseValue(TyperParameter(list[str], []), {"MyModule_one": " a , b "}) == ["a", "b"]
+
+    # ----------------------------------------------------------------------
+    def test_ListItemsThatAreEmptyAreDiscarded(self):
+        assert _ParseValue(TyperParameter(list[str], []), {"MyModule_one": "a,,b,"}) == ["a", "b"]
+
+    # ----------------------------------------------------------------------
+    def test_SingleItemList(self):
+        assert _ParseValue(TyperParameter(list[str], []), {"MyModule_one": "a"}) == ["a"]
+
+    # ----------------------------------------------------------------------
     # The form submits every value as a string, so each item is converted to the declared item type.
     def test_ListItemsAreConverted(self):
-        assert _ParseValue(TyperParameter(list[int], []), {"MyModule_one": ["1", "2"]}) == [1, 2]
+        assert _ParseValue(TyperParameter(list[int], []), {"MyModule_one": "1,2"}) == [1, 2]
 
     # ----------------------------------------------------------------------
     # A tuple declares its item type first, so the ellipsis that follows is not mistaken for one.
     def test_TupleItemsAreConverted(self):
-        assert _ParseValue(TyperParameter(tuple[int, ...], ()), {"MyModule_one": ["1", "2"]}) == [1, 2]
+        assert _ParseValue(TyperParameter(tuple[int, ...], ()), {"MyModule_one": "1,2"}) == [1, 2]
 
     # ----------------------------------------------------------------------
-    def test_ListFromATuple(self):
+    # A value that arrives as a sequence rather than as a string needs no splitting.
+    def test_ListFromASequence(self):
         assert _ParseValue(TyperParameter(list[str], []), {"MyModule_one": ("a", "b")}) == ["a", "b"]
 
     # ----------------------------------------------------------------------
-    def test_ListThatIsNotASequenceRestoresTheDefault(self):
-        value = _ParseValue(TyperParameter(list[str], ["default"]), {"MyModule_one": None})
+    def test_EmptyListRestoresTheDefault(self):
+        assert _ParseValue(TyperParameter(list[str], ["default"]), {"MyModule_one": ""}) == ["default"]
 
-        assert value == ["default"]
+    # ----------------------------------------------------------------------
+    def test_EmptyListWithNoDefault(self):
+        value = _ParseValue(TyperParameter(list[str], inspect.Parameter.empty), {"MyModule_one": ""})
+
+        assert value == []
+
+    # ----------------------------------------------------------------------
+    def test_EmptyOptionalList(self):
+        assert _ParseValue(TyperParameter(list[str] | None, ["default"]), {"MyModule_one": ""}) is None
 
     # ----------------------------------------------------------------------
     def test_Choice(self):
