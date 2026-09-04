@@ -85,7 +85,7 @@ def test_Construct():
     assert requirement.name == "SuggestUpdatingPullRequestBranches"
     assert (
         requirement.description
-        == "Validates whether the update branch control is offered on every pull request whose branch is behind its base branch; the update it performs produces commits that GitHub does not sign."
+        == "Validates whether the update branch control is offered on pull requests behind their base branch; the update produces commits that GitHub does not sign."
     )
     assert requirement.requires_explicit_include is False
 

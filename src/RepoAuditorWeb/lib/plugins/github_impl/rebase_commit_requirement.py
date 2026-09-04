@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class RebaseCommitRequirement(Requirement):
-    """Validates whether pull requests can be merged by rebasing; the method replays the branch's commits onto the base branch as new commits, so their signatures do not reach it and GitHub cannot replace them."""
+    """Validates whether pull requests can be merged by rebasing; the method replays commits onto the base branch as new commits, dropping their signatures."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

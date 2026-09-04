@@ -88,7 +88,7 @@ def test_Construct():
     assert requirement.name == "SupportPullRequests"
     assert (
         requirement.description
-        == "Validates whether the repository's pull requests are enabled; pull requests are how proposed changes are reviewed and are the only way a user without write access can contribute code."
+        == "Validates whether the repository's pull requests are enabled; they are the only way a user without write access can contribute code."
     )
     assert requirement.requires_explicit_include is False
 

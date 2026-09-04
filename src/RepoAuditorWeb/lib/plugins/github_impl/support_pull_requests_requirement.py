@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class SupportPullRequestsRequirement(Requirement):
-    """Validates whether the repository's pull requests are enabled; pull requests are how proposed changes are reviewed and are the only way a user without write access can contribute code."""
+    """Validates whether the repository's pull requests are enabled; they are the only way a user without write access can contribute code."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
