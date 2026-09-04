@@ -5,6 +5,7 @@ import requests
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.support_issues_requirement import SupportIssuesRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.support_wikis_requirement import SupportWikisRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.template_requirement import TemplateRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.web_commit_signoff_requirement import WebCommitSignoffRequirement
@@ -29,6 +30,7 @@ class StandardQuery(Query):
                 DefaultBranchRequirement(),
                 # settings page (Features)
                 SupportWikisRequirement(),
+                SupportIssuesRequirement(),
             ],
         )
 

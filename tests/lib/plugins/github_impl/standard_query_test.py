@@ -42,6 +42,7 @@ def test_Construct():
         "WebCommitSignoff",
         "DefaultBranch",
         "SupportWikis",
+        "SupportIssues",
     ]
 
 
