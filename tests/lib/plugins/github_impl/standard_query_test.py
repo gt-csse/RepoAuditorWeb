@@ -40,6 +40,7 @@ def test_Construct():
         "License",
         "Template",
         "WebCommitSignoff",
+        "DefaultBranch",
     ]
 
 

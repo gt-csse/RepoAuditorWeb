@@ -2,6 +2,7 @@ from typing import cast, override
 
 import requests
 
+from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.template_requirement import TemplateRequirement
@@ -24,6 +25,7 @@ class StandardQuery(Query):
                 # settings page
                 TemplateRequirement(),
                 WebCommitSignoffRequirement(),
+                DefaultBranchRequirement(),
             ],
         )
 
