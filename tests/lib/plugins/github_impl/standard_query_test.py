@@ -44,6 +44,8 @@ def test_Construct():
         "SupportWikis",
         "SupportIssues",
         "SupportDiscussions",
+        "SupportProjects",
+        "SupportPullRequests",
     ]
 
 
