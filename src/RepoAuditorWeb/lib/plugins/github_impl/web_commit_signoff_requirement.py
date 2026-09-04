@@ -27,10 +27,12 @@ class WebCommitSignoffRequirement(Requirement):
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
-            "enforce": TyperParameter(
+            "require": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help="Require contributors to sign off on web-based commits."),
+                OptionInfo(
+                    help="Require that contributors must sign off on web-based commits.",
+                ),
             ),
         }
 
@@ -45,7 +47,7 @@ class WebCommitSignoffRequirement(Requirement):
         web_commit_signoff_value = cast(
             bool, cast(dict, query_data["response"]).get("web_commit_signoff_required", False)
         )
-        acceptable_value = requirement_data["enforce"]
+        acceptable_value = cast(bool, requirement_data["require"])
 
         rationale = textwrap.dedent(
             """\
