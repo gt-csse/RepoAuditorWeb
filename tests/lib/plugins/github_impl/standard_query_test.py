@@ -49,6 +49,7 @@ def test_Construct():
         "MergeCommit",
         "MergeCommitMessage",
         "SquashCommit",
+        "SquashCommitMessage",
     ]
 
 
