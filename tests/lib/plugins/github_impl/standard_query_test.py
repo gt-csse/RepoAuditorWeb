@@ -43,6 +43,7 @@ def test_Construct():
         "DefaultBranch",
         "SupportWikis",
         "SupportIssues",
+        "SupportDiscussions",
     ]
 
 
