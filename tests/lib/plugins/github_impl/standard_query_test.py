@@ -53,6 +53,7 @@ def test_Construct():
         "RebaseCommit",
         "SuggestUpdatingPullRequestBranches",
         "AutoMerge",
+        "DeleteBranchOnMerge",
     ]
 
 
