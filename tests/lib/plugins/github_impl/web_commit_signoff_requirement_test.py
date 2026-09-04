@@ -58,7 +58,7 @@ def _CreateModule(requirement: WebCommitSignoffRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    enforce: bool = False,
+    require: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
     requirement = WebCommitSignoffRequirement()
@@ -66,7 +66,7 @@ def _Evaluate(
     return requirement.Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
-        {"skip": False, "enforce": enforce},
+        {"skip": False, "require": require},
     )
 
 
@@ -86,20 +86,20 @@ def test_Construct():
 def test_GetParameters():
     parameters = WebCommitSignoffRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "enforce"]
-    assert parameters["enforce"].type is bool
-    assert parameters["enforce"].default is False
+    assert list(parameters.keys()) == ["skip", "require"]
+    assert parameters["require"].type is bool
+    assert parameters["require"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("web_commit_signoff_required", "enforce"),
+    ("web_commit_signoff_required", "require"),
     [(False, False), (True, True)],
 )
-def test_MatchingValue(web_commit_signoff_required, enforce):
+def test_MatchingValue(web_commit_signoff_required, require):
     result = _Evaluate(
         {"web_commit_signoff_required": web_commit_signoff_required},
-        enforce=enforce,
+        require=require,
     )
 
     assert result.result == EvaluateResultValue.Success
@@ -134,9 +134,9 @@ def test_ErrorResolutionAndRationale():
 
 
 # ----------------------------------------------------------------------
-# The resolution directs the user to check the setting when signoff is enforced.
-def test_ErrorResolutionWhenEnforced():
-    result = _Evaluate({"web_commit_signoff_required": False}, enforce=True)
+# The resolution directs the user to check the setting when signoff is required.
+def test_ErrorResolutionWhenRequired():
+    result = _Evaluate({"web_commit_signoff_required": False}, require=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -151,8 +151,8 @@ def test_ErrorResolutionWhenEnforced():
 
 
 # ----------------------------------------------------------------------
-def test_SignoffNotEnabledWhenEnforced():
-    result = _Evaluate({"web_commit_signoff_required": False}, enforce=True)
+def test_SignoffNotEnabledWhenRequired():
+    result = _Evaluate({"web_commit_signoff_required": False}, require=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -180,8 +180,8 @@ def test_MissingValue():
 
 
 # ----------------------------------------------------------------------
-def test_MissingValueWhenEnforced():
-    result = _Evaluate({}, enforce=True)
+def test_MissingValueWhenRequired():
+    result = _Evaluate({}, require=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -193,7 +193,7 @@ def test_MissingValueWhenEnforced():
 def test_Skip():
     requirement = WebCommitSignoffRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "enforce": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "require": False})
 
     assert result.result == EvaluateResultValue.Skipped
 
