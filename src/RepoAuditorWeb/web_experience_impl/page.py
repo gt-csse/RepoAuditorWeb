@@ -212,6 +212,19 @@ _STYLE = textwrap.dedent(
     .module-fields[open] > summary::before,
     .requirement-fields[open] > summary::before { transform: rotate(90deg); }
 
+    /* The description accompanies the name rather than competing with it, and yields its width to
+       the name and the pill so that neither is displaced by a long one. */
+    .module-fields > summary .description,
+    .requirement-fields > summary .description {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     /* The pill is pushed to the trailing edge so that the state of every module and requirement can
        be read down a single column rather than at the end of names of differing length. */
     .module-fields > summary .pill,
@@ -622,6 +635,15 @@ _SCRIPT = textwrap.dedent(
       name.className = "name";
       name.textContent = container.name;
       summary.appendChild(name);
+
+      // The description belongs to the summary rather than to the body so that what a module or
+      // requirement does is apparent without expanding it.
+      if (container.description) {
+        const description = document.createElement("span");
+        description.className = "description";
+        description.textContent = container.description;
+        summary.appendChild(description);
+      }
 
       details.appendChild(summary);
 

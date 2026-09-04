@@ -69,9 +69,13 @@ class DynamicParameters:
 
         dynamic_parameters: dict[str, TyperParameter] = {}
         argument_lookup: dict[str, ArgumentInfo] = {}
+        description_lookup: dict[str, dict[str | None, str]] = {}
 
         for module in modules:
             module_name = ValidateName(module.name)
+
+            descriptions = description_lookup.setdefault(module.name, {})
+            descriptions[None] = module.description
 
             for parameter_name, parameter in module.GetParameters().items():
                 full_parameter_name = f"{module_name}_{ValidateName(parameter_name, allow_underscore=True)}"
@@ -89,6 +93,8 @@ class DynamicParameters:
                 for requirement in query.requirements:
                     prefix = f"{module_name}_{ValidateName(requirement.name)}_"
 
+                    descriptions[requirement.name] = requirement.description
+
                     for parameter_name, parameter in requirement.GetParameters().items():
                         full_parameter_name = f"{prefix}{ValidateName(parameter_name, allow_underscore=True)}"
 
@@ -105,6 +111,7 @@ class DynamicParameters:
 
         self.dynamic_parameters = dynamic_parameters
         self.argument_lookup = argument_lookup
+        self.description_lookup = description_lookup
 
     # ----------------------------------------------------------------------
     def Parse(

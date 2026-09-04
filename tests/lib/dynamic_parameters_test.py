@@ -103,6 +103,27 @@ class TestDynamicParameters:
         assert list(parameters.keys()) == ["One_skip", "One_a", "Two_skip", "Two_b"]
 
     # ----------------------------------------------------------------------
+    # A description belongs to the module or requirement rather than to any of its parameters, so a
+    # module's is keyed by None and each requirement's by its name.
+    def test_Descriptions(self):
+        module = MyModule(
+            "MyModule",
+            "My module description.",
+            [MyQuery("MyQuery", [MyRequirement("MyRequirement", "My requirement description.")])],
+        )
+
+        assert DynamicParameters([module]).description_lookup == {
+            "MyModule": {
+                None: "My module description.",
+                "MyRequirement": "My requirement description.",
+            },
+        }
+
+    # ----------------------------------------------------------------------
+    def test_DescriptionsAreEmptyWithoutModules(self):
+        assert DynamicParameters([]).description_lookup == {}
+
+    # ----------------------------------------------------------------------
     def test_ParameterNamesMayContainUnderscores(self):
         parameters = DynamicParameters(
             [_CreateModule(parameters={"one_two_three": TyperParameter(int, 1, OptionInfo())})],
