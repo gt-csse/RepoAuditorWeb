@@ -9,6 +9,7 @@ from RepoAuditorWeb.lib.plugins.github_impl.merge_commit_message_requirement imp
     MergeCommitMessageRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.merge_commit_requirement import MergeCommitRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.rebase_commit_requirement import RebaseCommitRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_message_requirement import (
     SquashCommitMessageRequirement,
 )
@@ -56,6 +57,7 @@ class StandardQuery(Query):
                 MergeCommitMessageRequirement(),
                 SquashCommitRequirement(),
                 SquashCommitMessageRequirement(),
+                RebaseCommitRequirement(),
             ],
         )
 
