@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_requirement import SquashCommitRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.squash_commit import SquashCommitRequirement
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery

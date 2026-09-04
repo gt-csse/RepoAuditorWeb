@@ -2,38 +2,50 @@ from typing import cast, override
 
 import requests
 
-from RepoAuditorWeb.lib.plugins.github_impl.auto_merge_requirement import AutoMergeRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.delete_branch_on_merge_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.auto_merge import AutoMergeRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.default_branch import (
+    DefaultBranchRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.delete_branch_on_merge import (
     DeleteBranchOnMergeRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.merge_commit_message_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.description import DescriptionRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.license import LicenseRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit_message import (
     MergeCommitMessageRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.merge_commit_requirement import MergeCommitRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.rebase_commit_requirement import RebaseCommitRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_message_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit import MergeCommitRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.rebase_commit import (
+    RebaseCommitRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.squash_commit_message import (
     SquashCommitMessageRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_requirement import SquashCommitRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.suggest_updating_pull_request_branches_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.squash_commit import (
+    SquashCommitRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.suggest_updating_pull_request_branches import (
     SuggestUpdatingPullRequestBranchesRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.support_discussions_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_discussions import (
     SupportDiscussionsRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.support_issues_requirement import SupportIssuesRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.support_projects_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_issues import (
+    SupportIssuesRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_projects import (
     SupportProjectsRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.support_pull_requests_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_pull_requests import (
     SupportPullRequestsRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.support_wikis_requirement import SupportWikisRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.template_requirement import TemplateRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.web_commit_signoff_requirement import WebCommitSignoffRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_wikis import (
+    SupportWikisRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.template import TemplateRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.web_commit_signoff import (
+    WebCommitSignoffRequirement,
+)
 from RepoAuditorWeb.lib.query import Query
 
 

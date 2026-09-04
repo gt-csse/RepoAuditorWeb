@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.rebase_commit_requirement import RebaseCommitRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.rebase_commit import RebaseCommitRequirement
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery

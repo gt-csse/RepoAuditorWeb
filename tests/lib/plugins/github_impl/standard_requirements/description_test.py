@@ -2,7 +2,10 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement, Values
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.description import (
+    DescriptionRequirement,
+    Values,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 

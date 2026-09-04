@@ -2,7 +2,9 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.auto_merge_requirement import AutoMergeRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.delete_branch_on_merge import (
+    DeleteBranchOnMergeRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
@@ -10,63 +12,58 @@ from conftest import MyModule, MyQuery
 
 
 # ----------------------------------------------------------------------
-_DOCUMENTATION_URL = "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-auto-merge-for-pull-requests-in-your-repository"
+_DOCUMENTATION_URL = "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches"
 
 
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
     """\
-    The default behavior is to require that auto-merge is enabled.
+    The default behavior is to require that head branches are automatically deleted when
+    pull requests are merged.
 
     Note that this differs from the state of a newly created repository, where the setting is
     disabled.
 
     ## Reasons for this Default
 
-    - The setting relaxes nothing. Auto-merge merges only once every required review and
-      status check has passed, which are the same conditions that gate the merge button, so
-      a pull request that auto-merge lands is one that a person could have landed by hand at
-      that moment. The branch protection rules and rulesets remain the authority over what
-      may merge.
-    - Without it, a pull request that has satisfied every requirement waits on someone
-      noticing that it has. That delay is not a review of anything, since the review already
-      happened, and the branch grows staler while it lasts.
-    - Enabling it removes the incentive to sit on the merge button while checks run. Someone
-      watching a long test suite so they can merge at the end is the case the setting exists
-      to replace, and the alternative to it is a person merging from memory rather than from
-      a signal.
-    - The control is offered only on pull requests that cannot merge immediately, so it
-      cannot be used to bypass a wait that does not exist, and only users with write access
-      can enable it on a pull request.
-    - Auto-merge disables itself when someone without write access pushes to the head branch
-      or the base branch is changed, so a queued merge does not carry over to work that
-      arrived after it was queued.
-    - The setting only makes the control available. Each pull request still has to have
-      auto-merge turned on individually, so enabling it here does not cause anything to merge
-      on its own.
+    - Short-lived branches are preferable to long-lived ones. A branch that disappears when
+      its work lands cannot accumulate a second change, drift behind the base branch, or
+      become a place where work waits; deleting it on merge is what makes the short lifetime
+      the default outcome rather than something each contributor has to remember.
+    - A merged branch describes no work that is not already on the base branch, so what
+      remains is a name that outlives its meaning. The branch list is a list of work in
+      progress only if the entries that are no longer in progress leave it.
+    - Deleting the branch by hand is a step after the merge, performed by whoever notices,
+      so the branches that survive are the ones nobody attended to rather than the ones that
+      were meant to. Automating it removes the judgment from a decision that has only one
+      correct answer.
+    - Nothing is lost. The branch is restorable from the pull request that merged it, and
+      the commits are reachable from the base branch, so the ref is a convenience rather
+      than the record of the work.
+    - Deletion is skipped for a branch that another open pull request still references, and
+      open pull requests that targeted the deleted branch are retargeted to the merged pull
+      request's base branch rather than closed, so the setting does not strand work in
+      review.
+    - Branch protection rules and rulesets take precedence, so a branch that a rule protects
+      from deletion is not deleted regardless of this setting.
 
     ## Reasons to Override this Default
 
-    - The project's merge requirements do not fully describe when a merge is acceptable, and
-      a person is expected to apply judgment that no status check encodes. Auto-merge is only
-      as trustworthy as the rules it waits on, so a repository whose rules are advisory
-      should not offer it.
-    - Merges are deliberately coordinated with something outside the repository, such as a
-      release window or a deployment that a merge triggers, where landing a change as soon as
-      it is ready is the wrong outcome.
-    - The project requires signed commits and relies on the merge and squash methods, whose
-      commits GitHub signs with its own web-flow key rather than the merging user's; a
-      project that wants merges attributed to a human signature would rather they be
-      performed by hand.
+    - Branch names carry meaning beyond the merge, such as a release or integration branch
+      that is merged repeatedly and expected to persist. Rules should protect such branches,
+      but a project that has not written those rules may prefer not to rely on them.
+    - Something outside the repository reads the head branch after the merge, such as a
+      deployment, an external tracker, or a CI job that resolves the branch name rather than
+      the commit.
 
-    Note that a repository using a merge queue does not need this setting, since the queue
-    performs the merges itself once a pull request is added to it.
+    Note that the setting governs head branches in this repository only; a pull request from
+    a fork has its head branch in the fork, which this repository's setting does not control.
     """,
 )
 
 
 # ----------------------------------------------------------------------
-def _CreateModule(requirement: AutoMergeRequirement) -> MyModule:
+def _CreateModule(requirement: DeleteBranchOnMergeRequirement) -> MyModule:
     return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
 
 
@@ -78,7 +75,7 @@ def _Evaluate(
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
     pat: str | None = "my-pat",
 ) -> EvaluateResult:
-    requirement = AutoMergeRequirement()
+    requirement = DeleteBranchOnMergeRequirement()
 
     return requirement.Evaluate(
         _CreateModule(requirement),
@@ -89,19 +86,19 @@ def _Evaluate(
 
 # ----------------------------------------------------------------------
 def test_Construct():
-    requirement = AutoMergeRequirement()
+    requirement = DeleteBranchOnMergeRequirement()
 
-    assert requirement.name == "AutoMerge"
+    assert requirement.name == "DeleteBranchOnMerge"
     assert (
         requirement.description
-        == "Validates whether a pull request can be queued to merge once its requirements are met; the same reviews and status checks still apply."
+        == "Validates whether a pull request's head branch is deleted once it merges; the branch remains restorable from the pull request afterwards."
     )
     assert requirement.requires_explicit_include is False
 
 
 # ----------------------------------------------------------------------
 def test_GetParameters():
-    parameters = AutoMergeRequirement().GetParameters()
+    parameters = DeleteBranchOnMergeRequirement().GetParameters()
 
     assert list(parameters.keys()) == ["skip", "disallow"]
     assert parameters["disallow"].type is bool
@@ -110,11 +107,11 @@ def test_GetParameters():
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("allow_auto_merge", "disallow"),
+    ("delete_branch_on_merge", "disallow"),
     [(True, False), (False, True)],
 )
-def test_MatchingStatus(allow_auto_merge, disallow):
-    result = _Evaluate({"allow_auto_merge": allow_auto_merge}, disallow=disallow)
+def test_MatchingStatus(delete_branch_on_merge, disallow):
+    result = _Evaluate({"delete_branch_on_merge": delete_branch_on_merge}, disallow=disallow)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -125,46 +122,46 @@ def test_MatchingStatus(allow_auto_merge, disallow):
 # The rationale explains the default regardless of the outcome, so it is present on success even
 # though there is nothing to resolve.
 def test_SuccessRationale():
-    result = _Evaluate({"allow_auto_merge": True})
+    result = _Evaluate({"delete_branch_on_merge": True})
 
     assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
 def test_ErrorRationale():
-    result = _Evaluate({"allow_auto_merge": False})
+    result = _Evaluate({"delete_branch_on_merge": False})
 
     assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
 def test_ErrorResolution():
-    result = _Evaluate({"allow_auto_merge": False})
+    result = _Evaluate({"delete_branch_on_merge": False})
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
         2) Scroll to the **Pull Requests** section.
-        3) Check the **Allow auto-merge** checkbox.
+        3) Check the **Automatically delete head branches** checkbox.
 
-        See [Managing auto-merge for pull requests in your repository]({_DOCUMENTATION_URL})
+        See [Managing the automatic deletion of branches]({_DOCUMENTATION_URL})
         for more information.
         """,
     )
 
 
 # ----------------------------------------------------------------------
-# The resolution directs the user to uncheck the setting when auto-merge must be disabled.
+# The resolution directs the user to uncheck the setting when branch deletion must be disabled.
 def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate({"allow_auto_merge": True}, disallow=True)
+    result = _Evaluate({"delete_branch_on_merge": True}, disallow=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
         2) Scroll to the **Pull Requests** section.
-        3) Uncheck the **Allow auto-merge** checkbox.
+        3) Uncheck the **Automatically delete head branches** checkbox.
 
-        See [Managing auto-merge for pull requests in your repository]({_DOCUMENTATION_URL})
+        See [Managing the automatic deletion of branches]({_DOCUMENTATION_URL})
         for more information.
         """,
     )
@@ -174,15 +171,18 @@ def test_ErrorResolutionWhenDisallowed():
 # The settings url is derived from the repository under audit rather than hard-coded, so it points
 # at an Enterprise host when one is being audited.
 def test_ResolutionUsesEnterpriseUrl():
-    result = _Evaluate({"allow_auto_merge": False}, url="https://github.example.com/my-org/my-repo")
+    result = _Evaluate(
+        {"delete_branch_on_merge": False},
+        url="https://github.example.com/my-org/my-repo",
+    )
 
     assert result.resolution is not None
     assert "(https://github.example.com/my-org/my-repo/settings)" in result.resolution
 
 
 # ----------------------------------------------------------------------
-def test_NoAutoMergeWhenRequired():
-    result = _Evaluate({"allow_auto_merge": False})
+def test_NoDeleteBranchOnMergeWhenRequired():
+    result = _Evaluate({"delete_branch_on_merge": False})
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -191,8 +191,8 @@ def test_NoAutoMergeWhenRequired():
 
 
 # ----------------------------------------------------------------------
-def test_AutoMergeWhenDisallowed():
-    result = _Evaluate({"allow_auto_merge": True}, disallow=True)
+def test_DeleteBranchOnMergeWhenDisallowed():
+    result = _Evaluate({"delete_branch_on_merge": True}, disallow=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -204,7 +204,7 @@ def test_AutoMergeWhenDisallowed():
 # An explicit False is a visible setting that is genuinely disabled, so it fails rather than being
 # treated as the unknown case.
 def test_DisabledIsDistinctFromUnknown():
-    result = _Evaluate({"allow_auto_merge": False}, pat=None)
+    result = _Evaluate({"delete_branch_on_merge": False}, pat=None)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -213,14 +213,14 @@ def test_DisabledIsDistinctFromUnknown():
 
 
 # ----------------------------------------------------------------------
-# GitHub omits the auto-merge setting for a caller without push access, so an absent key means the
-# value is unknown rather than disabled. A missing token is the user's to correct, so it warns.
+# GitHub omits the branch deletion setting for a caller without push access, so an absent key means
+# the value is unknown rather than disabled. A missing token is the user's to correct, so it warns.
 def test_MissingStatusWithoutPat():
     result = _Evaluate({}, pat=None)
 
     assert result.result == EvaluateResultValue.Warning
     assert result.context == (
-        "The repository's auto-merge settings are not visible because no Personal Access Token was provided."
+        "The repository's branch deletion settings are not visible because no Personal Access Token was provided."
     )
 
 
@@ -234,14 +234,14 @@ def test_MissingStatusWithoutPatResolution():
 
 
 # ----------------------------------------------------------------------
-# A token that lacks push access reads the repository but still does not see the auto-merge setting,
-# which is a misconfiguration of the token rather than a repository failure.
+# A token that lacks push access reads the repository but still does not see the branch deletion
+# setting, which is a misconfiguration of the token rather than a repository failure.
 def test_MissingStatusWithPat():
     result = _Evaluate({})
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's auto-merge settings are not visible because the Personal Access Token provided does not grant push access to the repository."
+        "The repository's branch deletion settings are not visible because the Personal Access Token provided does not grant push access to the repository."
     )
 
 
@@ -273,7 +273,7 @@ def test_MissingStatusHasNoRationale(pat):
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    requirement = AutoMergeRequirement()
+    requirement = DeleteBranchOnMergeRequirement()
 
     result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
 
