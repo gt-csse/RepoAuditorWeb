@@ -2,6 +2,7 @@ from typing import cast, override
 
 import requests
 
+from RepoAuditorWeb.lib.plugins.github_impl.auto_merge_requirement import AutoMergeRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
@@ -62,6 +63,7 @@ class StandardQuery(Query):
                 SquashCommitMessageRequirement(),
                 RebaseCommitRequirement(),
                 SuggestUpdatingPullRequestBranchesRequirement(),
+                AutoMergeRequirement(),
             ],
         )
 
