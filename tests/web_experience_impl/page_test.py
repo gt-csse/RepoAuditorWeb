@@ -11,11 +11,13 @@ _GROUPS = [
     FormGroup(
         "MyModule",
         [FormField("MyModule_value", "value", FieldType.Text, "")],
+        "My module description.",
         toggle="MyModule_skip",
         sections=[
             FormSection(
                 "MyRequirement",
                 [FormField("MyModule_MyRequirement_value", "value", FieldType.Text, "")],
+                "My requirement description.",
                 toggle="MyModule_MyRequirement_skip",
             ),
         ],
@@ -79,10 +81,12 @@ def test_GroupsAreEmbedded():
                             "required": False,
                         },
                     ],
+                    "description": "My requirement description.",
                     "toggle": "MyModule_MyRequirement_skip",
                     "toggle_includes": False,
                 },
             ],
+            "description": "My module description.",
             "toggle": "MyModule_skip",
             "toggle_includes": False,
         },
@@ -152,6 +156,30 @@ def test_PillIsDisplayedBySummary():
 
     assert 'pill.className = "pill";' in page
     assert "summary.appendChild(pill);" in page
+
+
+# ----------------------------------------------------------------------
+# A collapsed container displays its summary and nothing else, so the description must belong to
+# the summary for it to remain visible.
+def test_DescriptionIsDisplayedBySummary():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.indent(
+            textwrap.dedent(
+                """\
+                if (container.description) {
+                  const description = document.createElement("span");
+                  description.className = "description";
+                  description.textContent = container.description;
+                  summary.appendChild(description);
+                }
+                """,
+            ),
+            "  ",
+        )
+        in page
+    )
 
 
 # ----------------------------------------------------------------------

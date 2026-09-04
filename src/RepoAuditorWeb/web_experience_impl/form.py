@@ -46,6 +46,7 @@ class FormContainer:
 
     name: str
     fields: list[FormField] = field(default_factory=list)
+    description: str = ""
 
     # Modules and requirements alike are governed by a single field, which the display indicates
     # alongside the name so that it is apparent without expanding the container. One that must be
@@ -95,13 +96,21 @@ def CreateGroups(
             [],
         ).append(_CreateField(name, argument_info.parameter_name, parameter, value))
 
+    descriptions = dynamic_parameters.description_lookup
+
     return [
         _CreateContainer(
             FormGroup,
             name,
             fields.get(None, []),
+            descriptions[name][None],
             sections=[
-                _CreateContainer(FormSection, requirement_name, requirement_fields)
+                _CreateContainer(
+                    FormSection,
+                    requirement_name,
+                    requirement_fields,
+                    descriptions[name][requirement_name],
+                )
                 for requirement_name, requirement_fields in fields.items()
                 if requirement_name is not None
             ],
@@ -148,6 +157,7 @@ def _CreateContainer[ContainerT: FormContainer](
     container_type: type[ContainerT],
     name: str,
     fields: list[FormField],
+    description: str,
     **kwargs: object,
 ) -> ContainerT:
     # Modules and requirements alike contribute exactly one of these, so the display can rely on
@@ -161,6 +171,7 @@ def _CreateContainer[ContainerT: FormContainer](
     return container_type(
         name,
         fields,
+        description,
         toggle=toggle.name,
         toggle_includes=toggle.label == _INCLUDE_PARAMETER_NAME,
         **kwargs,

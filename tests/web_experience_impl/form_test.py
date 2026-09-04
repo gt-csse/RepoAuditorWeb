@@ -101,6 +101,7 @@ class TestFormSection:
         section = FormSection("MyRequirement")
 
         assert section.fields == []
+        assert section.description == ""
         assert section.toggle is None
         assert section.toggle_includes is False
 
@@ -120,6 +121,7 @@ class TestFormGroup:
 
         assert group.fields == []
         assert group.sections == []
+        assert group.description == ""
         assert group.toggle is None
         assert group.toggle_includes is False
 
@@ -143,6 +145,23 @@ class TestCreateGroups:
 
         assert len(groups) == 1
         assert groups[0].name == "MyModule"
+
+    # ----------------------------------------------------------------------
+    def test_DescriptionsAreDisplayed(self):
+        dynamic_parameters = DynamicParameters(
+            [
+                MyModule(
+                    "MyModule",
+                    "My module description.",
+                    [MyQuery("MyQuery", [MyRequirement("MyRequirement", "My requirement description.")])],
+                ),
+            ],
+        )
+
+        groups = CreateGroups(dynamic_parameters, {})
+
+        assert groups[0].description == "My module description."
+        assert groups[0].sections[0].description == "My requirement description."
 
     # ----------------------------------------------------------------------
     # The name of the parameter the module declared is the label; the name that identifies it

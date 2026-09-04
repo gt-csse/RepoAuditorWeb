@@ -164,6 +164,16 @@ class TestFields:
         ]
 
     # ----------------------------------------------------------------------
+    def test_Descriptions(self):
+        module = _CreateModule()
+        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+
+        groups = _GetEndpoint(app, "/api/fields")(_TOKEN)["groups"]
+
+        assert groups[0]["description"] == "My description."
+        assert groups[0]["sections"][0]["description"] == "My requirement description."
+
+    # ----------------------------------------------------------------------
     def test_ValuesAreDisplayed(self):
         module = _CreateModule()
         app = CreateApp(
