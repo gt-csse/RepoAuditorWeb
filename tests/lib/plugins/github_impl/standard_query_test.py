@@ -47,6 +47,7 @@ def test_Construct():
         "SupportProjects",
         "SupportPullRequests",
         "MergeCommit",
+        "MergeCommitMessage",
     ]
 
 
