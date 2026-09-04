@@ -52,7 +52,7 @@ class Requirement(ABC):
     def __init__(
         self,
         name: str,
-        description: str,
+        description: str,  # Note that the description should be ~25 words or less
         *,
         requires_explicit_include: bool = False,  # If True, the requirement will not be run unless explicitly included by the user
     ) -> None:

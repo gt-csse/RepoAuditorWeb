@@ -104,7 +104,7 @@ def test_DynamicRequirementOptionsAppearInHelp():
         "--GitHub-Template-skip",
         "--GitHub-Template-require",
         "--GitHub-WebCommitSignoff-skip",
-        "--GitHub-WebCommitSignoff-no",
+        "--GitHub-WebCommitSignoff-enforce",
     } <= _GetOptionNames(app)
 
 
