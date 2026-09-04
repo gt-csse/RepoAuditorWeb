@@ -82,7 +82,7 @@ def test_Construct():
     assert requirement.name == "SupportIssues"
     assert (
         requirement.description
-        == "Validates whether the repository's issue tracker is enabled; issues are where bug reports, tasks, and feature requests are filed and referenced by commits and pull requests."
+        == "Validates whether the repository's issue tracker is enabled; issues are where bug reports, tasks, and feature requests are filed and referenced."
     )
     assert requirement.requires_explicit_include is False
 

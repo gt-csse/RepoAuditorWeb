@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class SquashCommitRequirement(Requirement):
-    """Validates whether pull requests can be merged by squashing; the method rewrites the branch's commits into a single new commit, so their authorship and signatures do not reach the base branch."""
+    """Validates whether pull requests can be merged by squashing; the method rewrites the branch's commits into one, dropping their authorship and signatures."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

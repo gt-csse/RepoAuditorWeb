@@ -91,7 +91,7 @@ def test_Construct():
     assert requirement.name == "SquashCommit"
     assert (
         requirement.description
-        == "Validates whether pull requests can be merged by squashing; the method rewrites the branch's commits into a single new commit, so their authorship and signatures do not reach the base branch."
+        == "Validates whether pull requests can be merged by squashing; the method rewrites the branch's commits into one, dropping their authorship and signatures."
     )
     assert requirement.requires_explicit_include is False
 

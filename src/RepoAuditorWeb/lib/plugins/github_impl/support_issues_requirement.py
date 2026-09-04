@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class SupportIssuesRequirement(Requirement):
-    """Validates whether the repository's issue tracker is enabled; issues are where bug reports, tasks, and feature requests are filed and referenced by commits and pull requests."""
+    """Validates whether the repository's issue tracker is enabled; issues are where bug reports, tasks, and feature requests are filed and referenced."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

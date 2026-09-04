@@ -94,7 +94,7 @@ def test_Construct():
     assert requirement.name == "AutoMerge"
     assert (
         requirement.description
-        == "Validates whether a pull request can be queued to merge once its requirements are met; the merge waits for the same reviews and status checks that a manual merge would, so it changes who performs it rather than what it must satisfy."
+        == "Validates whether a pull request can be queued to merge once its requirements are met; the same reviews and status checks still apply."
     )
     assert requirement.requires_explicit_include is False
 

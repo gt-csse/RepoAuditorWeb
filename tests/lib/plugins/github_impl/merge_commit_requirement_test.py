@@ -88,7 +88,7 @@ def test_Construct():
     assert requirement.name == "MergeCommit"
     assert (
         requirement.description
-        == "Validates whether pull requests can be merged with a merge commit; the method merges with `--no-ff`, so the branch's individual commits are preserved under a commit that records the integration."
+        == "Validates whether pull requests can be merged with a merge commit; the method merges with `--no-ff`, preserving the branch's individual commits."
     )
     assert requirement.requires_explicit_include is False
 
