@@ -51,6 +51,7 @@ def test_Construct():
         "SquashCommit",
         "SquashCommitMessage",
         "RebaseCommit",
+        "SuggestUpdatingPullRequestBranches",
     ]
 
 

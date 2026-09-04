@@ -14,6 +14,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_message_requirement im
     SquashCommitMessageRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_requirement import SquashCommitRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.suggest_updating_pull_request_branches_requirement import (
+    SuggestUpdatingPullRequestBranchesRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.support_discussions_requirement import (
     SupportDiscussionsRequirement,
 )
@@ -58,6 +61,7 @@ class StandardQuery(Query):
                 SquashCommitRequirement(),
                 SquashCommitMessageRequirement(),
                 RebaseCommitRequirement(),
+                SuggestUpdatingPullRequestBranchesRequirement(),
             ],
         )
 
