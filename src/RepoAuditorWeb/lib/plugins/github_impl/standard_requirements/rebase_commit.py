@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.plugins.github_impl.restricted_value import GetRestrictedValue
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import GetRestrictedValue
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:

@@ -2,7 +2,9 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.default_branch import (
+    DefaultBranchRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 

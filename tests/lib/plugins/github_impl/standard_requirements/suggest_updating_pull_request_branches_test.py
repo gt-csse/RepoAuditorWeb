@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.suggest_updating_pull_request_branches_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.suggest_updating_pull_request_branches import (
     SuggestUpdatingPullRequestBranchesRequirement,
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue

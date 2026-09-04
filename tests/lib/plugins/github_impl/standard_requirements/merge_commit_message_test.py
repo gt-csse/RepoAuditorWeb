@@ -2,76 +2,68 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.squash_commit_message_requirement import (
-    SquashCommitMessageRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit_message import (
+    MergeCommitMessageRequirement,
     Values,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery
 
 
 # ----------------------------------------------------------------------
-_DOCUMENTATION_URL = "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests"
+_DOCUMENTATION_URL = "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-merging-for-pull-requests"
 
 
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
     """\
-    The default behavior is to require that the squash commit's subject is the pull request
-    title and that its body contains the messages of the commits being squashed (the **Pull
-    request title and commit details** option).
+    The default behavior is to require that the merge commit's subject is the pull request
+    title and that its body is empty (the **Pull request title** option).
 
     Note that this differs from the state of a newly created repository, which uses the
     **Default message** option.
 
     ## Reasons for this Default
 
-    - Squashing discards the commits it replaces, so any information recorded only in their
-      messages is lost when the branch is deleted. This option is the only one that carries
-      those messages onto the base branch, which keeps the reasoning behind each step of the
-      change reachable from the history rather than from a branch that no longer exists.
-    - A pull request approved as a series of commits is reviewed as that series. Retaining the
-      messages preserves the account of the work that the reviewer read, so the commit that
-      lands describes the same change the review covered.
-    - The pull request title is a stable subject. The **Default message** option takes the
-      subject from the single commit when a branch has one commit and from the pull request
-      title when it has more, so the subject of a squash commit depends on how the branch
-      happened to be structured. Fixing it to the title makes `git log --oneline` and
-      `git shortlog` consistent across merges.
-    - The pull request number is appended to the subject under this option, so the commit
-      still links back to its discussion and review.
-    - The commit body is the copy that survives without GitHub. Repository archives, mirrors,
-      and clones carry commit messages, while pull request bodies and their commit lists are
-      host metadata that a `git clone` does not include.
+    - The classic subject, `Merge pull request #123 from <owner>/<branch>`, describes the
+      mechanics of the merge rather than the change it introduced. A log of such subjects
+      conveys only that merges happened, so the reader has to open each one to learn what it
+      was. The pull request title states the change, which is what a subject line is for.
+    - The branch name in the classic subject is transient. It identifies a ref that is
+      typically deleted once the pull request merges, so it dates the history with a name that
+      no longer resolves while displacing the description of the change.
+    - Git convention treats the first line as a short summary, and tooling relies on it:
+      `git log --oneline`, `git shortlog`, blame annotations, and most review interfaces show
+      the subject alone. A subject that omits the change makes each of these less informative.
+    - An empty body keeps the pull request description in one place. The description is
+      maintained on the pull request, where it can be corrected after the fact, whereas a copy
+      committed into the history cannot be amended once the commit is on the base branch.
+    - The pull request number remains in the subject under this option, so the commit still
+      links back to its discussion and review.
 
     ## Reasons to Override this Default
 
-    - The branch's commits are fixups, merges of the base branch, or work-in-progress markers
-      that carry no meaning after review, in which case copying them into the body adds noise
-      rather than information (`pull_request_title` or
-      `pull_request_title_and_description`).
-    - The project maintains the account of the change in the pull request description instead
-      of in the commits, and wants that description to be what lands
+    - The project wants the commit to be self-contained, so that the reasoning survives without
+      access to the pull request. This matters when the history may be read outside GitHub, or
+      when the repository could move to a host where the pull requests do not follow
       (`pull_request_title_and_description`).
-    - Tooling generates release notes from commit bodies and expects a curated body rather
-      than a concatenation of the branch's messages (`pull_request_title_and_description`).
-    - The project relies on a single-commit branch's own subject and body reaching the base
-      branch unaltered (`default_message`).
+    - Tooling that generates release notes or changelogs from commit bodies has nothing to read
+      when the body is empty (`pull_request_title_and_description`).
+    - The project relies on the classic subject's branch name, or on tooling that parses the
+      `Merge pull request #N` form, and changing it would break that (`default_message`).
 
     Note that this setting only supplies the message GitHub pre-fills; a user with write
     access can edit it before confirming the merge, so it establishes a default rather than
-    enforcing a format. Note also that it applies to squash commits alone, and that the merge
-    commit method is configured separately. A squash commit carries no information about the
-    authorship or signatures of the commits it replaces regardless of this setting, which is
-    a property of the method rather than of the message.
+    enforcing a format. Note also that it applies to merge commits alone, and that the squash
+    and rebase methods are configured separately.
     """,
 )
 
 
 # ----------------------------------------------------------------------
-def _CreateModule(requirement: SquashCommitMessageRequirement) -> MyModule:
+def _CreateModule(requirement: MergeCommitMessageRequirement) -> MyModule:
     return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
 
 
@@ -79,11 +71,11 @@ def _CreateModule(requirement: SquashCommitMessageRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    value: Values = Values.PullRequestTitleAndCommitDetails,
+    value: Values = Values.PullRequestTitle,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
     pat: str | None = "my-pat",
 ) -> EvaluateResult:
-    requirement = SquashCommitMessageRequirement()
+    requirement = MergeCommitMessageRequirement()
 
     return requirement.Evaluate(
         _CreateModule(requirement),
@@ -93,35 +85,33 @@ def _Evaluate(
 
 
 # ----------------------------------------------------------------------
-def _Response(title: str, message: str, *, allow_squash_merge: bool = True) -> dict:
+def _Response(title: str, message: str, *, allow_merge_commit: bool = True) -> dict:
     return {
-        "allow_squash_merge": allow_squash_merge,
-        "squash_merge_commit_title": title,
-        "squash_merge_commit_message": message,
+        "allow_merge_commit": allow_merge_commit,
+        "merge_commit_title": title,
+        "merge_commit_message": message,
     }
 
 
 # ----------------------------------------------------------------------
 def test_Construct():
-    requirement = SquashCommitMessageRequirement()
+    requirement = MergeCommitMessageRequirement()
 
-    assert requirement.name == "SquashCommitMessage"
+    assert requirement.name == "MergeCommitMessage"
     assert (
         requirement.description
-        == "Validates the default commit message offered when a pull request is merged by squashing."
+        == "Validates the default commit message offered when a pull request is merged with a merge commit."
     )
     assert requirement.requires_explicit_include is False
 
 
 # ----------------------------------------------------------------------
-# The default carries the squashed commits' messages onto the base branch, which is the only option
-# that preserves information recorded solely in those commits.
 def test_GetParameters():
-    parameters = SquashCommitMessageRequirement().GetParameters()
+    parameters = MergeCommitMessageRequirement().GetParameters()
 
     assert list(parameters.keys()) == ["skip", "value"]
     assert parameters["value"].type is Values
-    assert parameters["value"].default == Values.PullRequestTitleAndCommitDetails
+    assert parameters["value"].default == Values.PullRequestTitle
 
 
 # ----------------------------------------------------------------------
@@ -129,7 +119,6 @@ def test_ValuesMembers():
     assert [(value.name, value.value) for value in Values] == [
         ("DefaultMessage", "default_message"),
         ("PullRequestTitle", "pull_request_title"),
-        ("PullRequestTitleAndCommitDetails", "pull_request_title_and_commit_details"),
         ("PullRequestTitleAndDescription", "pull_request_title_and_description"),
     ]
 
@@ -140,9 +129,8 @@ def test_ValuesMembers():
 @pytest.mark.parametrize(
     ("value", "title", "message"),
     [
-        (Values.DefaultMessage, "COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"),
+        (Values.DefaultMessage, "MERGE_MESSAGE", "PR_TITLE"),
         (Values.PullRequestTitle, "PR_TITLE", "BLANK"),
-        (Values.PullRequestTitleAndCommitDetails, "PR_TITLE", "COMMIT_MESSAGES"),
         (Values.PullRequestTitleAndDescription, "PR_TITLE", "PR_BODY"),
     ],
 )
@@ -155,21 +143,17 @@ def test_MatchingValues(value, title, message):
 
 
 # ----------------------------------------------------------------------
-# 'COMMIT_MESSAGES' is shared by two options, so a value that matches the expected message is still
-# a failure when the title does not match.
-def test_MatchingMessageWithMismatchedTitle():
-    result = _Evaluate(
-        _Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"),
-        value=Values.PullRequestTitleAndCommitDetails,
-    )
+# 'PR_TITLE' means different things in each field, so a value that matches the expected title is
+# still a failure when the message does not match.
+def test_MatchingTitleWithMismatchedMessage():
+    result = _Evaluate(_Response("PR_TITLE", "PR_BODY"), value=Values.PullRequestTitle)
 
     assert result.result == EvaluateResultValue.Error
 
 
 # ----------------------------------------------------------------------
-# 'PR_TITLE' is shared by three options, so a matching title is not sufficient either.
-def test_MatchingTitleWithMismatchedMessage():
-    result = _Evaluate(_Response("PR_TITLE", "PR_BODY"), value=Values.PullRequestTitleAndCommitDetails)
+def test_MismatchedTitleWithMatchingMessage():
+    result = _Evaluate(_Response("MERGE_MESSAGE", "BLANK"), value=Values.PullRequestTitle)
 
     assert result.result == EvaluateResultValue.Error
 
@@ -177,12 +161,12 @@ def test_MatchingTitleWithMismatchedMessage():
 # ----------------------------------------------------------------------
 # A newly created repository uses the 'Default message' option, which the default value rejects.
 def test_NewRepositoryDefaultFails():
-    result = _Evaluate(_Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"))
+    result = _Evaluate(_Response("MERGE_MESSAGE", "PR_TITLE"))
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's default squash commit message is 'Default message', but the requirement "
-        "specifies it must be 'Pull request title and commit details'."
+        "The repository's default merge commit message is 'Default message', but the requirement "
+        "specifies it must be 'Pull request title'."
     )
 
 
@@ -192,8 +176,7 @@ def test_NewRepositoryDefaultFails():
 @pytest.mark.parametrize(
     ("title", "message", "label"),
     [
-        ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES", "Default message"),
-        ("PR_TITLE", "BLANK", "Pull request title"),
+        ("MERGE_MESSAGE", "PR_TITLE", "Default message"),
         ("PR_TITLE", "PR_BODY", "Pull request title and description"),
     ],
 )
@@ -201,8 +184,8 @@ def test_ContextUsesUiLabel(title, message, label):
     result = _Evaluate(_Response(title, message))
 
     assert result.context == (
-        f"The repository's default squash commit message is '{label}', but the requirement "
-        "specifies it must be 'Pull request title and commit details'."
+        f"The repository's default merge commit message is '{label}', but the requirement "
+        "specifies it must be 'Pull request title'."
     )
 
 
@@ -213,12 +196,11 @@ def test_ContextUsesUiLabel(title, message, label):
     [
         (Values.DefaultMessage, "Default message"),
         (Values.PullRequestTitle, "Pull request title"),
-        (Values.PullRequestTitleAndCommitDetails, "Pull request title and commit details"),
         (Values.PullRequestTitleAndDescription, "Pull request title and description"),
     ],
 )
 def test_ContextUsesUiLabelForRequiredValue(value, label):
-    result = _Evaluate(_Response("INVALID", "INVALID"), value=value)
+    result = _Evaluate(_Response("MERGE_MESSAGE", "BLANK"), value=value)
 
     assert result.context is not None
     assert result.context.endswith(f"but the requirement specifies it must be '{label}'.")
@@ -228,27 +210,27 @@ def test_ContextUsesUiLabelForRequiredValue(value, label):
 # A pairing that the dropdown cannot produce has no label to report, so the API values are named
 # directly rather than being forced onto the nearest option.
 def test_UnreachablePairing():
-    result = _Evaluate(_Response("COMMIT_OR_PR_TITLE", "PR_BODY"))
+    result = _Evaluate(_Response("MERGE_MESSAGE", "PR_BODY"))
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's default squash commit message is title 'COMMIT_OR_PR_TITLE' with message "
-        "'PR_BODY', but the requirement specifies it must be 'Pull request title and commit details'."
+        "The repository's default merge commit message is title 'MERGE_MESSAGE' with message "
+        "'PR_BODY', but the requirement specifies it must be 'Pull request title'."
     )
 
 
 # ----------------------------------------------------------------------
 def test_ErrorResolution():
-    result = _Evaluate(_Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"))
+    result = _Evaluate(_Response("MERGE_MESSAGE", "PR_TITLE"))
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [General settings](https://github.com/gt-csse/RepoAuditorWeb/settings) page.
         2) Scroll to the **Pull Requests** section.
-        3) Ensure that the **Allow squash merging** checkbox is checked.
-        4) Select **Pull request title and commit details** in the dropdown beneath it.
+        3) Ensure that the **Allow merge commits** checkbox is checked.
+        4) Select **Pull request title** in the dropdown beneath it.
 
-        See [Configuring commit squashing for pull requests]({_DOCUMENTATION_URL})
+        See [Configuring commit merging for pull requests]({_DOCUMENTATION_URL})
         for more information.
         """,
     )
@@ -262,7 +244,6 @@ def test_ErrorResolution():
     [
         (Values.DefaultMessage, "Default message"),
         (Values.PullRequestTitle, "Pull request title"),
-        (Values.PullRequestTitleAndCommitDetails, "Pull request title and commit details"),
         (Values.PullRequestTitleAndDescription, "Pull request title and description"),
     ],
 )
@@ -278,7 +259,7 @@ def test_ResolutionUsesUiLabel(value, label):
 # at an Enterprise host when one is being audited.
 def test_ResolutionUsesEnterpriseUrl():
     result = _Evaluate(
-        _Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"),
+        _Response("MERGE_MESSAGE", "PR_TITLE"),
         url="https://github.example.com/my-org/my-repo",
     )
 
@@ -290,20 +271,20 @@ def test_ResolutionUsesEnterpriseUrl():
 # The rationale explains the default regardless of the outcome or the selected value.
 @pytest.mark.parametrize("value", list(Values))
 def test_Rationale(value):
-    result = _Evaluate(_Response("PR_TITLE", "COMMIT_MESSAGES"), value=value)
+    result = _Evaluate(_Response("PR_TITLE", "BLANK"), value=value)
 
     assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
 def test_ErrorRationale():
-    result = _Evaluate(_Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"))
+    result = _Evaluate(_Response("MERGE_MESSAGE", "PR_TITLE"))
 
     assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
-# GitHub omits the squash commit message settings for a caller without push access, so an absent
+# GitHub omits the merge commit message settings for a caller without push access, so an absent
 # key means the value is unknown rather than a particular setting. A missing token is the user's to
 # correct, so it warns.
 def test_MissingValuesWithoutPat():
@@ -311,7 +292,7 @@ def test_MissingValuesWithoutPat():
 
     assert result.result == EvaluateResultValue.Warning
     assert result.context == (
-        "The repository's squash commit message settings are not visible because no Personal Access Token was provided."
+        "The repository's merge commit message settings are not visible because no Personal Access Token was provided."
     )
 
 
@@ -332,7 +313,7 @@ def test_MissingValuesWithPat():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's squash commit message settings are not visible because the Personal Access Token provided does not grant push access to the repository."
+        "The repository's merge commit message settings are not visible because the Personal Access Token provided does not grant push access to the repository."
     )
 
 
@@ -342,8 +323,8 @@ def test_MissingValuesWithPat():
 @pytest.mark.parametrize(
     "response",
     [
-        {"allow_squash_merge": True, "squash_merge_commit_title": "PR_TITLE"},
-        {"allow_squash_merge": True, "squash_merge_commit_message": "COMMIT_MESSAGES"},
+        {"allow_merge_commit": True, "merge_commit_title": "PR_TITLE"},
+        {"allow_merge_commit": True, "merge_commit_message": "BLANK"},
     ],
 )
 def test_PartiallyMissingValues(response):
@@ -351,7 +332,7 @@ def test_PartiallyMissingValues(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's squash commit message settings are not visible because the Personal Access Token provided does not grant push access to the repository."
+        "The repository's merge commit message settings are not visible because the Personal Access Token provided does not grant push access to the repository."
     )
 
 
@@ -367,15 +348,15 @@ def test_MissingValuesHaveNoRationale(pat):
 
 # ----------------------------------------------------------------------
 def test_ResultAttributes():
-    requirement = SquashCommitMessageRequirement()
+    requirement = MergeCommitMessageRequirement()
 
     result = requirement.Evaluate(
         _CreateModule(requirement),
         {
-            "response": _Response("PR_TITLE", "COMMIT_MESSAGES"),
+            "response": _Response("PR_TITLE", "BLANK"),
             "session": GitHubSession("https://github.com/gt-csse/RepoAuditorWeb", "my-pat"),
         },
-        {"skip": False, "value": Values.PullRequestTitleAndCommitDetails},
+        {"skip": False, "value": Values.PullRequestTitle},
     )
 
     assert result.result == EvaluateResultValue.Success
@@ -383,36 +364,33 @@ def test_ResultAttributes():
 
 
 # ----------------------------------------------------------------------
-# The setting only governs the message offered for squash commits, so it has nothing to evaluate in
+# The setting only governs the message offered for merge commits, so it has nothing to evaluate in
 # a repository that disallows the method.
 @pytest.mark.parametrize("value", list(Values))
-def test_SquashMergingDisallowed(value):
-    result = _Evaluate(
-        _Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES", allow_squash_merge=False),
-        value=value,
-    )
+def test_MergeCommitsDisallowed(value):
+    result = _Evaluate(_Response("MERGE_MESSAGE", "PR_TITLE", allow_merge_commit=False), value=value)
 
     assert result.result == EvaluateResultValue.DoesNotApply
     assert result.context == (
-        "The repository does not allow squash merging, so no default squash commit message is offered."
+        "The repository does not allow merge commits, so no default merge commit message is offered."
     )
 
 
 # ----------------------------------------------------------------------
 # There is nothing for the user to correct when the requirement does not apply, so no resolution is
 # offered; the rationale still explains the default that was not evaluated.
-def test_SquashMergingDisallowedResolutionAndRationale():
-    result = _Evaluate(_Response("PR_TITLE", "COMMIT_MESSAGES", allow_squash_merge=False))
+def test_MergeCommitsDisallowedResolutionAndRationale():
+    result = _Evaluate(_Response("PR_TITLE", "BLANK", allow_merge_commit=False))
 
     assert result.resolution is None
     assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
-# GitHub retains the message setting while squash merging is disallowed, so a matching value is
+# GitHub retains the message setting while merge commits are disallowed, so a matching value is
 # reported as inapplicable rather than as a success.
-def test_SquashMergingDisallowedWithMatchingValue():
-    result = _Evaluate(_Response("PR_TITLE", "COMMIT_MESSAGES", allow_squash_merge=False))
+def test_MergeCommitsDisallowedWithMatchingValue():
+    result = _Evaluate(_Response("PR_TITLE", "BLANK", allow_merge_commit=False))
 
     assert result.result == EvaluateResultValue.DoesNotApply
 
@@ -427,25 +405,22 @@ def test_SquashMergingDisallowedWithMatchingValue():
         ("my-pat", EvaluateResultValue.Error),
     ],
 )
-def test_MissingAllowSquashMerge(pat, expected_result):
-    result = _Evaluate(
-        {"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "COMMIT_MESSAGES"},
-        pat=pat,
-    )
+def test_MissingAllowMergeCommit(pat, expected_result):
+    result = _Evaluate({"merge_commit_title": "PR_TITLE", "merge_commit_message": "BLANK"}, pat=pat)
 
     assert result.result == expected_result
     assert result.context is not None
-    assert "squash commit message settings are not visible" in result.context
+    assert "merge commit message settings are not visible" in result.context
 
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    requirement = SquashCommitMessageRequirement()
+    requirement = MergeCommitMessageRequirement()
 
     result = requirement.Evaluate(
         _CreateModule(requirement),
         {},
-        {"skip": True, "value": Values.PullRequestTitleAndCommitDetails},
+        {"skip": True, "value": Values.PullRequestTitle},
     )
 
     assert result.result == EvaluateResultValue.Skipped

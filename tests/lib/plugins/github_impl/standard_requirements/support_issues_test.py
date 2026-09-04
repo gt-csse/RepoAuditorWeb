@@ -3,7 +3,9 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.support_issues_requirement import SupportIssuesRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_issues import (
+    SupportIssuesRequirement,
+)
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery

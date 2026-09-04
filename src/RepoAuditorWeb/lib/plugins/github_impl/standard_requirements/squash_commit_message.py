@@ -6,7 +6,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.plugins.github_impl.commit_message_value import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.commit_message_value import (
     CommitMessageSetting,
     EvaluateCommitMessage,
 )

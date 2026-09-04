@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.license import LicenseRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 

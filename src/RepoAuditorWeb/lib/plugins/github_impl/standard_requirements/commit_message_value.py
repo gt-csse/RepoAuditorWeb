@@ -4,7 +4,7 @@ import textwrap
 
 from typing import cast, TYPE_CHECKING
 
-from RepoAuditorWeb.lib.plugins.github_impl.restricted_value import GetRestrictedValue
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import GetRestrictedValue
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:

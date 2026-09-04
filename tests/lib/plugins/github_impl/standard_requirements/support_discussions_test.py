@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.support_discussions_requirement import (
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_discussions import (
     SupportDiscussionsRequirement,
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
