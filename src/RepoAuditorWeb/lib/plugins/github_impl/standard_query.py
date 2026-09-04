@@ -9,6 +9,12 @@ from RepoAuditorWeb.lib.plugins.github_impl.support_discussions_requirement impo
     SupportDiscussionsRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.support_issues_requirement import SupportIssuesRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.support_projects_requirement import (
+    SupportProjectsRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.support_pull_requests_requirement import (
+    SupportPullRequestsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.support_wikis_requirement import SupportWikisRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.template_requirement import TemplateRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.web_commit_signoff_requirement import WebCommitSignoffRequirement
@@ -35,6 +41,8 @@ class StandardQuery(Query):
                 SupportWikisRequirement(),
                 SupportIssuesRequirement(),
                 SupportDiscussionsRequirement(),
+                SupportProjectsRequirement(),
+                SupportPullRequestsRequirement(),
             ],
         )
 
