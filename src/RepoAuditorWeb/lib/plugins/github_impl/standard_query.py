@@ -4,6 +4,9 @@ import requests
 
 from RepoAuditorWeb.lib.plugins.github_impl.auto_merge_requirement import AutoMergeRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.delete_branch_on_merge_requirement import (
+    DeleteBranchOnMergeRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.merge_commit_message_requirement import (
@@ -64,6 +67,7 @@ class StandardQuery(Query):
                 RebaseCommitRequirement(),
                 SuggestUpdatingPullRequestBranchesRequirement(),
                 AutoMergeRequirement(),
+                DeleteBranchOnMergeRequirement(),
             ],
         )
 
