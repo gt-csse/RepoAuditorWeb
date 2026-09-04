@@ -225,6 +225,23 @@ _STYLE = textwrap.dedent(
       white-space: nowrap;
     }
 
+    /* A collapsed container is a single row that the summaries above and below it are read against,
+       so a long description is truncated there. Once the container is expanded it is the one being
+       read, and the whole description matters more than the height of the row it occupies. */
+    .module-fields[open] > summary .description,
+    .requirement-fields[open] > summary .description {
+      overflow: visible;
+      white-space: normal;
+    }
+
+    /* The marker, the name and the pill remain on the first line of a wrapped description rather
+       than being centered against the block it becomes. */
+    .module-fields[open] > summary,
+    .requirement-fields[open] > summary { align-items: baseline; }
+
+    .module-fields[open] > summary::before,
+    .requirement-fields[open] > summary::before { align-self: center; }
+
     /* The pill is pushed to the trailing edge so that the state of every module and requirement can
        be read down a single column rather than at the end of names of differing length. */
     .module-fields > summary .pill,

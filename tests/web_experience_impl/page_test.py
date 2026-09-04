@@ -183,6 +183,44 @@ def test_DescriptionIsDisplayedBySummary():
 
 
 # ----------------------------------------------------------------------
+# A long description is truncated while the container is collapsed so that the summaries read as
+# rows, and displayed in full once it is expanded.
+def test_DescriptionWrapsWhenTheContainerIsExpanded():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            .module-fields > summary .description,
+            .requirement-fields > summary .description {
+              font-size: 12px;
+              font-weight: 400;
+              color: var(--muted);
+              min-width: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+            """,
+        )
+        in page
+    )
+
+    assert (
+        textwrap.dedent(
+            """\
+            .module-fields[open] > summary .description,
+            .requirement-fields[open] > summary .description {
+              overflow: visible;
+              white-space: normal;
+            }
+            """,
+        )
+        in page
+    )
+
+
+# ----------------------------------------------------------------------
 # The value of the field may change after the pill is created, so the pill follows it.
 def test_PillTracksTheFieldThatGovernsTheContainer():
     page = CreatePage(_GROUPS, "my_token")
