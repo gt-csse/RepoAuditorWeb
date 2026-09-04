@@ -5,6 +5,7 @@ import requests
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirement import DefaultBranchRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.description_requirement import DescriptionRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.license_requirement import LicenseRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.merge_commit_requirement import MergeCommitRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.support_discussions_requirement import (
     SupportDiscussionsRequirement,
 )
@@ -43,6 +44,8 @@ class StandardQuery(Query):
                 SupportDiscussionsRequirement(),
                 SupportProjectsRequirement(),
                 SupportPullRequestsRequirement(),
+                # settings page (Pull Requests)
+                MergeCommitRequirement(),
             ],
         )
 
