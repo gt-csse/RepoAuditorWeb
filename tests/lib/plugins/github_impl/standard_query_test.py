@@ -52,6 +52,7 @@ def test_Construct():
         "SquashCommitMessage",
         "RebaseCommit",
         "SuggestUpdatingPullRequestBranches",
+        "AutoMerge",
     ]
 
 
