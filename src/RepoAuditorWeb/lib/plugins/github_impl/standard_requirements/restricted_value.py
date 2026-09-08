@@ -18,6 +18,12 @@ type ValueDescription = str
 
 
 # ----------------------------------------------------------------------
+# GitHub reports the 'security_and_analysis' settings as objects rather than booleans so that
+# additional state can be introduced without changing the shape of the response.
+ENABLED_STATUS = "enabled"
+
+
+# ----------------------------------------------------------------------
 class AccessLevel(StrEnum):
     """Repository access a Personal Access Token must grant for a restricted value to be visible."""
 

@@ -27,6 +27,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.rebase_commit 
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.secret_protection import (
     SecretProtectionRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.secret_push_protection import (
+    SecretPushProtectionRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.squash_commit_message import (
     SquashCommitMessageRequirement,
 )
@@ -94,6 +97,7 @@ class StandardQuery(Query):
                 # advanced security page
                 DependabotSecurityUpdatesRequirement(),
                 SecretProtectionRequirement(),
+                SecretPushProtectionRequirement(),
             ],
         )
 
