@@ -57,6 +57,7 @@ def test_Construct():
         "PublicPrivate",
         "DependabotSecurityUpdates",
         "SecretProtection",
+        "SecretPushProtection",
     ]
 
 

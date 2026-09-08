@@ -7,6 +7,7 @@ from typer.models import OptionInfo
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import (
     AccessLevel,
+    ENABLED_STATUS,
     GetRestrictedValue,
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
@@ -14,12 +15,6 @@ from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
     from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-
-
-# ----------------------------------------------------------------------
-# GitHub reports the setting as an object rather than a boolean so that additional state can be
-# introduced without changing the shape of the response.
-_ENABLED_STATUS = "enabled"
 
 
 # ----------------------------------------------------------------------
@@ -122,7 +117,7 @@ class DependabotSecurityUpdatesRequirement(Requirement):
         if isinstance(status_value, EvaluateResult):
             return status_value
 
-        dependabot_security_updates_value = status_value == _ENABLED_STATUS
+        dependabot_security_updates_value = status_value == ENABLED_STATUS
 
         if dependabot_security_updates_value != acceptable_value:
             action = "Enable" if acceptable_value else "Disable"
