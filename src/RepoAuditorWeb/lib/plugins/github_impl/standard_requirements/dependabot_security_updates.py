@@ -134,7 +134,7 @@ class DependabotSecurityUpdatesRequirement(Requirement):
                 1) Open the repository's [Advanced Security settings]({repository_url}/settings/security_analysis) page.
                 2) Scroll to the **Dependabot security updates** row.
                 3) Click the **{action}** button.
-                4) Click the **Save changes** button.
+                4) Click the **Save changes** button at the bottom of the page.
 
                 See [Configuring Dependabot security updates](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-security-updates)
                 for more information.
