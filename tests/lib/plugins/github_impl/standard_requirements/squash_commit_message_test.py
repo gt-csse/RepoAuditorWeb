@@ -311,7 +311,7 @@ def test_MissingValuesWithoutPat():
 
     assert result.result == EvaluateResultValue.Warning
     assert result.context == (
-        "The repository's squash commit message settings are not visible because no Personal Access Token was provided."
+        "The repository's squash commit message settings are not visible because a Personal Access Token was not provided."
     )
 
 

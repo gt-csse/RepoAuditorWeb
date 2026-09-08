@@ -81,7 +81,7 @@ def GetRestrictedValue(
 
     return EvaluateResult(
         EvaluateResultValue.Warning,
-        f"The repository's {value_description} are not visible because no Personal Access Token was provided.",
+        f"The repository's {value_description} are not visible because a Personal Access Token was not provided.",
         _NO_PAT_RESOLUTION,
         None,
         requirement,

@@ -215,7 +215,7 @@ def test_MissingStatusWithoutPat():
 
     assert result.result == EvaluateResultValue.Warning
     assert result.context == (
-        "The repository's rebase merge settings are not visible because no Personal Access Token was provided."
+        "The repository's rebase merge settings are not visible because a Personal Access Token was not provided."
     )
 
 
