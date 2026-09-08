@@ -2,8 +2,8 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.dependabot_security_updates import (
-    DependabotSecurityUpdatesRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.secret_protection import (
+    SecretProtectionRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
@@ -12,69 +12,66 @@ from conftest import MyModule, MyQuery
 
 
 # ----------------------------------------------------------------------
-_DOCUMENTATION_URL = "https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-security-updates"
+_DOCUMENTATION_URL = "https://docs.github.com/en/code-security/how-tos/secure-your-secrets/detect-secret-leaks/enable-secret-scanning"
 
 
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
     """\
-    The default behavior is to require that Dependabot security updates are enabled.
-
-    Note that this differs from the state of a newly created repository, where the setting is
-    disabled.
+    The default behavior is to require that secret protection is enabled.
 
     ## Reasons for this Default
 
-    - A dependency with a published advisory is a vulnerability the project already has, and
-      the patched version already exists. What remains is the work of noticing the advisory
-      and applying the update, which is what this setting performs.
-    - An alert states that a problem exists; a pull request states what to do about it. The
-      difference matters because the alert is read by whoever thinks to look at the security
-      tab, while the pull request arrives where the project already reviews changes.
-    - Advisories are published on the ecosystem's schedule rather than the project's, so a
-      project that updates dependencies only when it happens to touch them is exposed for
-      however long it is between such occasions. Automating the response removes that
-      interval.
-    - The change is proposed rather than applied. It arrives as a pull request against the
-      default branch, subject to the same review and status checks as any other change, so
-      enabling the setting delegates the noticing rather than the deciding.
-    - The update is the smallest one that resolves the advisory, so the pull request is
-      usually a version bump rather than a migration, and the cost of reviewing it is
-      correspondingly small.
+    - A credential committed to a repository is disclosed at the moment of the push, and
+      stays disclosed until it is revoked. Deleting the line does not help, because the
+      commit that introduced it remains reachable, which makes finding the credential the
+      part of the problem worth automating.
+    - The scan covers the entire git history on all branches, along with issues, pull
+      requests, discussions, and wikis, so it reports credentials that predate the setting
+      being turned on rather than only those pushed afterwards.
+    - Detection is by partner pattern rather than by guesswork, and GitHub notifies the
+      provider that issued the credential, so a leaked token is often revoked by the
+      provider before the project has read the alert.
+    - Enabling the setting also brings push protection for the secret types included by
+      default, which blocks the commit that would have leaked the credential; the difference
+      between preventing a leak and reporting one is the cost of rotating the credential.
+    - Validity checks state whether a detected credential is still live, which is what
+      separates an alert that requires immediate rotation from one that documents a
+      credential already revoked.
+    - The setting reports rather than enforces. An alert costs the project the time to read
+      it, and the credential it names was already exposed, so the setting cannot make the
+      repository's position worse than it was.
 
     ## Reasons to Override this Default
 
-    - The project prefers to choose which alerts produce pull requests. Dependabot attempts
-      to open one for every open alert that has a patch available, which on a large or
-      long-neglected dependency set is a volume of pull requests that is read as noise and
-      then ignored. Auto-triage rules, applied with the setting disabled, are the documented
-      alternative.
-    - Pull requests trigger workflows, so on a project with expensive continuous integration
-      the automated updates consume Actions minutes on a schedule the project does not
-      control.
-    - Dependencies are managed outside the repository, such as by a vendored tree, an
-      internal mirror, or a tool that resolves versions centrally, in which case a pull
-      request that edits a manifest proposes a change the project cannot merge.
+    - The repository intentionally contains strings that resemble credentials, such as test
+      fixtures, documentation examples, or revoked sample keys, and the resulting alerts
+      are read as noise. Excluding paths with `secret_scanning.yml` is the narrower
+      alternative to disabling the setting outright.
+    - The project scans with a different tool that it already acts on, and duplicating the
+      alerts across two systems means neither is treated as the authoritative one.
+    - The repository is private and the organization does not hold the GitHub Secret
+      Protection license the setting requires there, in which case enabling it is a
+      purchasing decision rather than a configuration one.
 
-    Note that the setting depends on the dependency graph and Dependabot alerts; enabling
-    Dependabot enables the dependency graph if it is not already on.
+    Note that alerts are visible only to users with write access or better, so enabling the
+    setting on a public repository does not disclose the location of a credential to the
+    public.
 
-    Note also that updates are raised against the default branch only, and only for
-    dependencies declared in a manifest or lock file, so a repository whose dependencies are
-    detected but not declared receives alerts without corresponding pull requests. Not every
-    ecosystem supports security updates, and a repository with no manifest has nothing for
-    the setting to act on.
+    Note also that detection is limited to the supported patterns, so the setting does not
+    establish that a repository is free of credentials; a password or an internal token in a
+    format no provider has registered is not detected.
     """,
 )
 
 
 # ----------------------------------------------------------------------
 def _CreateResponse(status: str) -> dict:
-    return {"security_and_analysis": {"dependabot_security_updates": {"status": status}}}
+    return {"security_and_analysis": {"secret_scanning": {"status": status}}}
 
 
 # ----------------------------------------------------------------------
-def _CreateModule(requirement: DependabotSecurityUpdatesRequirement) -> MyModule:
+def _CreateModule(requirement: SecretProtectionRequirement) -> MyModule:
     return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
 
 
@@ -86,7 +83,7 @@ def _Evaluate(
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
     pat: str | None = "my-pat",
 ) -> EvaluateResult:
-    requirement = DependabotSecurityUpdatesRequirement()
+    requirement = SecretProtectionRequirement()
 
     return requirement.Evaluate(
         _CreateModule(requirement),
@@ -97,19 +94,19 @@ def _Evaluate(
 
 # ----------------------------------------------------------------------
 def test_Construct():
-    requirement = DependabotSecurityUpdatesRequirement()
+    requirement = SecretProtectionRequirement()
 
-    assert requirement.name == "DependabotSecurityUpdates"
+    assert requirement.name == "SecretProtection"
     assert (
         requirement.description
-        == "Validates whether Dependabot automatically opens pull requests that update dependencies with known vulnerabilities to a patched version."
+        == "Validates whether GitHub scans the repository's history, branches, and other content for credentials and raises an alert when one is found."
     )
     assert requirement.requires_explicit_include is False
 
 
 # ----------------------------------------------------------------------
 def test_GetParameters():
-    parameters = DependabotSecurityUpdatesRequirement().GetParameters()
+    parameters = SecretProtectionRequirement().GetParameters()
 
     assert list(parameters.keys()) == ["skip", "disallow"]
     assert parameters["disallow"].type is bool
@@ -152,29 +149,31 @@ def test_ErrorResolution():
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [Advanced Security settings](https://github.com/gt-csse/RepoAuditorWeb/settings/security_analysis) page.
-        2) Scroll to the **Dependabot security updates** row.
+        2) Scroll to the **Secret Protection** row.
         3) Click the **Enable** button.
-        4) Click the **Save changes** button at the bottom of the page.
+        4) Confirm the change when prompted.
+        5) Click the **Save changes** button at the bottom of the page.
 
-        See [Configuring Dependabot security updates]({_DOCUMENTATION_URL})
+        See [Enabling secret scanning for your repository]({_DOCUMENTATION_URL})
         for more information.
         """,
     )
 
 
 # ----------------------------------------------------------------------
-# The resolution directs the user to disable the setting when the updates must not be enabled.
+# The resolution directs the user to disable the setting when secret protection must not be enabled.
 def test_ErrorResolutionWhenDisallowed():
     result = _Evaluate(_CreateResponse("enabled"), disallow=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [Advanced Security settings](https://github.com/gt-csse/RepoAuditorWeb/settings/security_analysis) page.
-        2) Scroll to the **Dependabot security updates** row.
+        2) Scroll to the **Secret Protection** row.
         3) Click the **Disable** button.
-        4) Click the **Save changes** button at the bottom of the page.
+        4) Confirm the change when prompted.
+        5) Click the **Save changes** button at the bottom of the page.
 
-        See [Configuring Dependabot security updates]({_DOCUMENTATION_URL})
+        See [Enabling secret scanning for your repository]({_DOCUMENTATION_URL})
         for more information.
         """,
     )
@@ -294,8 +293,22 @@ def test_MissingStatusHasNoRationale(pat):
 
 
 # ----------------------------------------------------------------------
+# The other secret scanning settings are distinct from the one under audit, so a response that
+# reports only those is treated as though the value is not visible.
+def test_UnrelatedSecretScanningSettingsAreNotUsed():
+    result = _Evaluate(
+        {"security_and_analysis": {"secret_scanning_push_protection": {"status": "enabled"}}},
+    )
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The repository's security and analysis settings are not visible because the Personal Access Token provided does not grant admin access to the repository."
+    )
+
+
+# ----------------------------------------------------------------------
 def test_Skip():
-    requirement = DependabotSecurityUpdatesRequirement()
+    requirement = SecretProtectionRequirement()
 
     result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
 
