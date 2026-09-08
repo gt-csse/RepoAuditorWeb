@@ -15,6 +15,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit_m
     MergeCommitMessageRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit import MergeCommitRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.public_private import (
+    PublicPrivateRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.rebase_commit import (
     RebaseCommitRequirement,
 )
@@ -80,6 +83,8 @@ class StandardQuery(Query):
                 SuggestUpdatingPullRequestBranchesRequirement(),
                 AutoMergeRequirement(),
                 DeleteBranchOnMergeRequirement(),
+                # settings page (Danger Zone)
+                PublicPrivateRequirement(),
             ],
         )
 

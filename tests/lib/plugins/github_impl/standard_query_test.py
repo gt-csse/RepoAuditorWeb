@@ -54,6 +54,7 @@ def test_Construct():
         "SuggestUpdatingPullRequestBranches",
         "AutoMerge",
         "DeleteBranchOnMerge",
+        "PublicPrivate",
     ]
 
 
