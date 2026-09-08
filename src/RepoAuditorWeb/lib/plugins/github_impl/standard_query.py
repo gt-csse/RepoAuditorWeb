@@ -9,6 +9,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.default_branch
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.delete_branch_on_merge import (
     DeleteBranchOnMergeRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.dependabot_security_updates import (
+    DependabotSecurityUpdatesRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.description import DescriptionRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.license import LicenseRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit_message import (
@@ -85,6 +88,8 @@ class StandardQuery(Query):
                 DeleteBranchOnMergeRequirement(),
                 # settings page (Danger Zone)
                 PublicPrivateRequirement(),
+                # advanced security page
+                DependabotSecurityUpdatesRequirement(),
             ],
         )
 

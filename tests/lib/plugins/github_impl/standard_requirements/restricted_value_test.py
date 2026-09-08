@@ -3,7 +3,10 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import GetRestrictedValue
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import (
+    AccessLevel,
+    GetRestrictedValue,
+)
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery, MyRequirement
@@ -13,9 +16,10 @@ from conftest import MyModule, MyQuery, MyRequirement
 def _Invoke(
     response: dict,
     *,
-    key: str = "allow_merge_commit",
+    keys: str | tuple[str, ...] = "allow_merge_commit",
     value_description: str = "merge settings",
     pat: str | None = "my-pat",
+    access_level: AccessLevel = AccessLevel.Push,
 ) -> EvaluateResult | object:
     requirement = MyRequirement("MyRequirement", "My description.")
     module = MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
@@ -27,8 +31,9 @@ def _Invoke(
             "response": response,
             "session": GitHubSession("https://github.com/gt-csse/RepoAuditorWeb", pat),
         },
-        key,
+        keys,
         value_description,
+        access_level,
     )
 
 
@@ -42,7 +47,96 @@ def test_VisibleValue(value):
 # ----------------------------------------------------------------------
 # The key is a parameter so that any restricted setting can be read, not just the merge methods.
 def test_ReadsTheRequestedKey():
-    assert _Invoke({"delete_branch_on_merge": True}, key="delete_branch_on_merge") is True
+    assert _Invoke({"delete_branch_on_merge": True}, keys="delete_branch_on_merge") is True
+
+
+# ----------------------------------------------------------------------
+# Some settings are nested within the response, so a sequence of keys describes the path to them.
+def test_ReadsNestedKeys():
+    response = {"security_and_analysis": {"dependabot_security_updates": {"status": "enabled"}}}
+
+    value = _Invoke(
+        response,
+        keys=("security_and_analysis", "dependabot_security_updates", "status"),
+    )
+
+    assert value == "enabled"
+
+
+# ----------------------------------------------------------------------
+# A path that stops short is not visible, so it is reported rather than raising.
+@pytest.mark.parametrize(
+    "response",
+    [
+        {},
+        {"security_and_analysis": None},
+        {"security_and_analysis": {}},
+        {"security_and_analysis": {"dependabot_security_updates": {}}},
+    ],
+)
+def test_NestedKeysNotVisible(response):
+    result = _Invoke(
+        response,
+        keys=("security_and_analysis", "dependabot_security_updates", "status"),
+    )
+
+    assert isinstance(result, EvaluateResult)
+    assert result.result == EvaluateResultValue.Error
+
+
+# ----------------------------------------------------------------------
+# A value along the path that is not a dictionary cannot be traversed further.
+def test_NestedKeysStopAtNonDictionary():
+    result = _Invoke({"security_and_analysis": True}, keys=("security_and_analysis", "status"))
+
+    assert isinstance(result, EvaluateResult)
+    assert result.result == EvaluateResultValue.Error
+
+
+# ----------------------------------------------------------------------
+# The access level is interpolated because GitHub restricts different settings to different levels.
+def test_AdminAccessLevelContext():
+    result = _Invoke({}, value_description="security and analysis settings", access_level=AccessLevel.Admin)
+
+    assert isinstance(result, EvaluateResult)
+    assert result.context == (
+        "The repository's security and analysis settings are not visible because the Personal Access Token provided does not grant admin access to the repository."
+    )
+
+
+# ----------------------------------------------------------------------
+def test_AdminAccessLevelResolutionWithoutPat():
+    result = _Invoke({}, pat=None, access_level=AccessLevel.Admin)
+
+    assert isinstance(result, EvaluateResult)
+    assert result.resolution == textwrap.dedent(
+        """\
+        1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
+           with admin access to the repository.
+        2) Provide it via the `--GitHub-pat` command line argument or the
+           `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
+
+        See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+        for more information.
+        """,
+    )
+
+
+# ----------------------------------------------------------------------
+def test_AdminAccessLevelResolutionWithPat():
+    result = _Invoke({}, access_level=AccessLevel.Admin)
+
+    assert isinstance(result, EvaluateResult)
+    assert result.resolution == textwrap.dedent(
+        """\
+        1) Open the [Personal Access Tokens](https://github.com/settings/personal-access-tokens) page.
+        2) Grant the token admin access to the repository, or replace it with one that has it. A
+           fine-grained token must also list the repository among those it can access.
+
+        See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+        for more information.
+        """,
+    )
 
 
 # ----------------------------------------------------------------------

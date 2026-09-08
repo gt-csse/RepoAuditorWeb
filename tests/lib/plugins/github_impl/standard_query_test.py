@@ -55,6 +55,7 @@ def test_Construct():
         "AutoMerge",
         "DeleteBranchOnMerge",
         "PublicPrivate",
+        "DependabotSecurityUpdates",
     ]
 
 
