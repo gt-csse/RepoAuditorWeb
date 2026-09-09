@@ -3,7 +3,7 @@ import re
 import pytest
 import requests
 
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, GitHubSession
+from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, GitHubSession, TeamSize
 
 
 # ----------------------------------------------------------------------
@@ -30,14 +30,21 @@ def test_Construct():
 
 
 # ----------------------------------------------------------------------
+def test_TeamSizeValues():
+    assert [member.value for member in TeamSize] == ["solo", "small", "large"]
+
+
+# ----------------------------------------------------------------------
 def test_GetParameters():
     parameters = GitHubModule().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "url", "pat", "branch"]
+    assert list(parameters.keys()) == ["skip", "url", "pat", "branch", "team_size"]
     assert parameters["url"].type is str
     assert parameters["url"].default is None
     assert parameters["pat"].type == (str | None)
     assert parameters["branch"].type == (str | None)
+    assert parameters["team_size"].type is TeamSize
+    assert parameters["team_size"].default == TeamSize.Small
 
 
 # ----------------------------------------------------------------------
@@ -56,7 +63,7 @@ class TestGetModuleData:
         )
 
         assert module_data is not None
-        assert list(module_data[None].keys()) == ["session", "branch"]
+        assert list(module_data[None].keys()) == ["session", "branch", "team_size"]
 
     # ----------------------------------------------------------------------
     # The branch is carried through so that queries can evaluate a non-default branch.
@@ -75,6 +82,51 @@ class TestGetModuleData:
 
         assert module_data is not None
         assert module_data[None]["branch"] == branch
+
+    # ----------------------------------------------------------------------
+    # The team size is carried through so that requirements can derive defaults from it.
+    @pytest.mark.parametrize(
+        ("team_size", "expected"),
+        [
+            (TeamSize.Solo, TeamSize.Solo),
+            (TeamSize.Small, TeamSize.Small),
+            (TeamSize.Large, TeamSize.Large),
+            # The web form submits every value as a string.
+            ("large", TeamSize.Large),
+            # An absent value is the default rather than an error.
+            (None, TeamSize.Small),
+        ],
+    )
+    def test_TeamSize(self, team_size, expected):
+        module_data = GitHubModule().GetModuleData(
+            {
+                None: {
+                    "skip": False,
+                    "url": "https://github.com/gt-csse/RepoAuditorWeb",
+                    "pat": None,
+                    "branch": None,
+                    "team_size": team_size,
+                },
+            },
+        )
+
+        assert module_data is not None
+        assert module_data[None]["team_size"] == expected
+
+    # ----------------------------------------------------------------------
+    def test_ErrorInvalidTeamSize(self):
+        with pytest.raises(ValueError, match=re.escape("'huge' is not a valid TeamSize")):
+            GitHubModule().GetModuleData(
+                {
+                    None: {
+                        "skip": False,
+                        "url": "https://github.com/gt-csse/RepoAuditorWeb",
+                        "pat": None,
+                        "branch": None,
+                        "team_size": "huge",
+                    },
+                },
+            )
 
     # ----------------------------------------------------------------------
     def test_PreservesRequirementArguments(self):
