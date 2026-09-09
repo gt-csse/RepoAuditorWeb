@@ -14,6 +14,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_linear_
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_pull_requests import (
     RequirePullRequestsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_review_from_code_owners import (
+    RequireReviewFromCodeOwnersRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_signed_commits import (
     RequireSignedCommitsRequirement,
 )
@@ -50,6 +53,7 @@ class RulesetQuery(Query):
                 RequirePullRequestsRequirement(),
                 RequireApprovalsRequirement(),
                 DismissStalePullRequestApprovalsRequirement(),
+                RequireReviewFromCodeOwnersRequirement(),
             ],
         )
 

@@ -407,6 +407,15 @@ class TestFieldTypes:
         assert field.type == expected
 
     # ----------------------------------------------------------------------
+    # Every other type recovers None from an empty control, which a checkbox does not have, so an
+    # optional bool is displayed by a control that can express the absent value.
+    def test_OptionalBoolean(self):
+        field = _CreateField(TyperParameter(bool | None, None))
+
+        assert field.type == FieldType.OptionalBoolean
+        assert field.choices == ["default", "yes", "no"]
+
+    # ----------------------------------------------------------------------
     # An unsubscripted 'list' declares no origin, so it is not distinguishable from a plain value.
     def test_UnsubscriptedList(self):
         assert _CreateField(TyperParameter(list, [])).type == FieldType.Text
@@ -469,6 +478,18 @@ class TestFieldValues:
         assert field.value is expected
 
     # ----------------------------------------------------------------------
+    # The absent value is displayed as a state of its own rather than collapsing to one of the two
+    # values the parameter may hold.
+    @pytest.mark.parametrize(
+        ("default", "expected"),
+        [(True, "yes"), (False, "no"), (None, "default")],
+    )
+    def test_OptionalBooleanValue(self, default, expected):
+        field = _CreateField(TyperParameter(bool | None, default))
+
+        assert field.value == expected
+
+    # ----------------------------------------------------------------------
     # A control cannot display None, so an absent value is displayed as an empty control.
     @pytest.mark.parametrize("parameter_type", [str, int, float])
     def test_NoneValue(self, parameter_type):
@@ -522,6 +543,25 @@ class TestParseValues:
     )
     def test_Boolean(self, submitted, expected):
         assert _ParseValue(TyperParameter(bool, False), {"MyModule_one": submitted}) == expected
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        ("submitted", "expected"),
+        [("yes", True), ("no", False), ("default", None), ("", None)],
+    )
+    def test_OptionalBoolean(self, submitted, expected):
+        assert _ParseValue(TyperParameter(bool | None, None), {"MyModule_one": submitted}) is expected
+
+    # ----------------------------------------------------------------------
+    # A requirement that derives its default from other data is reached only when the submitted
+    # value is None, so the state the form displays for an untouched control must parse back to it.
+    @pytest.mark.parametrize("default", [None, True, False])
+    def test_OptionalBooleanRoundTrip(self, default):
+        parameter = TyperParameter(bool | None, default)
+
+        displayed = _CreateField(parameter).value
+
+        assert _ParseValue(parameter, {"MyModule_one": displayed}) is default
 
     # ----------------------------------------------------------------------
     # The form submits a list as a single string, so the items are split from it.
