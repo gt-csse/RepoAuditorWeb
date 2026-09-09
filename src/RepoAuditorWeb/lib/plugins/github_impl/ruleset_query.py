@@ -8,6 +8,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_creati
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_deletions import (
     RestrictDeletionsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_updates import (
+    RestrictUpdatesRequirement,
+)
 from RepoAuditorWeb.lib.query import Query
 
 
@@ -22,6 +25,7 @@ class RulesetQuery(Query):
             [
                 RestrictDeletionsRequirement(),
                 RestrictCreationsRequirement(),
+                RestrictUpdatesRequirement(),
             ],
         )
 
