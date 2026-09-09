@@ -127,19 +127,24 @@ def test_TeamSizeDefault(team_size, expected):
 
 
 # ----------------------------------------------------------------------
-# A solo maintainer is expected to require no approvals, which a branch with no pull request rule at
-# all also satisfies.
+# The count is a setting of the pull request rule, so a branch that does not require a pull request
+# collects no approvals for it to govern regardless of the team size.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_NoRulesSatisfiesSolo(response):
-    result = _Evaluate(response, team_size=TeamSize.Solo)
+@pytest.mark.parametrize("team_size", [TeamSize.Solo, TeamSize.Small, TeamSize.Large])
+def test_DoesNotApplyWithoutPullRequestRule(response, team_size):
+    result = _Evaluate(response, team_size=team_size)
 
-    assert result.result == EvaluateResultValue.Success
+    assert result.result == EvaluateResultValue.DoesNotApply
+    assert result.context == (
+        "The ruleset does not require a pull request before merging, so no approvals are collected."
+    )
+    assert result.resolution is None
 
 
 # ----------------------------------------------------------------------
 # The rationale explains the default regardless of the outcome, so it is present on success even
 # though there is nothing to resolve.
-@pytest.mark.parametrize("response", [[_CreatePullRequestRule(1)], []])
+@pytest.mark.parametrize("response", [[_CreatePullRequestRule(1)], [_CreatePullRequestRule(0)]])
 def test_Rationale(response):
     result = _Evaluate(response)
 
@@ -159,21 +164,10 @@ def test_Rationale(response):
     ],
 )
 def test_RationaleNamesTeamSize(team_size, expected):
-    result = _Evaluate([], team_size=team_size)
+    result = _Evaluate([_CreatePullRequestRule(0)], team_size=team_size)
 
     assert result.rationale is not None
     assert expected in result.rationale
-
-
-# ----------------------------------------------------------------------
-# The endpoint reports only the rules that apply, so a branch whose rules do not include the pull
-# request rule requires no approvals.
-@pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_NoApprovalsWhenRequired(response):
-    result = _Evaluate(response)
-
-    assert result.result == EvaluateResultValue.Error
-    assert result.context == ("The repository's value is '0', but the requirement specifies it must be '1'.")
 
 
 # ----------------------------------------------------------------------
@@ -217,22 +211,21 @@ def test_ValueOverridesTeamSize(team_size):
 # A value of zero is an override rather than an absent one, so it is honored even for a team whose
 # size implies a higher count.
 def test_ValueOfZero():
-    result = _Evaluate([], value=0, team_size=TeamSize.Large)
+    result = _Evaluate([_CreatePullRequestRule(0)], value=0, team_size=TeamSize.Large)
 
     assert result.result == EvaluateResultValue.Success
 
 
 # ----------------------------------------------------------------------
 def test_ErrorResolution():
-    result = _Evaluate([])
+    result = _Evaluate([_CreatePullRequestRule(0)])
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Check the **Require a pull request before merging** checkbox in the **Branch rules** section.
-        4) Set the **Required approvals** dropdown to 1.
-        5) Click the **Save changes** button at the bottom of the page.
+        3) Set the **Required approvals** dropdown beneath **Require a pull request before merging** to 1.
+        4) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.
@@ -243,15 +236,14 @@ def test_ErrorResolution():
 # ----------------------------------------------------------------------
 # The resolution names the count that satisfies the requirement rather than a fixed one.
 def test_ErrorResolutionUsesExpectedCount():
-    result = _Evaluate([], team_size=TeamSize.Large)
+    result = _Evaluate([_CreatePullRequestRule(0)], team_size=TeamSize.Large)
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Check the **Require a pull request before merging** checkbox in the **Branch rules** section.
-        4) Set the **Required approvals** dropdown to 2.
-        5) Click the **Save changes** button at the bottom of the page.
+        3) Set the **Required approvals** dropdown beneath **Require a pull request before merging** to 2.
+        4) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.
@@ -263,7 +255,7 @@ def test_ErrorResolutionUsesExpectedCount():
 # A ruleset may target a branch other than 'main', so the resolution names the branch that was
 # queried.
 def test_ResolutionUsesBranchName():
-    result = _Evaluate([], branch="trunk")
+    result = _Evaluate([_CreatePullRequestRule(0)], branch="trunk")
 
     assert result.resolution is not None
     assert "`trunk`" in result.resolution
@@ -274,7 +266,7 @@ def test_ResolutionUsesBranchName():
 # The settings url is derived from the repository under audit rather than hard-coded, so it points
 # at an Enterprise host when one is being audited.
 def test_ResolutionUsesEnterpriseUrl():
-    result = _Evaluate([], url="https://github.example.com/my-org/my-repo")
+    result = _Evaluate([_CreatePullRequestRule(0)], url="https://github.example.com/my-org/my-repo")
 
     assert result.resolution is not None
     assert "(https://github.example.com/my-org/my-repo/settings/rules)" in result.resolution

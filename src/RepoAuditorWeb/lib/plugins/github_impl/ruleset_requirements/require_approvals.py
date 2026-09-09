@@ -66,16 +66,22 @@ class RequireApprovalsRequirement(Requirement):
     ) -> EvaluateResult:
         rules = cast(list[dict[str, object]], query_data["response"])
 
-        # The endpoint reports only the rules that apply, so a branch without the pull request rule
-        # requires no approvals rather than an unknown number of them.
-        approvals_value = 0
+        # The endpoint reports only the rules that apply, so the absence of the pull request rule
+        # means the branch accepts direct pushes.
+        pull_request_rule = next((rule for rule in rules if rule.get("type") == RULE_TYPE), None)
 
-        for rule in rules:
-            if rule.get("type") != RULE_TYPE:
-                continue
-
-            parameters = cast(dict[str, object], rule.get("parameters") or {})
-            approvals_value = cast(int, parameters.get("required_approving_review_count") or 0)
+        # The count is a setting of the pull request rule, so it governs nothing on a branch that
+        # does not require one. Reporting a failure here would restate the absence of the pull
+        # request rule, which RequirePullRequests already covers.
+        if pull_request_rule is None:
+            return EvaluateResult(
+                EvaluateResultValue.DoesNotApply,
+                "The ruleset does not require a pull request before merging, so no approvals are collected.",
+                None,
+                None,
+                self,
+                module,
+            )
 
         team_size = cast(TeamSize, query_data["team_size"])
 
@@ -143,19 +149,21 @@ class RequireApprovalsRequirement(Requirement):
             """,
         )
 
+        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
+        approvals_value = cast(int, parameters.get("required_approving_review_count") or 0)
+
         if approvals_value != acceptable_value:
             repository_url = cast("GitHubSession", query_data["session"]).github_url
             branch_name = cast(str, query_data["branch"])
 
-            # The count is a setting of the pull request rule rather than a rule of its own, so the
-            # rule has to be enabled before the count can be set to a non-zero value.
+            # The requirement does not apply unless the pull request rule is enabled, so the
+            # dropdown is already available and the resolution does not need to enable the rule.
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Check the **Require a pull request before merging** checkbox in the **Branch rules** section.
-                4) Set the **Required approvals** dropdown to {acceptable_value}.
-                5) Click the **Save changes** button at the bottom of the page.
+                3) Set the **Required approvals** dropdown beneath **Require a pull request before merging** to {acceptable_value}.
+                4) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
                 for more information.
