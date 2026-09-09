@@ -2,6 +2,9 @@ from typing import cast, override
 
 import requests
 
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.dismiss_stale_pull_request_approvals import (
+    DismissStalePullRequestApprovalsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approvals import (
     RequireApprovalsRequirement,
 )
@@ -46,6 +49,7 @@ class RulesetQuery(Query):
                 RequireSignedCommitsRequirement(),
                 RequirePullRequestsRequirement(),
                 RequireApprovalsRequirement(),
+                DismissStalePullRequestApprovalsRequirement(),
             ],
         )
 
