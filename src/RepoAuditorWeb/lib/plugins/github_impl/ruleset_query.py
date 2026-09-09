@@ -11,6 +11,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approva
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approvals import (
     RequireApprovalsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_conversation_resolution import (
+    RequireConversationResolutionRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_linear_history import (
     RequireLinearHistoryRequirement,
 )
@@ -58,6 +61,7 @@ class RulesetQuery(Query):
                 DismissStalePullRequestApprovalsRequirement(),
                 RequireReviewFromCodeOwnersRequirement(),
                 RequireApprovalOfMostRecentPushRequirement(),
+                RequireConversationResolutionRequirement(),
             ],
         )
 
