@@ -5,6 +5,9 @@ import requests
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.dismiss_stale_pull_request_approvals import (
     DismissStalePullRequestApprovalsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approval_of_most_recent_push import (
+    RequireApprovalOfMostRecentPushRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approvals import (
     RequireApprovalsRequirement,
 )
@@ -54,6 +57,7 @@ class RulesetQuery(Query):
                 RequireApprovalsRequirement(),
                 DismissStalePullRequestApprovalsRequirement(),
                 RequireReviewFromCodeOwnersRequirement(),
+                RequireApprovalOfMostRecentPushRequirement(),
             ],
         )
 
