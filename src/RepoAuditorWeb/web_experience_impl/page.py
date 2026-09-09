@@ -542,7 +542,7 @@ _SCRIPT = textwrap.dedent(
         return input;
       }
 
-      if (field.type === "choice") {
+      if (field.type === "choice" || field.type === "optional_boolean") {
         const select = document.createElement("select");
 
         for (const choice of field.choices) {

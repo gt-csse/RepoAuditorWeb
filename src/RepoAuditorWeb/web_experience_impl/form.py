@@ -16,6 +16,9 @@ class FieldType(enum.StrEnum):
     """The control used to display a field."""
 
     Boolean = "boolean"
+    # A checkbox has no empty state, so a bool that may also be None needs a control that can
+    # express the absent value alongside the two it may hold.
+    OptionalBoolean = "optional_boolean"
     Integer = "integer"
     Number = "number"
     Text = "text"
@@ -149,6 +152,14 @@ _SKIP_PARAMETER_NAME = "skip"
 
 _LIST_DELIMITER = ","
 
+# The states of a tri-state boolean, named so that the control reads as the choice being made rather
+# than as a value that happens to be empty.
+_OPTIONAL_BOOLEAN_NONE = "default"
+_OPTIONAL_BOOLEAN_TRUE = "yes"
+_OPTIONAL_BOOLEAN_FALSE = "no"
+
+_OPTIONAL_BOOLEAN_VALUES = {True: _OPTIONAL_BOOLEAN_TRUE, False: _OPTIONAL_BOOLEAN_FALSE}
+
 # A parameter that a module requires but declares a default for (so that its absence is reported by
 # the module rather than by the command line) says so at the beginning of its help text.
 _REQUIRED_HELP_PREFIX = "[REQUIRED]"
@@ -188,7 +199,7 @@ def _CreateField(
     value: object,
 ) -> FormField:
     resolved_type = _ResolveType(parameter.type)
-    field_type = _ResolveFieldType(resolved_type)
+    field_type = _ResolveFieldType(resolved_type, allows_none=_AllowsNone(parameter.type))
     info = parameter.info
 
     help_text = getattr(info, "help", None) or ""
@@ -211,6 +222,11 @@ def _CreateField(
         value = _LIST_DELIMITER.join(str(item) for item in value) if isinstance(value, list | tuple) else ""
     elif field_type == FieldType.Boolean:
         value = bool(value)
+    elif field_type == FieldType.OptionalBoolean:
+        # The three states are displayed as the strings that identify them, so the control submits
+        # the absent value rather than collapsing it to one of the other two.
+        choices = [_OPTIONAL_BOOLEAN_NONE, _OPTIONAL_BOOLEAN_TRUE, _OPTIONAL_BOOLEAN_FALSE]
+        value = _OPTIONAL_BOOLEAN_NONE if value is None else _OPTIONAL_BOOLEAN_VALUES[bool(value)]
     elif value is None:
         value = ""
 
@@ -242,7 +258,7 @@ def _ResolveType(parameter_type: type | UnionType) -> type:
 
 
 # ----------------------------------------------------------------------
-def _ResolveFieldType(resolved_type: type) -> FieldType:
+def _ResolveFieldType(resolved_type: type, *, allows_none: bool = False) -> FieldType:
     if get_origin(resolved_type) in (list, tuple):
         return FieldType.List
 
@@ -250,7 +266,8 @@ def _ResolveFieldType(resolved_type: type) -> FieldType:
         return FieldType.Choice
 
     if resolved_type is bool:
-        return FieldType.Boolean
+        # Every other type recovers None from an empty control, which a checkbox does not have.
+        return FieldType.OptionalBoolean if allows_none else FieldType.Boolean
 
     if resolved_type is int:
         return FieldType.Integer
@@ -264,10 +281,21 @@ def _ResolveFieldType(resolved_type: type) -> FieldType:
 # ----------------------------------------------------------------------
 def _CoerceValue(parameter: TyperParameter, value: object) -> object:
     resolved_type = _ResolveType(parameter.type)
-    field_type = _ResolveFieldType(resolved_type)
+    field_type = _ResolveFieldType(resolved_type, allows_none=_AllowsNone(parameter.type))
 
     if field_type == FieldType.Boolean:
         return bool(value)
+
+    if field_type == FieldType.OptionalBoolean:
+        # A value that names none of the states is the absent one, so a control that was never set
+        # resolves to None rather than to one of the values it could have held.
+        if value in (True, False):
+            return value
+
+        return {
+            _OPTIONAL_BOOLEAN_TRUE: True,
+            _OPTIONAL_BOOLEAN_FALSE: False,
+        }.get(str(value))
 
     if field_type == FieldType.List:
         items = (
