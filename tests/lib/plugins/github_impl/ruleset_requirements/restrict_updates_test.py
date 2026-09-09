@@ -182,7 +182,7 @@ def test_ErrorResolution():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Clear the **Restrict updates** checkbox in the **Rules** section.
+        3) Clear the **Restrict updates** checkbox in the **Branch rules** section.
         4) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
@@ -200,7 +200,7 @@ def test_ErrorResolutionWhenRequired():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Check the **Restrict updates** checkbox in the **Rules** section.
+        3) Check the **Restrict updates** checkbox in the **Branch rules** section.
         4) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
