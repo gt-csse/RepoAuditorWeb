@@ -30,7 +30,7 @@ class ProtectedMainlineBranchRequirement(Requirement):
             # The default requires the branch to be protected, so the parameter names the override
             # rather than the default; a 'require' parameter defaulting to True would be a flag that
             # is already on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
                 OptionInfo(help="Require that the default branch is not protected."),
@@ -46,7 +46,7 @@ class ProtectedMainlineBranchRequirement(Requirement):
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
         protected_value = cast(bool, cast(dict, query_data["response"]).get("protected", False))
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\
@@ -67,9 +67,9 @@ class ProtectedMainlineBranchRequirement(Requirement):
             - The default branch is the branch a clone checks out, the base branch proposed for new
               pull requests, and the branch consumers reference by name, so it is the branch where
               rewritten history is most widely observed.
-            - Protection is the mechanism the rules worth requiring later are attached to, including
-              required reviews, required status checks, and linear history. This requirement
-              establishes that mechanism rather than any particular rule.
+            - Protection is the mechanism the rules worth having later are attached to, including
+              required reviews, status checks, and linear history. This requirement establishes that
+              mechanism rather than any particular rule.
 
             ## Reasons to Override this Default
 

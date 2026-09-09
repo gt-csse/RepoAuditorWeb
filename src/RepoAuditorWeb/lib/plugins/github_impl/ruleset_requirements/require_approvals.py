@@ -107,9 +107,9 @@ class RequireApprovalsRequirement(Requirement):
               judgement. The pull request produces something that can be examined and a status check
               reports what a machine concluded, but neither states that a person read the change, so
               a count of zero permits an author to merge their own work unseen.
-            - The count is what gives the surrounding rules force. Requiring a pull request without
-              requiring an approval leaves a process whose last step is the author clicking merge,
-              which reaches the same result as a direct push by a longer route.
+            - The count is what gives the surrounding rules force. Requiring a pull request with no
+              approval leaves a process whose last step is the author clicking merge, which reaches
+              the same result as a direct push by a longer route.
             - GitHub does not allow an author to approve their own pull request, so any count above
               zero guarantees that the reviewer is someone other than the person who wrote the
               change.
@@ -117,7 +117,7 @@ class RequireApprovalsRequirement(Requirement):
               reviewers detect close to the maximum number of defects a review will find and that
               the cost of adding further reviewers is not justified, so a large team is expected to
               require two rather than a number that grows with its headcount.
-            - Requiring more approvals than a team can supply is worse than requiring fewer. Each
+            - Requiring more approvals than a team can supply is worse than too few. Each
               approval names a person who must be available before the change can land, so a count
               that exceeds the number of people willing to review turns the rule into a queue and
               pressures the team into granting bypasses that weaken every other rule with it.

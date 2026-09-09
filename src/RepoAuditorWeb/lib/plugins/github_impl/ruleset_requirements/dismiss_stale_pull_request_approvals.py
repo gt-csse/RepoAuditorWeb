@@ -35,7 +35,7 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
             # The default requires the setting to be enabled, so the parameter names the override
             # rather than the default; a 'require' parameter defaulting to True would be a flag that
             # is already on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
                 OptionInfo(help="Require that stale pull request approvals are not dismissed."),
@@ -72,7 +72,7 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
         parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
         dismiss_value = bool(parameters.get("dismiss_stale_reviews_on_push"))
 
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\

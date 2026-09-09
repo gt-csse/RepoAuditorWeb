@@ -31,7 +31,7 @@ class MergeCommitRequirement(Requirement):
             # Merge commits are enabled by default, so the parameter names the override rather than
             # the default; a 'require' parameter defaulting to True would be a flag that is already
             # on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
                 OptionInfo(help="Require that merge commits are disallowed."),
@@ -46,7 +46,7 @@ class MergeCommitRequirement(Requirement):
         query_data: dict[str, object],
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\

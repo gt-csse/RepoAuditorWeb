@@ -35,10 +35,10 @@ class RequirePullRequestsRequirement(Requirement):
             # The default requires the rule to be enabled, so the parameter names the override
             # rather than the default; a 'require' parameter defaulting to True would be a flag that
             # is already on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help="Require that pull requests are not required."),
+                OptionInfo(help="Require that pull requests are not mandated."),
             ),
         }
 
@@ -53,7 +53,7 @@ class RequirePullRequestsRequirement(Requirement):
         rules = cast(list[dict[str, object]], query_data["response"])
         pull_requests_value = any(rule.get("type") == RULE_TYPE for rule in rules)
 
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\
@@ -70,8 +70,8 @@ class RequirePullRequestsRequirement(Requirement):
               repository's process attaches to: a review, an approval, a status check, and a
               conversation all refer to a pull request, so a change that never opens one is a change
               those controls cannot describe.
-            - The rule is what makes the other rules meaningful. Required status checks and required
-              reviews constrain how a pull request merges, so a branch that still accepts direct
+            - The rule is what makes the other rules meaningful. Mandatory status checks and reviews
+              constrain how a pull request merges, so a branch that still accepts direct
               pushes leaves a path that bypasses them entirely rather than a path that is merely
               less scrutinized.
             - The record survives the merge. A pull request retains the discussion, the reviewers,
@@ -81,9 +81,9 @@ class RequirePullRequestsRequirement(Requirement):
               requests by convention depends on every contributor remembering under time pressure,
               and the pushes that skip the process are the ones made in a hurry rather than the ones
               that were least important.
-            - The cost is small for work that was going to be reviewed anyway. The rule requires
-              only that a pull request be opened, and a ruleset that sets no required approvals
-              permits the author to merge their own pull request immediately.
+            - The cost is small for work that was going to be reviewed anyway. The rule asks only
+              that a pull request be opened, and a ruleset that sets no required approvals permits
+              the author to merge their own pull request immediately.
 
             ## Reasons to Override this Default
 

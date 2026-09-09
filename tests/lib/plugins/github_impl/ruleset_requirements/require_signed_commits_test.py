@@ -101,7 +101,7 @@ def _CreateModule(requirement: RequireSignedCommitsRequirement) -> MyModule:
 def _Evaluate(
     response: list[dict],
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -114,7 +114,7 @@ def _Evaluate(
             "branch": branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -134,14 +134,14 @@ def test_Construct():
 def test_GetParameters():
     parameters = RequireSignedCommitsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("response", "disallow"),
+    ("response", "prohibit"),
     [
         ([_REQUIRED_SIGNATURES_RULE], False),
         ([_OTHER_RULE, _REQUIRED_SIGNATURES_RULE], False),
@@ -149,8 +149,8 @@ def test_GetParameters():
         ([], True),
     ],
 )
-def test_MatchingValue(response, disallow):
-    result = _Evaluate(response, disallow=disallow)
+def test_MatchingValue(response, prohibit):
+    result = _Evaluate(response, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -181,8 +181,8 @@ def test_NotRequiredWhenRequired(response):
 
 
 # ----------------------------------------------------------------------
-def test_RequiredWhenDisallowed():
-    result = _Evaluate([_REQUIRED_SIGNATURES_RULE], disallow=True)
+def test_RequiredWhenProhibited():
+    result = _Evaluate([_REQUIRED_SIGNATURES_RULE], prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -209,8 +209,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to clear the rule when signed commits must not be required.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate([_REQUIRED_SIGNATURES_RULE], disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate([_REQUIRED_SIGNATURES_RULE], prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -250,6 +250,6 @@ def test_ResolutionUsesEnterpriseUrl():
 def test_Skip():
     requirement = RequireSignedCommitsRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped

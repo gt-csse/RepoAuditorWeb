@@ -31,8 +31,8 @@ _RATIONALE = textwrap.dedent(
       branch requires someone to still hold the commit hash in a local clone or a reflog
       that has not yet expired.
     - A deletion defeats the protections attached to the branch rather than violating them.
-      Required reviews, required status checks, and a blocked force push all constrain what
-      may be pushed to a branch that exists; none of them apply once the branch is gone.
+      Required reviews, status checks, and a blocked force push all constrain what may be
+      pushed to a branch that exists; none of them apply once the branch is gone.
     - The branch this query targets is the one consumers reference by name. Its deletion
       breaks clones, pull requests opened against it, workflows triggered on it, and
       published links to it, so the cost is borne by everyone reading the repository rather
@@ -84,7 +84,7 @@ def _CreateModule(requirement: RestrictDeletionsRequirement) -> MyModule:
 def _Evaluate(
     response: list[dict],
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -97,7 +97,7 @@ def _Evaluate(
             "branch": branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -117,14 +117,14 @@ def test_Construct():
 def test_GetParameters():
     parameters = RestrictDeletionsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("response", "disallow"),
+    ("response", "prohibit"),
     [
         ([_DELETION_RULE], False),
         ([_OTHER_RULE, _DELETION_RULE], False),
@@ -132,8 +132,8 @@ def test_GetParameters():
         ([], True),
     ],
 )
-def test_MatchingValue(response, disallow):
-    result = _Evaluate(response, disallow=disallow)
+def test_MatchingValue(response, prohibit):
+    result = _Evaluate(response, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -164,8 +164,8 @@ def test_UnrestrictedWhenRequired(response):
 
 
 # ----------------------------------------------------------------------
-def test_RestrictedWhenDisallowed():
-    result = _Evaluate([_DELETION_RULE], disallow=True)
+def test_RestrictedWhenProhibited():
+    result = _Evaluate([_DELETION_RULE], prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -192,8 +192,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to clear the rule when deletions must not be restricted.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate([_DELETION_RULE], disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate([_DELETION_RULE], prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -233,6 +233,6 @@ def test_ResolutionUsesEnterpriseUrl():
 def test_Skip():
     requirement = RestrictDeletionsRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped

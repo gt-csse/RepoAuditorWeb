@@ -34,7 +34,7 @@ class RestrictDeletionsRequirement(Requirement):
             # The default requires the rule to be enabled, so the parameter names the override
             # rather than the default; a 'require' parameter defaulting to True would be a flag that
             # is already on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
                 OptionInfo(help="Require that deletions are not restricted."),
@@ -52,7 +52,7 @@ class RestrictDeletionsRequirement(Requirement):
         rules = cast(list[dict[str, object]], query_data["response"])
         restrict_deletions_value = any(rule.get("type") == RULE_TYPE for rule in rules)
 
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\
@@ -66,8 +66,8 @@ class RestrictDeletionsRequirement(Requirement):
               branch requires someone to still hold the commit hash in a local clone or a reflog
               that has not yet expired.
             - A deletion defeats the protections attached to the branch rather than violating them.
-              Required reviews, required status checks, and a blocked force push all constrain what
-              may be pushed to a branch that exists; none of them apply once the branch is gone.
+              Required reviews, status checks, and a blocked force push all constrain what may be
+              pushed to a branch that exists; none of them apply once the branch is gone.
             - The branch this query targets is the one consumers reference by name. Its deletion
               breaks clones, pull requests opened against it, workflows triggered on it, and
               published links to it, so the cost is borne by everyone reading the repository rather

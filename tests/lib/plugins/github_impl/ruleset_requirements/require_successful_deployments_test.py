@@ -108,7 +108,7 @@ def _Evaluate(
     response: list[dict],
     *,
     value: int = 1,
-    disallow: bool = False,
+    prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -121,7 +121,7 @@ def _Evaluate(
             "branch": branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"include": True, "value": value, "disallow": disallow},
+        {"include": True, "value": value, "prohibit": prohibit},
     )
 
 
@@ -142,11 +142,11 @@ def test_Construct():
 def test_GetParameters():
     parameters = RequireSuccessfulDeploymentsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["include", "disallow", "value"]
+    assert list(parameters.keys()) == ["include", "prohibit", "value"]
     assert parameters["value"].type is int
     assert parameters["value"].default == 1
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
@@ -184,9 +184,9 @@ def test_Rationale(response):
 # A single rationale describes the requirement, so neither the requested count nor the inverted
 # expectation changes it.
 @pytest.mark.parametrize("value", [1, 3])
-@pytest.mark.parametrize("disallow", [False, True])
-def test_RationaleIsInvariant(value, disallow):
-    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, disallow=disallow)
+@pytest.mark.parametrize("prohibit", [False, True])
+def test_RationaleIsInvariant(value, prohibit):
+    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, prohibit=prohibit)
 
     assert result.rationale == _RATIONALE
 
@@ -355,10 +355,10 @@ def test_ResolutionUsesEnterpriseUrl():
 
 
 # ----------------------------------------------------------------------
-# 'disallow' inverts the expectation, so an absent rule is what satisfies the requirement.
+# 'prohibit' inverts the expectation, so an absent rule is what satisfies the requirement.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_DisallowMatching(response):
-    result = _Evaluate(response, disallow=True)
+def test_ProhibitMatching(response):
+    result = _Evaluate(response, prohibit=True)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -370,8 +370,8 @@ def test_DisallowMatching(response):
     "response",
     [[_REQUIRED_DEPLOYMENTS_RULE], [_TWO_ENVIRONMENTS_RULE], [_NO_ENVIRONMENTS_RULE]],
 )
-def test_DisallowWhenRequired(response):
-    result = _Evaluate(response, disallow=True)
+def test_ProhibitWhenRequired(response):
+    result = _Evaluate(response, prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -382,8 +382,8 @@ def test_DisallowWhenRequired(response):
 # ----------------------------------------------------------------------
 # The resolution clears the checkbox rather than naming environments, since the rule is expected to
 # be absent entirely.
-def test_DisallowResolution():
-    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], disallow=True)
+def test_ProhibitResolution():
+    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -402,8 +402,8 @@ def test_DisallowResolution():
 # The count describes how much the rule must require, so it is not consulted when the rule is
 # expected to be absent.
 @pytest.mark.parametrize("value", [1, 5])
-def test_DisallowIgnoresValue(value):
-    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, disallow=True)
+def test_ProhibitIgnoresValue(value):
+    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -419,7 +419,7 @@ def test_NotIncluded():
     result = requirement.Evaluate(
         _CreateModule(requirement),
         {},
-        {"include": False, "value": 1, "disallow": False},
+        {"include": False, "value": 1, "prohibit": False},
     )
 
     assert result.result == EvaluateResultValue.Skipped

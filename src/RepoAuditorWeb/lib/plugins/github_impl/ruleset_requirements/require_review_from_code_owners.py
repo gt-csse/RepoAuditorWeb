@@ -51,7 +51,7 @@ class RequireReviewFromCodeOwnersRequirement(Requirement):
                 bool | None,
                 None,
                 OptionInfo(
-                    help="Require that review from code owners is required, overriding the value implied by the team size.",
+                    help="Require review from code owners, overriding the value implied by the team size.",
                 ),
             ),
         }

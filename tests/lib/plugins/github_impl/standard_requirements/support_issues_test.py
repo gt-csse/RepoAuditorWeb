@@ -65,7 +65,7 @@ def _CreateModule(requirement: SupportIssuesRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
     requirement = SupportIssuesRequirement()
@@ -73,7 +73,7 @@ def _Evaluate(
     return requirement.Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -95,18 +95,18 @@ def test_Construct():
 def test_GetParameters():
     parameters = SupportIssuesRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("has_issues", "disallow"),
+    ("has_issues", "prohibit"),
     [(True, False), (False, True)],
 )
-def test_MatchingStatus(has_issues, disallow):
-    result = _Evaluate({"has_issues": has_issues}, disallow=disallow)
+def test_MatchingStatus(has_issues, prohibit):
+    result = _Evaluate({"has_issues": has_issues}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -147,8 +147,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to uncheck the setting when the tracker must be disabled.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate({"has_issues": True}, disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate({"has_issues": True}, prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -183,8 +183,8 @@ def test_NoIssuesWhenRequired():
 
 
 # ----------------------------------------------------------------------
-def test_IssuesWhenDisallowed():
-    result = _Evaluate({"has_issues": True}, disallow=True)
+def test_IssuesWhenProhibited():
+    result = _Evaluate({"has_issues": True}, prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -204,8 +204,8 @@ def test_MissingStatus():
 
 
 # ----------------------------------------------------------------------
-def test_MissingStatusWhenDisallowed():
-    result = _Evaluate({}, disallow=True)
+def test_MissingStatusWhenProhibited():
+    result = _Evaluate({}, prohibit=True)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -215,6 +215,6 @@ def test_MissingStatusWhenDisallowed():
 def test_Skip():
     requirement = SupportIssuesRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped

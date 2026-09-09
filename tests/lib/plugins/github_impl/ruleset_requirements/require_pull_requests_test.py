@@ -34,8 +34,8 @@ _RATIONALE = textwrap.dedent(
       repository's process attaches to: a review, an approval, a status check, and a
       conversation all refer to a pull request, so a change that never opens one is a change
       those controls cannot describe.
-    - The rule is what makes the other rules meaningful. Required status checks and required
-      reviews constrain how a pull request merges, so a branch that still accepts direct
+    - The rule is what makes the other rules meaningful. Mandatory status checks and reviews
+      constrain how a pull request merges, so a branch that still accepts direct
       pushes leaves a path that bypasses them entirely rather than a path that is merely
       less scrutinized.
     - The record survives the merge. A pull request retains the discussion, the reviewers,
@@ -45,9 +45,9 @@ _RATIONALE = textwrap.dedent(
       requests by convention depends on every contributor remembering under time pressure,
       and the pushes that skip the process are the ones made in a hurry rather than the ones
       that were least important.
-    - The cost is small for work that was going to be reviewed anyway. The rule requires
-      only that a pull request be opened, and a ruleset that sets no required approvals
-      permits the author to merge their own pull request immediately.
+    - The cost is small for work that was going to be reviewed anyway. The rule asks only
+      that a pull request be opened, and a ruleset that sets no required approvals permits
+      the author to merge their own pull request immediately.
 
     ## Reasons to Override this Default
 
@@ -105,7 +105,7 @@ def _CreateModule(requirement: RequirePullRequestsRequirement) -> MyModule:
 def _Evaluate(
     response: list[dict],
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -118,7 +118,7 @@ def _Evaluate(
             "branch": branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -138,14 +138,14 @@ def test_Construct():
 def test_GetParameters():
     parameters = RequirePullRequestsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("response", "disallow"),
+    ("response", "prohibit"),
     [
         ([_PULL_REQUEST_RULE], False),
         ([_OTHER_RULE, _PULL_REQUEST_RULE], False),
@@ -153,8 +153,8 @@ def test_GetParameters():
         ([], True),
     ],
 )
-def test_MatchingValue(response, disallow):
-    result = _Evaluate(response, disallow=disallow)
+def test_MatchingValue(response, prohibit):
+    result = _Evaluate(response, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -185,8 +185,8 @@ def test_NotRequiredWhenRequired(response):
 
 
 # ----------------------------------------------------------------------
-def test_RequiredWhenDisallowed():
-    result = _Evaluate([_PULL_REQUEST_RULE], disallow=True)
+def test_RequiredWhenProhibited():
+    result = _Evaluate([_PULL_REQUEST_RULE], prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -213,8 +213,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to clear the rule when pull requests must not be required.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate([_PULL_REQUEST_RULE], disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate([_PULL_REQUEST_RULE], prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -254,6 +254,6 @@ def test_ResolutionUsesEnterpriseUrl():
 def test_Skip():
     requirement = RequirePullRequestsRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped

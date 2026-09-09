@@ -34,7 +34,7 @@ class RequireLinearHistoryRequirement(Requirement):
             "require": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help="Require that a linear history is required."),
+                OptionInfo(help="Require that a ruleset mandates a linear history."),
             ),
         }
 
@@ -75,9 +75,9 @@ class RequireLinearHistoryRequirement(Requirement):
               repository whose branch already contains merge commits rejects every subsequent push,
               which cannot be resolved without rewriting the history.
             - Linearity is a property of how the history reads rather than of what it admits. The
-              rules that determine whether a change is fit to land, such as requiring a pull request,
-              requiring status checks, and requiring signatures, are unaffected by whether the
-              commits sit in a line.
+              rules that determine whether a change is fit to land, such as those requiring a pull
+              request, status checks, and signatures, are unaffected by whether the commits sit in a
+              line.
 
             ## Reasons to Override this Default
 

@@ -79,7 +79,7 @@ def _CreateModule(requirement: SecretProtectionRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
     pat: str | None = "my-pat",
 ) -> EvaluateResult:
@@ -88,7 +88,7 @@ def _Evaluate(
     return requirement.Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, pat)},
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -108,18 +108,18 @@ def test_Construct():
 def test_GetParameters():
     parameters = SecretProtectionRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("status", "disallow"),
+    ("status", "prohibit"),
     [("enabled", False), ("disabled", True)],
 )
-def test_MatchingStatus(status, disallow):
-    result = _Evaluate(_CreateResponse(status), disallow=disallow)
+def test_MatchingStatus(status, prohibit):
+    result = _Evaluate(_CreateResponse(status), prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -162,8 +162,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to disable the setting when secret protection must not be enabled.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate(_CreateResponse("enabled"), disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate(_CreateResponse("enabled"), prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -203,8 +203,8 @@ def test_DisabledWhenRequired():
 
 
 # ----------------------------------------------------------------------
-def test_EnabledWhenDisallowed():
-    result = _Evaluate(_CreateResponse("enabled"), disallow=True)
+def test_EnabledWhenProhibited():
+    result = _Evaluate(_CreateResponse("enabled"), prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -267,7 +267,7 @@ def test_MissingStatusWithPat():
 
 
 # ----------------------------------------------------------------------
-# The setting cannot be evaluated when it is not visible, so 'disallow' does not turn an unknown
+# The setting cannot be evaluated when it is not visible, so 'prohibit' does not turn an unknown
 # value into a passing result.
 @pytest.mark.parametrize(
     ("pat", "expected_result"),
@@ -276,8 +276,8 @@ def test_MissingStatusWithPat():
         ("my-pat", EvaluateResultValue.Error),
     ],
 )
-def test_MissingStatusWhenDisallowed(pat, expected_result):
-    result = _Evaluate({}, disallow=True, pat=pat)
+def test_MissingStatusWhenProhibited(pat, expected_result):
+    result = _Evaluate({}, prohibit=True, pat=pat)
 
     assert result.result == expected_result
 
@@ -310,6 +310,6 @@ def test_UnrelatedSecretScanningSettingsAreNotUsed():
 def test_Skip():
     requirement = SecretProtectionRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped
