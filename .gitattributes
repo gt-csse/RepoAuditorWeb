@@ -1,0 +1,4 @@
+# Normalize all text files to LF in the repository while keeping CRLF in the
+# working tree; without this, line endings vary by contributor platform and git
+# configuration.
+* text=auto eol=crlf
