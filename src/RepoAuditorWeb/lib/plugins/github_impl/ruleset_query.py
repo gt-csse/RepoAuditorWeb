@@ -2,6 +2,9 @@ from typing import cast, override
 
 import requests
 
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_creations import (
+    RestrictCreationsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_deletions import (
     RestrictDeletionsRequirement,
 )
@@ -18,6 +21,7 @@ class RulesetQuery(Query):
             "RulesetQuery",
             [
                 RestrictDeletionsRequirement(),
+                RestrictCreationsRequirement(),
             ],
         )
 
