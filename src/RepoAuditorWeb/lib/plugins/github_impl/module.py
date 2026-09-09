@@ -8,6 +8,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.module import Module
+from RepoAuditorWeb.lib.plugins.github_impl.default_branch_query import DefaultBranchQuery
 from RepoAuditorWeb.lib.plugins.github_impl.standard_query import StandardQuery
 
 
@@ -22,6 +23,7 @@ class GitHubModule(Module):
             "Validates GitHub configuration settings.",
             [
                 StandardQuery(),
+                DefaultBranchQuery(),
             ],
             requires_explicit_include=False,  # TODO: True,
         )
