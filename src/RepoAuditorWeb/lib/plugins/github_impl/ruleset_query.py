@@ -5,6 +5,9 @@ import requests
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_linear_history import (
     RequireLinearHistoryRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_signed_commits import (
+    RequireSignedCommitsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_successful_deployments import (
     RequireSuccessfulDeploymentsRequirement,
 )
@@ -34,6 +37,7 @@ class RulesetQuery(Query):
                 RestrictUpdatesRequirement(),
                 RequireLinearHistoryRequirement(),
                 RequireSuccessfulDeploymentsRequirement(),
+                RequireSignedCommitsRequirement(),
             ],
         )
 
