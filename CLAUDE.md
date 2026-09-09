@@ -3,7 +3,7 @@
 # File Format
 Adhere to these principles when writing files.
 
-- Line endings for new content should match the line endings in the rest of the file.
+- Line endings for new content should match the line endings in the rest of the file. When creating a new file, match the convention for the other files in the repository.
 
 # Architectural Principles
 Adhere to these architectural principles when planning and writing code.
