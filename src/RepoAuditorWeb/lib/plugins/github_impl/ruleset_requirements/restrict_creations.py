@@ -98,7 +98,7 @@ class RestrictCreationsRequirement(Requirement):
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) {action} the **Restrict creations** checkbox in the **Rules** section.
+                3) {action} the **Restrict creations** checkbox in the **Branch rules** section.
                 4) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#restrict-creations)
