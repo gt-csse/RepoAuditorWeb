@@ -12,7 +12,7 @@ from conftest import MyModule, MyQuery
 
 
 # ----------------------------------------------------------------------
-_DOCUMENTATION_URL = (
+_DEPLOYMENTS_DOCUMENTATION_URL = (
     "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository"
     "/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging"
 )
@@ -21,45 +21,52 @@ _DOCUMENTATION_URL = (
 # ----------------------------------------------------------------------
 _RATIONALE = textwrap.dedent(
     """\
-    The default behavior is to expect that a ruleset does not require successful
-    deployments, which matches GitHub's own default when a branch ruleset is created.
+        This requirement is not included by default because the rule presumes that the repository
+        defines deployment environments and deploys to them from a pull request, which is a
+        property of the project rather than something that can be inferred from the ruleset.
 
-    ## Reasons for this Default
+        When included, the default behavior is to require that a ruleset mandates successful
+        deployments to at least 1 environment(s).
 
-    - The rule is expressed in terms of deployment environments, so it presumes the
-      repository defines environments and runs a workflow that deploys to them. A
-      repository that publishes no deployments cannot satisfy the rule, and one that
-      deploys only after a merge has nothing to deploy while the pull request is open.
-    - The rule names environments literally. Renaming or retiring an environment leaves the
-      ruleset naming one that no longer receives deployments, which blocks every pull
-      request until the ruleset is edited, and the failure surfaces as an unmergeable pull
-      request rather than as an error where the rename occurred.
-    - Deploying a proposed change is a stronger action than testing it. The deployment
-      targets a real environment with real credentials and real data, so the rule grants
-      every pull request, including one from a fork, the ability to reach that environment
-      before the change has been reviewed.
-    - Required status checks already gate a merge on evidence that a change is sound, and
-      they neither require an environment nor act outside the repository. A project that
-      wants a build, a test suite, or a preview to pass can require it without also
-      requiring that a deployment be recorded.
-    - The rule gates the merge rather than the release. A deployment that succeeds against
-      the head of a pull request says nothing about the merge result, so the rule is a
-      weaker signal than deploying from the base branch after the merge has landed.
+        ## Reasons for this Default
 
-    ## Reasons to Override this Default
+        - A project that includes this requirement has stated that its changes are expected to
+          reach a deployment environment before they merge, so the rule is what makes that
+          expectation hold for every pull request rather than only the ones a contributor
+          remembers to deploy.
+        - A deployment exercises the change in place. Infrastructure, database migrations, and
+          configuration are the cases a test suite describes least well, and a deployment that
+          fails against them is evidence no status check would have produced.
+        - The rule has no effect unless the ruleset names at least one environment, so a minimum
+          of 1 is the fewest that makes the rule do anything. A ruleset that enables
+          the checkbox and selects nothing is enabled but inert, which reads as protection that
+          is not present.
+        - One environment is enough to establish that the change deploys. Requiring more names
+          more environments that must each receive a deployment before the merge, which is a
+          statement about a project's promotion process rather than about whether the change
+          works, so the count is left to the project to raise.
 
-    - The project maintains a staging or preview environment that every change is expected
-      to reach before it merges, so the deployment is a step contributors already perform
-      and the rule enforces what is otherwise a convention.
-    - The change under review is difficult to validate without exercising it in place, such
-      as one that alters infrastructure, database migrations, or configuration whose
-      behavior does not appear in a test suite.
-    - The project deploys from pull requests already and treats a failed deployment as
-      disqualifying, in which case the rule records a decision the project makes by hand.
+        ## Reasons to Override this Default
 
-    Note that the rule has no effect unless the ruleset names at least one environment, so a
-    ruleset that enables it without selecting environments does not satisfy the requirement.
-    """,
+        - The project promotes a change through several environments before it merges, such as a
+          preview and a staging environment, in which case the count should name each one that a
+          merge is expected to wait for.
+        - The named environments have diverged from the ones the repository actually deploys to.
+          The rule names environments literally, so a renamed or retired environment leaves the
+          ruleset naming one that no longer receives deployments, which blocks every pull
+          request until the ruleset is edited.
+        - Deploying a proposed change is a stronger action than testing it, since the deployment
+          targets a real environment with real credentials and real data. A repository that
+          accepts pull requests from forks may prefer required status checks, which gate a merge
+          on evidence that a change is sound without acting outside the repository.
+        - The project deploys only after a merge, so there is nothing to deploy while the pull
+          request is open and the rule would block every one of them. Such a project can invert
+          the expectation so that the rule is required to stay off.
+
+        Note that the rule gates the merge rather than the release. A deployment that succeeds
+        against the head of a pull request says nothing about the merge result, so it is a weaker
+        signal than deploying from the base branch after the merge has landed.
+        """,
 )
 
 
@@ -72,17 +79,22 @@ _REQUIRED_DEPLOYMENTS_RULE = {
     "parameters": {"required_deployment_environments": ["staging"]},
 }
 
+_TWO_ENVIRONMENTS_RULE = {
+    **_REQUIRED_DEPLOYMENTS_RULE,
+    "parameters": {"required_deployment_environments": ["staging", "production"]},
+}
+
+_NO_ENVIRONMENTS_RULE = {
+    **_REQUIRED_DEPLOYMENTS_RULE,
+    "parameters": {"required_deployment_environments": []},
+}
+
 _OTHER_RULE = {
     "type": "deletion",
     "ruleset_source_type": "Repository",
     "ruleset_source": "gt-csse/RepoAuditorWeb",
     "ruleset_id": 42,
     "parameters": {},
-}
-
-_NO_ENVIRONMENTS_RULE = {
-    **_REQUIRED_DEPLOYMENTS_RULE,
-    "parameters": {"required_deployment_environments": []},
 }
 
 
@@ -95,7 +107,8 @@ def _CreateModule(requirement: RequireSuccessfulDeploymentsRequirement) -> MyMod
 def _Evaluate(
     response: list[dict],
     *,
-    require: bool = False,
+    value: int = 1,
+    disallow: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -108,7 +121,7 @@ def _Evaluate(
             "branch": branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"skip": False, "require": require},
+        {"include": True, "value": value, "disallow": disallow},
     )
 
 
@@ -121,30 +134,33 @@ def test_Construct():
         requirement.description
         == "Validates whether a ruleset requires changes to deploy successfully to named environments before branches matching its pattern can be merged."
     )
-    assert requirement.requires_explicit_include is False
+    assert requirement.requires_explicit_include is True
 
 
 # ----------------------------------------------------------------------
+# The requirement is opt-in, so the framework offers an 'include' flag rather than a 'skip' flag.
 def test_GetParameters():
     parameters = RequireSuccessfulDeploymentsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "require"]
-    assert parameters["require"].type is bool
-    assert parameters["require"].default is False
+    assert list(parameters.keys()) == ["include", "disallow", "value"]
+    assert parameters["value"].type is int
+    assert parameters["value"].default == 1
+    assert parameters["disallow"].type is bool
+    assert parameters["disallow"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("response", "require"),
+    ("response", "value"),
     [
-        ([], False),
-        ([_OTHER_RULE], False),
-        ([_REQUIRED_DEPLOYMENTS_RULE], True),
-        ([_OTHER_RULE, _REQUIRED_DEPLOYMENTS_RULE], True),
+        ([_REQUIRED_DEPLOYMENTS_RULE], 1),
+        ([_TWO_ENVIRONMENTS_RULE], 1),
+        ([_TWO_ENVIRONMENTS_RULE], 2),
+        ([_OTHER_RULE, _REQUIRED_DEPLOYMENTS_RULE], 1),
     ],
 )
-def test_MatchingValue(response, require):
-    result = _Evaluate(response, require=require)
+def test_MatchingValue(response, value):
+    result = _Evaluate(response, value=value)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -152,9 +168,12 @@ def test_MatchingValue(response, require):
 
 
 # ----------------------------------------------------------------------
-# The rationale explains the default regardless of the outcome, so it is present on success even
+# The rationale explains the requirement regardless of the outcome, so it is present on success even
 # though there is nothing to resolve.
-@pytest.mark.parametrize("response", [[_REQUIRED_DEPLOYMENTS_RULE], [_OTHER_RULE]])
+@pytest.mark.parametrize(
+    "response",
+    [[_REQUIRED_DEPLOYMENTS_RULE], [], [_OTHER_RULE]],
+)
 def test_Rationale(response):
     result = _Evaluate(response)
 
@@ -162,124 +181,153 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
-def test_RequiredWhenNotRequested():
-    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE])
+# A single rationale describes the requirement, so neither the requested count nor the inverted
+# expectation changes it.
+@pytest.mark.parametrize("value", [1, 3])
+@pytest.mark.parametrize("disallow", [False, True])
+def test_RationaleIsInvariant(value, disallow):
+    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, disallow=disallow)
 
-    assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's value is 'True', but the requirement specifies it must be 'False'."
-    )
+    assert result.rationale == _RATIONALE
 
 
 # ----------------------------------------------------------------------
 # The endpoint reports only the rules that apply, so a branch whose rules do not include the
-# required deployments rule is one that can be merged without a successful deployment.
+# required deployments rule is one whose checkbox is not checked at all.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_NotRequiredWhenRequested(response):
-    result = _Evaluate(response, require=True)
+def test_DeploymentsNotRequired(response):
+    result = _Evaluate(response)
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
-    )
+    assert result.context == "The ruleset does not require successful deployments."
 
 
 # ----------------------------------------------------------------------
-# The rule gates a merge on the environments it names, so a rule that names none is enabled but
-# cannot block anything.
-def test_RuleWithoutEnvironments():
-    result = _Evaluate([_NO_ENVIRONMENTS_RULE], require=True)
+# An unchecked checkbox is reported as such no matter how many environments were requested, since
+# the count is not what is wrong.
+def test_DeploymentsNotRequiredWithHigherValue():
+    result = _Evaluate([], value=3)
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The ruleset requires successful deployments, but does not name any environments to deploy to."
-    )
+    assert result.context == "The ruleset does not require successful deployments."
 
 
 # ----------------------------------------------------------------------
-# The environments are absent from a rule whose parameters are missing or empty, which is treated
-# the same as a rule that names none rather than raising.
-@pytest.mark.parametrize(
-    "parameters",
-    [{}, {"required_deployment_environments": None}],
-)
-def test_RuleWithoutEnvironmentParameters(parameters):
-    result = _Evaluate([{**_REQUIRED_DEPLOYMENTS_RULE, "parameters": parameters}], require=True)
-
-    assert result.result == EvaluateResultValue.Error
-
-
-# ----------------------------------------------------------------------
-# The resolution directs the user to name an environment rather than to toggle the rule, because the
-# rule is already present as requested.
-def test_RuleWithoutEnvironmentsResolution():
-    result = _Evaluate([_NO_ENVIRONMENTS_RULE], require=True)
-
-    assert result.resolution == textwrap.dedent(
-        f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
-        2) Click the name of the ruleset that targets `main`.
-        3) Select at least one environment under the **Require deployments to succeed** checkbox in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
-
-        See [Available rules for rulesets]({_DOCUMENTATION_URL})
-        for more information.
-        """,
-    )
-
-
-# ----------------------------------------------------------------------
-# A rule that names no environments is still present, so a user who wants the rule absent gets the
-# mismatch rather than the missing-environment error.
-def test_RuleWithoutEnvironmentsWhenNotRequested():
-    result = _Evaluate([_NO_ENVIRONMENTS_RULE])
-
-    assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's value is 'True', but the requirement specifies it must be 'False'."
-    )
-
-
-# ----------------------------------------------------------------------
-# Environments named by any matching rule satisfy the requirement, since the endpoint reports one
-# rule per ruleset that applies to the branch.
-def test_EnvironmentsAcrossMultipleRules():
-    result = _Evaluate([_NO_ENVIRONMENTS_RULE, _REQUIRED_DEPLOYMENTS_RULE], require=True)
-
-    assert result.result == EvaluateResultValue.Success
-    assert result.context is None
-
-
-# ----------------------------------------------------------------------
-def test_ErrorResolution():
-    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE])
-
-    assert result.resolution == textwrap.dedent(
-        f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
-        2) Click the name of the ruleset that targets `main`.
-        3) Clear the **Require deployments to succeed** checkbox in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
-
-        See [Available rules for rulesets]({_DOCUMENTATION_URL})
-        for more information.
-        """,
-    )
-
-
-# ----------------------------------------------------------------------
-# The resolution directs the user to set the rule when successful deployments must be required.
-def test_ErrorResolutionWhenRequired():
-    result = _Evaluate([], require=True)
+# The resolution directs the user to the checkbox, because the rule is absent rather than merely
+# under-populated.
+def test_DeploymentsNotRequiredResolution():
+    result = _Evaluate([])
 
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
         3) Check the **Require deployments to succeed** checkbox in the **Branch rules** section.
+        4) Select at least 1 environment(s) beneath that checkbox.
+        5) Click the **Save changes** button at the bottom of the page.
+
+        See [Available rules for rulesets]({_DEPLOYMENTS_DOCUMENTATION_URL})
+        for more information.
+        """,
+    )
+
+
+# ----------------------------------------------------------------------
+# The rule gates a merge on the environments it names, so a rule that names none is enabled but
+# cannot block anything. The checkbox is checked, so this is reported as a count rather than as an
+# absent rule.
+def test_RuleWithoutEnvironments():
+    result = _Evaluate([_NO_ENVIRONMENTS_RULE])
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires successful deployments to 0 environment(s), but the requirement specifies it must be at least 1."
+    )
+
+
+# ----------------------------------------------------------------------
+# The rule is already enabled, so the resolution names the environments to add rather than
+# directing the user to the checkbox.
+def test_RuleWithoutEnvironmentsResolution():
+    result = _Evaluate([_NO_ENVIRONMENTS_RULE])
+
+    assert result.resolution == textwrap.dedent(
+        f"""\
+        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        2) Click the name of the ruleset that targets `main`.
+        3) Select at least 1 environment(s) beneath the **Require deployments to succeed** checkbox in the **Branch rules** section.
         4) Click the **Save changes** button at the bottom of the page.
 
-        See [Available rules for rulesets]({_DOCUMENTATION_URL})
+        See [Available rules for rulesets]({_DEPLOYMENTS_DOCUMENTATION_URL})
+        for more information.
+        """,
+    )
+
+
+# ----------------------------------------------------------------------
+# The environments are absent from a rule whose parameters are missing or empty, which is treated
+# the same as a rule that names none rather than raising.
+@pytest.mark.parametrize("parameters", [{}, {"required_deployment_environments": None}])
+def test_RuleWithoutEnvironmentParameters(parameters):
+    result = _Evaluate(
+        [{**_REQUIRED_DEPLOYMENTS_RULE, "parameters": parameters}],
+    )
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires successful deployments to 0 environment(s), but the requirement specifies it must be at least 1."
+    )
+
+
+# ----------------------------------------------------------------------
+# The count is a minimum, so naming fewer environments than requested is an error even though the
+# rule is enabled.
+def test_FewerEnvironmentsThanRequested():
+    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], value=2)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires successful deployments to 1 environment(s), but the requirement specifies it must be at least 2."
+    )
+
+
+# ----------------------------------------------------------------------
+# The count is a minimum rather than an exact value, so naming more environments than requested
+# satisfies the requirement.
+def test_MoreEnvironmentsThanRequested():
+    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=1)
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context is None
+
+
+# ----------------------------------------------------------------------
+# Environments named by any matching rule count toward the total, since the endpoint reports one
+# rule per ruleset that applies to the branch.
+def test_EnvironmentsAcrossMultipleRules():
+    result = _Evaluate(
+        [_NO_ENVIRONMENTS_RULE, _REQUIRED_DEPLOYMENTS_RULE],
+        value=1,
+    )
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context is None
+
+
+# ----------------------------------------------------------------------
+# The resolution names the requested count rather than a fixed one, so it tells the user how many
+# environments to select.
+def test_ErrorResolutionUsesValue():
+    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], value=3)
+
+    assert result.resolution == textwrap.dedent(
+        f"""\
+        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        2) Click the name of the ruleset that targets `main`.
+        3) Select at least 3 environment(s) beneath the **Require deployments to succeed** checkbox in the **Branch rules** section.
+        4) Click the **Save changes** button at the bottom of the page.
+
+        See [Available rules for rulesets]({_DEPLOYMENTS_DOCUMENTATION_URL})
         for more information.
         """,
     )
@@ -289,7 +337,7 @@ def test_ErrorResolutionWhenRequired():
 # A ruleset may target a branch other than 'main', so the resolution names the branch that was
 # queried.
 def test_ResolutionUsesBranchName():
-    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], branch="trunk")
+    result = _Evaluate([], branch="trunk")
 
     assert result.resolution is not None
     assert "`trunk`" in result.resolution
@@ -300,19 +348,78 @@ def test_ResolutionUsesBranchName():
 # The settings url is derived from the repository under audit rather than hard-coded, so it points
 # at an Enterprise host when one is being audited.
 def test_ResolutionUsesEnterpriseUrl():
-    result = _Evaluate(
-        [_REQUIRED_DEPLOYMENTS_RULE],
-        url="https://github.example.com/my-org/my-repo",
-    )
+    result = _Evaluate([], url="https://github.example.com/my-org/my-repo")
 
     assert result.resolution is not None
     assert "(https://github.example.com/my-org/my-repo/settings/rules)" in result.resolution
 
 
 # ----------------------------------------------------------------------
-def test_Skip():
+# 'disallow' inverts the expectation, so an absent rule is what satisfies the requirement.
+@pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
+def test_DisallowMatching(response):
+    result = _Evaluate(response, disallow=True)
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context is None
+    assert result.resolution is None
+
+
+# ----------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "response",
+    [[_REQUIRED_DEPLOYMENTS_RULE], [_TWO_ENVIRONMENTS_RULE], [_NO_ENVIRONMENTS_RULE]],
+)
+def test_DisallowWhenRequired(response):
+    result = _Evaluate(response, disallow=True)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires successful deployments, but the requirement specifies that it must not."
+    )
+
+
+# ----------------------------------------------------------------------
+# The resolution clears the checkbox rather than naming environments, since the rule is expected to
+# be absent entirely.
+def test_DisallowResolution():
+    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], disallow=True)
+
+    assert result.resolution == textwrap.dedent(
+        f"""\
+        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        2) Click the name of the ruleset that targets `main`.
+        3) Clear the **Require deployments to succeed** checkbox in the **Branch rules** section.
+        4) Click the **Save changes** button at the bottom of the page.
+
+        See [Available rules for rulesets]({_DEPLOYMENTS_DOCUMENTATION_URL})
+        for more information.
+        """,
+    )
+
+
+# ----------------------------------------------------------------------
+# The count describes how much the rule must require, so it is not consulted when the rule is
+# expected to be absent.
+@pytest.mark.parametrize("value", [1, 5])
+def test_DisallowIgnoresValue(value):
+    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, disallow=True)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires successful deployments, but the requirement specifies that it must not."
+    )
+
+
+# ----------------------------------------------------------------------
+# The requirement is opt-in, so it does not run unless the user includes it.
+def test_NotIncluded():
     requirement = RequireSuccessfulDeploymentsRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "require": False})
+    result = requirement.Evaluate(
+        _CreateModule(requirement),
+        {},
+        {"include": False, "value": 1, "disallow": False},
+    )
 
     assert result.result == EvaluateResultValue.Skipped
