@@ -177,7 +177,7 @@ def test_ResolutionUsesEnterpriseUrl():
 
 
 # ----------------------------------------------------------------------
-def test_DiscussionsWhenDisallowed():
+def test_DiscussionsWhenProhibited():
     result = _Evaluate({"has_discussions": True})
 
     assert result.result == EvaluateResultValue.Error

@@ -43,10 +43,10 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
         return {
             # Inverts the expectation for a project that includes the requirement in order to
             # assert that the rule stays off; 'value' does not apply when it is set.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help="Require that successful deployments are not required."),
+                OptionInfo(help="Require that successful deployments are not mandated."),
             ),
             # Inclusion already states that the rule is wanted, so the parameter describes how many
             # environments must be named rather than whether the rule is required at all.
@@ -72,7 +72,7 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
         rules = cast(list[dict[str, object]], query_data["response"])
 
         acceptable_value = cast(int, requirement_data["value"])
-        disallow = cast(bool, requirement_data["disallow"])
+        prohibit = cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             f"""\
@@ -139,7 +139,7 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
 
         # The count describes how much the rule must require, so it has nothing to describe when the
         # rule is expected to be absent.
-        if disallow:
+        if prohibit:
             if not deployment_rules:
                 return EvaluateResult(
                     EvaluateResultValue.Success,

@@ -30,7 +30,7 @@ class SupportIssuesRequirement(Requirement):
             # The tracker is enabled by default, so the parameter names the override rather than the
             # default; a 'require' parameter defaulting to True would be a flag that is already on
             # and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
                 OptionInfo(help="Require that the repository's issue tracker is disabled."),
@@ -46,7 +46,7 @@ class SupportIssuesRequirement(Requirement):
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
         has_issues_value = cast(dict, query_data["response"]).get("has_issues", False)
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\

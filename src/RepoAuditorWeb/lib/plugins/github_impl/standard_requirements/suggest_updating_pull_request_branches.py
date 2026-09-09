@@ -60,8 +60,8 @@ class SuggestUpdatingPullRequestBranchesRequirement(Requirement):
               what it produces here. The merge option creates a merge commit authored by the person who
               clicked it, and the rebase option replays the branch's commits as new objects; neither
               receives the web-flow signature that GitHub applies to a merge or squash it performs on
-              its own behalf. A project that requires signed commits therefore ends up with a branch it
-              can no longer merge, and recovering from it requires rewriting history.
+              its own behalf. A project that requires signed commits therefore ends up with a branch
+              it can no longer merge, and recovering from it means rewriting history.
             - The rebase option is the worse of the two, because it strips the signatures from commits
               that were already signed. Every commit on the branch is replayed with a new SHA and the
               signature does not follow it, so a branch that was fully signed becomes fully unsigned.

@@ -29,8 +29,8 @@ _RATIONALE = textwrap.dedent(
     - Pull requests are where review happens: line comments, requested changes, and approvals
       are attached to the proposal rather than to the commits that result. Disabling them
       removes the record of why a change was accepted in the form it was.
-    - Branch protection and rulesets are largely enforced through pull requests, since required
-      reviews, required status checks, and merge queues all gate the merge of a pull request.
+    - Branch protection and rulesets are largely enforced through pull requests, since
+      required reviews, status checks, and merge queues all gate the merge of a pull request.
       A repository that disables the feature cannot enforce those rules on the way in.
     - Pull request numbers share a namespace with issues and participate in GitHub's
       cross-referencing, so `Fixes #<number>` in a pull request body closes the issue on merge.
@@ -69,7 +69,7 @@ def _CreateModule(requirement: SupportPullRequestsRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
     requirement = SupportPullRequestsRequirement()
@@ -77,7 +77,7 @@ def _Evaluate(
     return requirement.Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, None)},
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -97,18 +97,18 @@ def test_Construct():
 def test_GetParameters():
     parameters = SupportPullRequestsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("has_pull_requests", "disallow"),
+    ("has_pull_requests", "prohibit"),
     [(True, False), (False, True)],
 )
-def test_MatchingStatus(has_pull_requests, disallow):
-    result = _Evaluate({"has_pull_requests": has_pull_requests}, disallow=disallow)
+def test_MatchingStatus(has_pull_requests, prohibit):
+    result = _Evaluate({"has_pull_requests": has_pull_requests}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -149,8 +149,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to uncheck the setting when pull requests must be disabled.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate({"has_pull_requests": True}, disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate({"has_pull_requests": True}, prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -185,8 +185,8 @@ def test_NoPullRequestsWhenRequired():
 
 
 # ----------------------------------------------------------------------
-def test_PullRequestsWhenDisallowed():
-    result = _Evaluate({"has_pull_requests": True}, disallow=True)
+def test_PullRequestsWhenProhibited():
+    result = _Evaluate({"has_pull_requests": True}, prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -206,8 +206,8 @@ def test_MissingStatus():
 
 
 # ----------------------------------------------------------------------
-def test_MissingStatusWhenDisallowed():
-    result = _Evaluate({}, disallow=True)
+def test_MissingStatusWhenProhibited():
+    result = _Evaluate({}, prohibit=True)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -217,6 +217,6 @@ def test_MissingStatusWhenDisallowed():
 def test_Skip():
     requirement = SupportPullRequestsRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped

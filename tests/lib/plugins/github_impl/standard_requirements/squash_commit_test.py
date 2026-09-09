@@ -178,7 +178,7 @@ def test_ResolutionUsesEnterpriseUrl():
 
 
 # ----------------------------------------------------------------------
-def test_SquashCommitWhenDisallowed():
+def test_SquashCommitWhenProhibited():
     result = _Evaluate({"allow_squash_merge": True})
 
     assert result.result == EvaluateResultValue.Error
@@ -252,7 +252,7 @@ def test_MissingStatusWithPat():
         ("my-pat", EvaluateResultValue.Error),
     ],
 )
-def test_MissingStatusWhenDisallowed(pat, expected_result):
+def test_MissingStatusWhenProhibited(pat, expected_result):
     result = _Evaluate({}, pat=pat)
 
     assert result.result == expected_result

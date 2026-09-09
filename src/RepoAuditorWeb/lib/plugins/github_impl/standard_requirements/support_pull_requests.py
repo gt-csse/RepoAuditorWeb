@@ -30,7 +30,7 @@ class SupportPullRequestsRequirement(Requirement):
             # Pull requests are enabled by default, so the parameter names the override rather than
             # the default; a 'require' parameter defaulting to True would be a flag that is already
             # on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
                 OptionInfo(help="Require that the repository's pull requests are disabled."),
@@ -46,7 +46,7 @@ class SupportPullRequestsRequirement(Requirement):
         requirement_data: dict[str, object],
     ) -> EvaluateResult:
         has_pull_requests_value = cast(dict, query_data["response"]).get("has_pull_requests", False)
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\
@@ -61,8 +61,8 @@ class SupportPullRequestsRequirement(Requirement):
             - Pull requests are where review happens: line comments, requested changes, and approvals
               are attached to the proposal rather than to the commits that result. Disabling them
               removes the record of why a change was accepted in the form it was.
-            - Branch protection and rulesets are largely enforced through pull requests, since required
-              reviews, required status checks, and merge queues all gate the merge of a pull request.
+            - Branch protection and rulesets are largely enforced through pull requests, since
+              required reviews, status checks, and merge queues all gate the merge of a pull request.
               A repository that disables the feature cannot enforce those rules on the way in.
             - Pull request numbers share a namespace with issues and participate in GitHub's
               cross-referencing, so `Fixes #<number>` in a pull request body closes the issue on merge.

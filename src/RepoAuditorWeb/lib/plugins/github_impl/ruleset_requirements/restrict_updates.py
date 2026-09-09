@@ -66,7 +66,7 @@ class RestrictUpdatesRequirement(Requirement):
               presents contributors with a merge button blocked by "The base branch does not allow
               updates", which describes the branch rather than anything the contributor can correct.
             - The protections that govern how a branch advances are already expressed by other
-              rules. Requiring a pull request, requiring status checks, and blocking force pushes
+              rules. Requiring a pull request, mandating status checks, and blocking force pushes
               constrain the content and provenance of an update while still allowing sanctioned work
               to land; this rule substitutes an unconditional refusal for that judgment.
             - Bypass permission becomes the only route by which the branch can move forward, so

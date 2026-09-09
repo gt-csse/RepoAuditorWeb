@@ -34,10 +34,10 @@ class RequireSignedCommitsRequirement(Requirement):
             # The default requires the rule to be enabled, so the parameter names the override
             # rather than the default; a 'require' parameter defaulting to True would be a flag that
             # is already on and cannot be turned off.
-            "disallow": TyperParameter(
+            "prohibit": TyperParameter(
                 bool,
                 False,  # noqa: FBT003
-                OptionInfo(help="Require that signed commits are not required."),
+                OptionInfo(help="Require that signed commits are not mandated."),
             ),
         }
 
@@ -52,7 +52,7 @@ class RequireSignedCommitsRequirement(Requirement):
         rules = cast(list[dict[str, object]], query_data["response"])
         signed_commits_value = any(rule.get("type") == RULE_TYPE for rule in rules)
 
-        acceptable_value = not cast(bool, requirement_data["disallow"])
+        acceptable_value = not cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             """\

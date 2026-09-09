@@ -174,7 +174,7 @@ def test_ResolutionUsesEnterpriseUrl():
 
 # ----------------------------------------------------------------------
 # Projects are enabled on a newly created repository, so this is the state the default flags.
-def test_ProjectsWhenDisallowed():
+def test_ProjectsWhenProhibited():
     result = _Evaluate({"has_projects": True})
 
     assert result.result == EvaluateResultValue.Error

@@ -43,9 +43,9 @@ _RATIONALE = textwrap.dedent(
     - The default branch is the branch a clone checks out, the base branch proposed for new
       pull requests, and the branch consumers reference by name, so it is the branch where
       rewritten history is most widely observed.
-    - Protection is the mechanism the rules worth requiring later are attached to, including
-      required reviews, required status checks, and linear history. This requirement
-      establishes that mechanism rather than any particular rule.
+    - Protection is the mechanism the rules worth having later are attached to, including
+      required reviews, status checks, and linear history. This requirement establishes that
+      mechanism rather than any particular rule.
 
     ## Reasons to Override this Default
 
@@ -80,7 +80,7 @@ def _CreateModule(requirement: ProtectedMainlineBranchRequirement) -> MyModule:
 def _Evaluate(
     response: dict,
     *,
-    disallow: bool = False,
+    prohibit: bool = False,
     default_branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -93,7 +93,7 @@ def _Evaluate(
             "default_branch": default_branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"skip": False, "disallow": disallow},
+        {"skip": False, "prohibit": prohibit},
     )
 
 
@@ -113,18 +113,18 @@ def test_Construct():
 def test_GetParameters():
     parameters = ProtectedMainlineBranchRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "disallow"]
-    assert parameters["disallow"].type is bool
-    assert parameters["disallow"].default is False
+    assert list(parameters.keys()) == ["skip", "prohibit"]
+    assert parameters["prohibit"].type is bool
+    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("protected", "disallow"),
+    ("protected", "prohibit"),
     [(True, False), (False, True)],
 )
-def test_MatchingValue(protected, disallow):
-    result = _Evaluate({"protected": protected}, disallow=disallow)
+def test_MatchingValue(protected, prohibit):
+    result = _Evaluate({"protected": protected}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -152,8 +152,8 @@ def test_UnprotectedWhenRequired():
 
 
 # ----------------------------------------------------------------------
-def test_ProtectedWhenDisallowed():
-    result = _Evaluate({"protected": True}, disallow=True)
+def test_ProtectedWhenProhibited():
+    result = _Evaluate({"protected": True}, prohibit=True)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -198,8 +198,8 @@ def test_ErrorResolution():
 
 # ----------------------------------------------------------------------
 # The resolution directs the user to remove the protection when the branch must not be protected.
-def test_ErrorResolutionWhenDisallowed():
-    result = _Evaluate({"protected": True}, disallow=True)
+def test_ErrorResolutionWhenProhibited():
+    result = _Evaluate({"protected": True}, prohibit=True)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -217,11 +217,11 @@ def test_ErrorResolutionWhenDisallowed():
 # ----------------------------------------------------------------------
 # The classic rule matches by branch name pattern, so the resolution names the branch that was
 # queried rather than assuming it is 'main'.
-@pytest.mark.parametrize("disallow", [False, True])
-def test_ResolutionUsesDefaultBranchName(disallow):
+@pytest.mark.parametrize("prohibit", [False, True])
+def test_ResolutionUsesDefaultBranchName(prohibit):
     result = _Evaluate(
-        {"protected": disallow},
-        disallow=disallow,
+        {"protected": prohibit},
+        prohibit=prohibit,
         default_branch="trunk",
     )
 
@@ -245,6 +245,6 @@ def test_ResolutionUsesEnterpriseUrl():
 def test_Skip():
     requirement = ProtectedMainlineBranchRequirement()
 
-    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "disallow": False})
+    result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped
