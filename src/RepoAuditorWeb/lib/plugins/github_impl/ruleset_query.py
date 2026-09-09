@@ -2,6 +2,9 @@ from typing import cast, override
 
 import requests
 
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approvals import (
+    RequireApprovalsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_linear_history import (
     RequireLinearHistoryRequirement,
 )
@@ -42,6 +45,7 @@ class RulesetQuery(Query):
                 RequireSuccessfulDeploymentsRequirement(),
                 RequireSignedCommitsRequirement(),
                 RequirePullRequestsRequirement(),
+                RequireApprovalsRequirement(),
             ],
         )
 

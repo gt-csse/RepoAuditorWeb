@@ -11,6 +11,7 @@ from RepoAuditorWeb.lib.module import Module
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_query import DefaultBranchQuery
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_query import RulesetQuery
 from RepoAuditorWeb.lib.plugins.github_impl.standard_query import StandardQuery
+from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
 
 
 # ----------------------------------------------------------------------
@@ -52,6 +53,11 @@ class GitHubModule(Module):
                 None,
                 OptionInfo(help="Branch to evaluate. The default branch will be used if not specified."),
             ),
+            "team_size": TyperParameter(
+                TeamSize,
+                TeamSize.Small,
+                OptionInfo(help=TeamSize.__doc__),
+            ),
         }
 
     # ----------------------------------------------------------------------
@@ -84,6 +90,7 @@ class GitHubModule(Module):
         arguments[None] = {
             "session": GitHubSession(url, github_pat),
             "branch": module_data["branch"],
+            "team_size": TeamSize(module_data.get("team_size") or TeamSize.Small),
         }
 
         return arguments

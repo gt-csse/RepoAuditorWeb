@@ -2,7 +2,7 @@ import pytest
 
 from RepoAuditorWeb.lib.plugins import community_standards_plugin, github_plugin, scientific_software_plugin
 from RepoAuditorWeb.lib.plugins.community_standards_impl.module import CommunityStandardsModule
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule
+from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, TeamSize
 from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import ScientificSoftwareModule
 
 
@@ -16,7 +16,7 @@ from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import Scientifi
             "GitHub",
             "Validates GitHub configuration settings.",
             False,
-            ["skip", "url", "pat", "branch"],
+            ["skip", "url", "pat", "branch", "team_size"],
         ),
         (
             community_standards_plugin,
@@ -57,6 +57,7 @@ def test_GetModule(plugin, module_type, name, description, requires_explicit_inc
                 "url": (str, None),
                 "pat": (str | None, None),
                 "branch": (str | None, None),
+                "team_size": (TeamSize, TeamSize.Small),
             },
         ),
         (CommunityStandardsModule, {"include": (bool, False), "one": (int, 10), "two": (str, "2")}),
