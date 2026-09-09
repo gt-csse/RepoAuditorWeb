@@ -56,7 +56,7 @@ class RequireSignedCommitsRequirement(Requirement):
 
         rationale = textwrap.dedent(
             """\
-            The default behavior is to require that a ruleset requires signed commits.
+            The default behavior is to require that a ruleset mandates signed commits.
 
             Note that this differs from GitHub's own default when a branch ruleset is created, where
             the rule is not selected.

@@ -53,7 +53,7 @@ class RequireLinearHistoryRequirement(Requirement):
 
         rationale = textwrap.dedent(
             """\
-            The default behavior is to require that a ruleset does not require a linear history,
+            The default behavior is to expect that a ruleset does not require a linear history,
             which matches GitHub's own default when a branch ruleset is created.
 
             ## Reasons for this Default
