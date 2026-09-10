@@ -41,21 +41,17 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
-            # Inverts the expectation for a project that includes the requirement in order to
-            # assert that the rule stays off; 'value' does not apply when it is set.
-            "prohibit": TyperParameter(
-                bool,
-                False,  # noqa: FBT003
-                OptionInfo(help="Require that successful deployments are not mandated."),
-            ),
             # Inclusion already states that the rule is wanted, so the parameter describes how many
-            # environments must be named rather than whether the rule is required at all.
+            # environments must be named rather than whether the rule is required at all. Zero
+            # inverts the expectation for a project that includes the requirement in order to assert
+            # that the rule stays off, since a rule that must name no environments is one that must
+            # not be present at all.
             "value": TyperParameter(
                 int,
                 DEFAULT_VALUE,
                 OptionInfo(
-                    help="Minimum number of deployment environments that must be required.",
-                    min=1,
+                    help="Minimum number of deployment environments that must be required; 0 requires that successful deployments are not mandated.",
+                    min=0,
                     max=10,
                 ),
             ),
@@ -72,7 +68,6 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
         rules = cast(list[dict[str, object]], query_data["response"])
 
         acceptable_value = cast(int, requirement_data["value"])
-        prohibit = cast(bool, requirement_data["prohibit"])
 
         rationale = textwrap.dedent(
             f"""\
@@ -115,8 +110,8 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
               accepts pull requests from forks may prefer required status checks, which gate a merge
               on evidence that a change is sound without acting outside the repository.
             - The project deploys only after a merge, so there is nothing to deploy while the pull
-              request is open and the rule would block every one of them. Such a project can invert
-              the expectation so that the rule is required to stay off.
+              request is open and the rule would block every one of them. Such a project can request
+              a count of 0 so that the rule is required to stay off.
 
             Note that the rule gates the merge rather than the release. A deployment that succeeds
             against the head of a pull request says nothing about the merge result, so it is a weaker
@@ -137,9 +132,9 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
                 parameters.get("required_deployment_environments") or [],
             )
 
-        # The count describes how much the rule must require, so it has nothing to describe when the
-        # rule is expected to be absent.
-        if prohibit:
+        # A rule that must name no environments is a rule that must not be present, since one that
+        # names none is enabled but inert.
+        if acceptable_value == 0:
             if not deployment_rules:
                 return EvaluateResult(
                     EvaluateResultValue.Success,
