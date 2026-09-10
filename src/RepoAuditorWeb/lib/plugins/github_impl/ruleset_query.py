@@ -11,6 +11,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approva
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approvals import (
     RequireApprovalsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_branches_to_be_up_to_date_before_merging import (
+    RequireBranchesToBeUpToDateBeforeMergingRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_conversation_resolution import (
     RequireConversationResolutionRequirement,
 )
@@ -66,6 +69,7 @@ class RulesetQuery(Query):
                 RequireApprovalOfMostRecentPushRequirement(),
                 RequireConversationResolutionRequirement(),
                 RequireStatusChecksToPassRequirement(),
+                RequireBranchesToBeUpToDateBeforeMergingRequirement(),
             ],
         )
 
