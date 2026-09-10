@@ -155,15 +155,18 @@ _STYLE = textwrap.dedent(
        still line up in a single column. The fallback applies until that measurement is made. */
     #form { --label-width: 220px; }
 
+    /* The label carries the field's description beneath its name, which makes it taller than the
+       control it names. Centering the two against each other keeps the description beside its
+       control rather than trailing below it. */
     .field {
       display: grid;
       grid-template-columns: minmax(0, var(--label-width)) minmax(0, 1fr);
       column-gap: 24px;
-      align-items: start;
+      align-items: center;
       padding: 6px 0;
     }
 
-    .field > label { color: var(--fg); padding-top: 5px; }
+    .field > label { color: var(--fg); }
 
     .field .help { display: block; color: var(--muted); font-size: 12px; }
 
@@ -274,7 +277,8 @@ _STYLE = textwrap.dedent(
       font: inherit;
     }
 
-    input[type="checkbox"] { width: 16px; height: 16px; margin-top: 6px; }
+    /* The row centers the control against its label, so the checkbox needs no offset of its own. */
+    input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
 
     .actions { display: flex; align-items: center; gap: 10px; }
 
@@ -292,6 +296,13 @@ _STYLE = textwrap.dedent(
     button#reset { background: transparent; color: var(--fg); border-color: var(--border); }
 
     button:disabled { opacity: 0.5; cursor: default; }
+
+    /* A control that has no effect is dimmed so that it reads as inert rather than as one that
+       happens to be ignored. The label is dimmed with it, since a label naming a control that
+       cannot be set is what makes the row look editable. */
+    .field :disabled { opacity: 0.5; cursor: default; }
+
+    .field:has(:disabled) > label { opacity: 0.5; }
 
     #status { color: var(--muted); }
 
@@ -533,6 +544,10 @@ _SCRIPT = textwrap.dedent(
     // the type of control that was created for a field.
     const readers = new Map();
 
+    // A module disables the sections it holds, which do not exist until the caller has appended
+    // them, so the wiring is collected while the tree is built and run once it is complete.
+    const pendingDisabling = [];
+
     function CreateControl(field) {
       if (field.type === "boolean") {
         const input = document.createElement("input");
@@ -542,7 +557,11 @@ _SCRIPT = textwrap.dedent(
         return input;
       }
 
-      if (field.type === "choice" || field.type === "optional_boolean") {
+      if (
+        field.type === "choice" ||
+        field.type === "optional_boolean" ||
+        field.type === "requirement_mode"
+      ) {
         const select = document.createElement("select");
 
         for (const choice of field.choices) {
@@ -613,6 +632,13 @@ _SCRIPT = textwrap.dedent(
       return row;
     }
 
+    // A requirement whose parameters were folded into one control is governed by a mode that names
+    // the state it selects, rather than by a checkbox whose polarity decides it.
+    function IsIncluded(container, toggle) {
+      if (toggle instanceof HTMLSelectElement) return toggle.value !== "skip";
+      return container.toggle_includes ? toggle.checked : !toggle.checked;
+    }
+
     // Whether a module or requirement runs is worth knowing while it is collapsed, so the pill
     // belongs to the summary and tracks the field that governs it rather than reading it once.
     function AddPill(container, summary, toggle) {
@@ -621,13 +647,52 @@ _SCRIPT = textwrap.dedent(
       summary.appendChild(pill);
 
       const Refresh = () => {
-        const included = container.toggle_includes ? toggle.checked : !toggle.checked;
+        const included = IsIncluded(container, toggle);
         pill.textContent = included ? "included" : "skipped";
         pill.classList.toggle("included", included);
         pill.classList.toggle("skipped", !included);
       };
 
       toggle.addEventListener("change", Refresh);
+      Refresh();
+    }
+
+    // What a module or requirement expects has no effect while it does not run, so its remaining
+    // controls are disabled rather than left to be set to no purpose. The toggle itself stays
+    // enabled, since it is what reverses the state.
+    function AddDisabling(container, details, toggle) {
+      const Refresh = () => {
+        // A skipped module runs none of its requirements, so a container inside a disabled one
+        // stays disabled whatever its own toggle says.
+        const inherited = details.dataset.inherited === "disabled";
+        const disabled = inherited || !IsIncluded(container, toggle);
+
+        for (const element of details.querySelectorAll("input, select")) {
+          // A control governed by a nested container is disabled by that container's own refresh,
+          // which runs after this one and accounts for what it inherits from here.
+          if (element.closest("details") !== details) continue;
+
+          // The toggle is what reverses the state it decides, so it stays enabled while it is the
+          // thing doing the disabling. Once the container is disabled from above, reversing it
+          // would achieve nothing, so the toggle is disabled with the rest.
+          element.disabled = element === toggle ? inherited : disabled;
+        }
+
+        // Requirement sections read this rather than the module's toggle, so that a section is
+        // disabled by its module without having to know which control governs it.
+        for (const nested of details.querySelectorAll(":scope > details")) {
+          nested.dataset.inherited = disabled ? "disabled" : "";
+          nested.dispatchEvent(new Event("refresh-disabling"));
+        }
+
+        details.classList.toggle("disabled", disabled);
+      };
+
+      toggle.addEventListener("change", Refresh);
+
+      // A module refreshes its sections by dispatching this, which is what a section listens for.
+      details.addEventListener("refresh-disabling", Refresh);
+
       Refresh();
     }
 
@@ -659,7 +724,14 @@ _SCRIPT = textwrap.dedent(
       for (const field of container.fields) details.appendChild(CreateRow(field));
 
       if (container.toggle) {
-        AddPill(container, summary, details.querySelector(`#${CSS.escape(container.toggle)}`));
+        const toggle = details.querySelector(`#${CSS.escape(container.toggle)}`);
+
+        AddPill(container, summary, toggle);
+
+        // Deferred so that a module disables the sections it holds, which are appended by the
+        // caller after this returns.
+        details.dataset.toggle = container.toggle;
+        pendingDisabling.push(() => AddDisabling(container, details, toggle));
       }
 
       return details;
@@ -701,6 +773,7 @@ _SCRIPT = textwrap.dedent(
     function BuildForm() {
       form.textContent = "";
       readers.clear();
+      pendingDisabling.length = 0;
 
       for (const group of config.groups) {
         // A module is displayed expanded; the requirements it holds are collapsed until one is the
@@ -713,6 +786,10 @@ _SCRIPT = textwrap.dedent(
 
         form.appendChild(details);
       }
+
+      // A module is wired before the sections it holds, so that disabling a module is what the
+      // sections then inherit.
+      for (const Wire of pendingDisabling) Wire();
 
       RefreshLabelWidth();
     }
@@ -742,6 +819,10 @@ _SCRIPT = textwrap.dedent(
       executeButton.disabled = running;
       status.textContent = running ? "Executing..." : "";
       for (const element of form.elements) element.disabled = running;
+
+      // Enabling every control is what a run ending would otherwise do, which would revive the
+      // controls of a module or requirement that does not run, so the disabling is applied again.
+      if (!running) for (const Wire of pendingDisabling) Wire();
 
       if (running) resetButton.disabled = true;
       else RefreshResetButton();

@@ -225,7 +225,9 @@ def test_DescriptionWrapsWhenTheContainerIsExpanded():
 def test_PillTracksTheFieldThatGovernsTheContainer():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert "const included = container.toggle_includes ? toggle.checked : !toggle.checked;" in page
+    assert 'if (toggle instanceof HTMLSelectElement) return toggle.value !== "skip";' in page
+    assert "return container.toggle_includes ? toggle.checked : !toggle.checked;" in page
+    assert "const included = IsIncluded(container, toggle);" in page
     assert 'pill.textContent = included ? "included" : "skipped";' in page
     assert 'toggle.addEventListener("change", Refresh);' in page
 
@@ -239,3 +241,75 @@ def test_ModulesAreExpandedAndRequirementsAreCollapsed():
     assert 'CreateContainer(group, "module-fields", true)' in page
     assert 'CreateContainer(section, "requirement-fields", false)' in page
     assert "details.open = open;" in page
+
+
+# ----------------------------------------------------------------------
+# What a module or requirement expects has no effect while it does not run, so the controls that
+# state it are disabled rather than left to be set to no purpose.
+def test_ControlsAreDisabledWhenTheContainerDoesNotRun():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "const disabled = inherited || !IsIncluded(container, toggle);" in page
+    assert 'details.classList.toggle("disabled", disabled);' in page
+    assert 'details.addEventListener("refresh-disabling", Refresh);' in page
+
+
+# ----------------------------------------------------------------------
+# The toggle is what reverses the state it decides, so disabling it along with the rest would leave
+# no way back. A container disabled by the one that holds it is past reversing, so its toggle goes
+# with it.
+def test_ToggleStaysEnabledUnlessItIsDisabledFromAbove():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "element.disabled = element === toggle ? inherited : disabled;" in page
+
+
+# ----------------------------------------------------------------------
+# A skipped module runs none of its requirements, so the sections it holds are disabled with it.
+def test_SkippedModuleDisablesItsRequirements():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'const inherited = details.dataset.inherited === "disabled";' in page
+    assert 'nested.dataset.inherited = disabled ? "disabled" : "";' in page
+    assert 'nested.dispatchEvent(new Event("refresh-disabling"));' in page
+
+
+# ----------------------------------------------------------------------
+# A module is wired before the sections it holds, which do not exist while it is being built.
+def test_DisablingIsWiredOnceTheFormIsBuilt():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "for (const Wire of pendingDisabling) Wire();" in page
+    assert "pendingDisabling.length = 0;" in page
+
+
+# ----------------------------------------------------------------------
+# A run disables every control and enabling them all is what ending it would otherwise do, which
+# would revive the controls of a module or requirement that does not run.
+def test_EndingARunDoesNotReviveDisabledControls():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "if (!running) for (const Wire of pendingDisabling) Wire();" in page
+
+
+# ----------------------------------------------------------------------
+# A control that cannot be set is dimmed along with its label, since a label naming an editable
+# control is what makes the row look editable.
+def test_DisabledControlsAreDimmed():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert ".field :disabled { opacity: 0.5; cursor: default; }" in page
+    assert ".field:has(:disabled) > label { opacity: 0.5; }" in page
+
+
+# ----------------------------------------------------------------------
+# A label carries the field's description beneath its name, which makes it taller than the control
+# it names, so the two are centered against each other rather than aligned at the top.
+def test_ControlsAreCenteredAgainstTheirDescription():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "align-items: center;" in page
+    assert ".field > label { color: var(--fg); }" in page
+
+    # The row centers the control, so a checkbox needs no offset of its own to line up with it.
+    assert 'input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }' in page

@@ -1,6 +1,8 @@
 import enum
 import inspect
 
+from types import UnionType
+
 import pytest
 
 from typer.models import OptionInfo
@@ -658,3 +660,494 @@ class TestParseEmptyValues:
 
         with pytest.raises((TypeError, ValueError)):
             _ParseValue(parameter, {"MyModule_one": ""})
+
+
+# ----------------------------------------------------------------------
+def _CreateModeDynamicParameters(
+    boolean_name: str,
+    *,
+    requires_explicit_include: bool = False,
+    extra_parameters: dict[str, TyperParameter] | None = None,
+    boolean_type: type | UnionType = bool,
+    boolean_default: object = False,
+) -> DynamicParameters:
+    """Create parameters for a requirement whose expectation is stated by a single boolean."""
+
+    parameters = {
+        boolean_name: TyperParameter(boolean_type, boolean_default, OptionInfo(help="Help.")),
+    }
+    parameters.update(extra_parameters or {})
+
+    return DynamicParameters(
+        [
+            MyModule(
+                "MyModule",
+                "My description.",
+                [
+                    MyQuery(
+                        "MyQuery",
+                        [
+                            MyRequirement(
+                                "MyRequirement",
+                                "My description.",
+                                parameters=parameters,
+                                requires_explicit_include=requires_explicit_include,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+
+# ----------------------------------------------------------------------
+def _GetModeField(
+    dynamic_parameters: DynamicParameters,
+    arguments: dict[str, dict[str | None, dict[str, object]]] | None = None,
+) -> FormField | None:
+    """Return the mode field of the only requirement, or None if its parameters were not collapsed."""
+
+    section = CreateGroups(dynamic_parameters, arguments or {})[0].sections[0]
+
+    return next(
+        (field for field in section.fields if field.type == FieldType.RequirementMode),
+        None,
+    )
+
+
+# ----------------------------------------------------------------------
+_MODE_NAME = "MyModule_MyRequirement_mode"
+
+
+# ----------------------------------------------------------------------
+# The parameter governing whether a requirement runs and the one stating what it expects cannot be
+# set independently, so the pair is displayed as the three states that it can express.
+class TestRequirementMode:
+    # ----------------------------------------------------------------------
+    def test_PairIsReplacedByASingleField(self):
+        section = CreateGroups(_CreateModeDynamicParameters("require"), {})[0].sections[0]
+
+        assert [(field.label, field.type) for field in section.fields] == [
+            ("expectation", FieldType.RequirementMode),
+        ]
+
+    # ----------------------------------------------------------------------
+    def test_ChoicesAreTheThreeStates(self):
+        field = _GetModeField(_CreateModeDynamicParameters("require"))
+
+        assert field is not None
+        assert field.choices == ["skip", "require", "prohibit"]
+
+    # ----------------------------------------------------------------------
+    # The label names what the control states rather than either parameter it stands in for, since
+    # neither name describes the choice and the requirement is displayed immediately above it.
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    def test_LabelNamesTheChoice(self, boolean_name):
+        field = _GetModeField(_CreateModeDynamicParameters(boolean_name))
+
+        assert field is not None
+        assert field.label == "expectation"
+
+    # ----------------------------------------------------------------------
+    # The help text of neither parameter can be reused, since each describes a single state and, for
+    # a 'prohibit' parameter, the one that is not selected by default. The three states are described
+    # instead.
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    def test_HelpDescribesTheThreeStates(self, boolean_name):
+        field = _GetModeField(_CreateModeDynamicParameters(boolean_name))
+
+        assert field is not None
+        assert field.help == (
+            "Whether the requirement is skipped (skip), enforced as enabled (require), or enforced "
+            "as disabled (prohibit)."
+        )
+
+    # ----------------------------------------------------------------------
+    # The mode governs whether the requirement runs, so it is what the display tracks in the absence
+    # of a checkbox to read.
+    def test_ContainerIsGovernedByTheMode(self):
+        section = CreateGroups(_CreateModeDynamicParameters("require"), {})[0].sections[0]
+
+        assert section.toggle == _MODE_NAME
+        assert section.toggle_includes is False
+
+    # ----------------------------------------------------------------------
+    # Scenario 1 is an opt-out requirement stating its expectation with 'prohibit'; scenario 2 an
+    # opt-out one stating it with 'require'; scenarios 3 and 4 the opt-in counterparts of each.
+    @pytest.mark.parametrize(
+        ("requires_explicit_include", "boolean_name", "gate_value", "boolean_value", "expected"),
+        [
+            # Scenario 1
+            (False, "prohibit", True, True, "skip"),
+            (False, "prohibit", True, False, "skip"),
+            (False, "prohibit", False, True, "prohibit"),
+            (False, "prohibit", False, False, "require"),
+            # Scenario 2
+            (False, "require", True, True, "skip"),
+            (False, "require", True, False, "skip"),
+            (False, "require", False, True, "require"),
+            (False, "require", False, False, "prohibit"),
+            # Scenario 3
+            (True, "prohibit", True, True, "prohibit"),
+            (True, "prohibit", True, False, "require"),
+            (True, "prohibit", False, True, "skip"),
+            (True, "prohibit", False, False, "skip"),
+            # Scenario 4
+            (True, "require", True, True, "require"),
+            (True, "require", True, False, "prohibit"),
+            (True, "require", False, True, "skip"),
+            (True, "require", False, False, "skip"),
+        ],
+    )
+    def test_ValueReflectsThePair(
+        self,
+        requires_explicit_include,
+        boolean_name,
+        gate_value,
+        boolean_value,
+        expected,
+    ):
+        gate_name = "include" if requires_explicit_include else "skip"
+
+        field = _GetModeField(
+            _CreateModeDynamicParameters(
+                boolean_name,
+                requires_explicit_include=requires_explicit_include,
+            ),
+            {"MyModule": {"MyRequirement": {gate_name: gate_value, boolean_name: boolean_value}}},
+        )
+
+        assert field is not None
+        assert field.value == expected
+
+    # ----------------------------------------------------------------------
+    # The submitted mode determines both of the parameters that it stands in for.
+    @pytest.mark.parametrize(
+        ("requires_explicit_include", "boolean_name", "mode", "expected_gate", "expected_boolean"),
+        [
+            # Scenario 1
+            (False, "prohibit", "skip", True, True),
+            (False, "prohibit", "require", False, False),
+            (False, "prohibit", "prohibit", False, True),
+            # Scenario 2
+            (False, "require", "skip", True, False),
+            (False, "require", "require", False, True),
+            (False, "require", "prohibit", False, False),
+            # Scenario 3
+            (True, "prohibit", "skip", False, True),
+            (True, "prohibit", "require", True, False),
+            (True, "prohibit", "prohibit", True, True),
+            # Scenario 4
+            (True, "require", "skip", False, False),
+            (True, "require", "require", True, True),
+            (True, "require", "prohibit", True, False),
+        ],
+    )
+    def test_SubmittedModeSetsBothParameters(
+        self,
+        requires_explicit_include,
+        boolean_name,
+        mode,
+        expected_gate,
+        expected_boolean,
+    ):
+        gate_name = "include" if requires_explicit_include else "skip"
+
+        arguments = ParseValues(
+            _CreateModeDynamicParameters(
+                boolean_name,
+                requires_explicit_include=requires_explicit_include,
+            ),
+            {_MODE_NAME: mode},
+        )
+
+        assert arguments["MyModule"]["MyRequirement"] == {
+            gate_name: expected_gate,
+            boolean_name: expected_boolean,
+        }
+
+    # ----------------------------------------------------------------------
+    # Every state the control can hold survives being submitted and displayed again.
+    @pytest.mark.parametrize("requires_explicit_include", [False, True])
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    @pytest.mark.parametrize("mode", ["skip", "require", "prohibit"])
+    def test_ModeRoundTrips(self, requires_explicit_include, boolean_name, mode):
+        dynamic_parameters = _CreateModeDynamicParameters(
+            boolean_name,
+            requires_explicit_include=requires_explicit_include,
+        )
+
+        field = _GetModeField(
+            dynamic_parameters,
+            ParseValues(dynamic_parameters, {_MODE_NAME: mode}),
+        )
+
+        assert field is not None
+        assert field.value == mode
+
+    # ----------------------------------------------------------------------
+    # A value naming none of the modes leaves the requirement out, which is the state that asserts
+    # nothing about the repository.
+    @pytest.mark.parametrize("submitted", ["", None])
+    def test_UnrecognizedModeSkips(self, submitted):
+        arguments = ParseValues(_CreateModeDynamicParameters("require"), {_MODE_NAME: submitted})
+
+        assert arguments["MyModule"]["MyRequirement"] == {"skip": True, "require": False}
+
+    # ----------------------------------------------------------------------
+    # A mode the form did not submit leaves the parameters at the values that they declare.
+    def test_DefaultsStandWhenNotSubmitted(self):
+        arguments = ParseValues(_CreateModeDynamicParameters("require"), {})
+
+        assert arguments["MyModule"]["MyRequirement"] == {"skip": False, "require": False}
+
+
+# ----------------------------------------------------------------------
+# A requirement whose expectation may be absent defers to the value the module implies, which is a
+# fourth choice rather than one the other three can express.
+class TestOptionalRequirementMode:
+    # ----------------------------------------------------------------------
+    def _CreateParameters(
+        self,
+        boolean_name: str,
+        *,
+        requires_explicit_include: bool = False,
+    ) -> DynamicParameters:
+        return _CreateModeDynamicParameters(
+            boolean_name,
+            requires_explicit_include=requires_explicit_include,
+            boolean_type=bool | None,
+            boolean_default=None,
+        )
+
+    # ----------------------------------------------------------------------
+    def test_PairIsReplacedByASingleField(self):
+        section = CreateGroups(self._CreateParameters("require"), {})[0].sections[0]
+
+        assert [(field.label, field.type) for field in section.fields] == [
+            ("expectation", FieldType.RequirementMode),
+        ]
+
+    # ----------------------------------------------------------------------
+    # The absent value is offered alongside the three states a plain boolean can express, and sits
+    # beside the states it resolves to.
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    def test_ChoicesIncludeTheDefault(self, boolean_name):
+        field = _GetModeField(self._CreateParameters(boolean_name))
+
+        assert field is not None
+        assert field.choices == ["skip", "use default", "require", "prohibit"]
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    def test_HelpDescribesTheFourStates(self, boolean_name):
+        field = _GetModeField(self._CreateParameters(boolean_name))
+
+        assert field is not None
+        assert field.help == (
+            "Whether the requirement is skipped (skip), left to the value the module implies (use "
+            "default), enforced as enabled (require), or enforced as disabled (prohibit)."
+        )
+
+    # ----------------------------------------------------------------------
+    # A parameter that is absent by default starts the control on the choice that leaves it absent.
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    def test_DefaultValueIsTheDefaultChoice(self, boolean_name):
+        field = _GetModeField(self._CreateParameters(boolean_name))
+
+        assert field is not None
+        assert field.value == "use default"
+
+    # ----------------------------------------------------------------------
+    # The absent value reads as 'use default' whichever name the boolean carries, since the negation
+    # a 'prohibit' parameter applies does not apply to the absence of a value.
+    @pytest.mark.parametrize(
+        ("requires_explicit_include", "boolean_name", "gate_value", "boolean_value", "expected"),
+        [
+            # An opt-out requirement stating its expectation with 'prohibit'.
+            (False, "prohibit", True, None, "skip"),
+            (False, "prohibit", True, True, "skip"),
+            (False, "prohibit", True, False, "skip"),
+            (False, "prohibit", False, None, "use default"),
+            (False, "prohibit", False, True, "prohibit"),
+            (False, "prohibit", False, False, "require"),
+            # An opt-out requirement stating its expectation with 'require'.
+            (False, "require", True, None, "skip"),
+            (False, "require", True, True, "skip"),
+            (False, "require", True, False, "skip"),
+            (False, "require", False, None, "use default"),
+            (False, "require", False, True, "require"),
+            (False, "require", False, False, "prohibit"),
+            # An opt-in requirement stating its expectation with 'prohibit'.
+            (True, "prohibit", False, None, "skip"),
+            (True, "prohibit", False, True, "skip"),
+            (True, "prohibit", False, False, "skip"),
+            (True, "prohibit", True, None, "use default"),
+            (True, "prohibit", True, True, "prohibit"),
+            (True, "prohibit", True, False, "require"),
+            # An opt-in requirement stating its expectation with 'require'.
+            (True, "require", False, None, "skip"),
+            (True, "require", False, True, "skip"),
+            (True, "require", False, False, "skip"),
+            (True, "require", True, None, "use default"),
+            (True, "require", True, True, "require"),
+            (True, "require", True, False, "prohibit"),
+        ],
+    )
+    def test_ValueReflectsThePair(
+        self,
+        requires_explicit_include,
+        boolean_name,
+        gate_value,
+        boolean_value,
+        expected,
+    ):
+        gate_name = "include" if requires_explicit_include else "skip"
+
+        field = _GetModeField(
+            self._CreateParameters(
+                boolean_name,
+                requires_explicit_include=requires_explicit_include,
+            ),
+            {"MyModule": {"MyRequirement": {gate_name: gate_value, boolean_name: boolean_value}}},
+        )
+
+        assert field is not None
+        assert field.value == expected
+
+    # ----------------------------------------------------------------------
+    # A requirement that states no expectation leaves the boolean absent, whether because it is
+    # skipped or because the value the module implies was accepted.
+    @pytest.mark.parametrize(
+        ("requires_explicit_include", "boolean_name", "mode", "expected_gate", "expected_boolean"),
+        [
+            # An opt-out requirement stating its expectation with 'prohibit'.
+            (False, "prohibit", "skip", True, None),
+            (False, "prohibit", "use default", False, None),
+            (False, "prohibit", "require", False, False),
+            (False, "prohibit", "prohibit", False, True),
+            # An opt-out requirement stating its expectation with 'require'.
+            (False, "require", "skip", True, None),
+            (False, "require", "use default", False, None),
+            (False, "require", "require", False, True),
+            (False, "require", "prohibit", False, False),
+            # An opt-in requirement stating its expectation with 'prohibit'.
+            (True, "prohibit", "skip", False, None),
+            (True, "prohibit", "use default", True, None),
+            (True, "prohibit", "require", True, False),
+            (True, "prohibit", "prohibit", True, True),
+            # An opt-in requirement stating its expectation with 'require'.
+            (True, "require", "skip", False, None),
+            (True, "require", "use default", True, None),
+            (True, "require", "require", True, True),
+            (True, "require", "prohibit", True, False),
+        ],
+    )
+    def test_SubmittedModeSetsBothParameters(
+        self,
+        requires_explicit_include,
+        boolean_name,
+        mode,
+        expected_gate,
+        expected_boolean,
+    ):
+        gate_name = "include" if requires_explicit_include else "skip"
+
+        arguments = ParseValues(
+            self._CreateParameters(
+                boolean_name,
+                requires_explicit_include=requires_explicit_include,
+            ),
+            {_MODE_NAME: mode},
+        )
+
+        assert arguments["MyModule"]["MyRequirement"] == {
+            gate_name: expected_gate,
+            boolean_name: expected_boolean,
+        }
+
+    # ----------------------------------------------------------------------
+    # Every state the control can hold survives being submitted and displayed again.
+    @pytest.mark.parametrize("requires_explicit_include", [False, True])
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    @pytest.mark.parametrize("mode", ["skip", "use default", "require", "prohibit"])
+    def test_ModeRoundTrips(self, requires_explicit_include, boolean_name, mode):
+        dynamic_parameters = self._CreateParameters(
+            boolean_name,
+            requires_explicit_include=requires_explicit_include,
+        )
+
+        field = _GetModeField(
+            dynamic_parameters,
+            ParseValues(dynamic_parameters, {_MODE_NAME: mode}),
+        )
+
+        assert field is not None
+        assert field.value == mode
+
+    # ----------------------------------------------------------------------
+    # Skipping states no expectation, so re-including the requirement offers the value the module
+    # implies rather than one the user never chose.
+    @pytest.mark.parametrize("boolean_name", ["require", "prohibit"])
+    def test_SkipLeavesNoExpectation(self, boolean_name):
+        dynamic_parameters = self._CreateParameters(boolean_name)
+
+        arguments = ParseValues(dynamic_parameters, {_MODE_NAME: "skip"})
+
+        assert arguments["MyModule"]["MyRequirement"][boolean_name] is None
+
+
+# ----------------------------------------------------------------------
+# A requirement stating more than whether it runs and what it expects cannot be reduced to the
+# modes, so it keeps the controls that can express what it states.
+class TestRequirementModeExclusions:
+    # ----------------------------------------------------------------------
+    def test_AdditionalParameterIsNotCollapsed(self):
+        dynamic_parameters = _CreateModeDynamicParameters(
+            "prohibit",
+            extra_parameters={"value": TyperParameter(int, 1, OptionInfo(help="Help."))},
+        )
+
+        assert _GetModeField(dynamic_parameters) is None
+
+        section = CreateGroups(dynamic_parameters, {})[0].sections[0]
+
+        assert section.toggle == "MyModule_MyRequirement_skip"
+        assert [(field.label, field.type) for field in section.fields] == [
+            ("skip", FieldType.Boolean),
+            ("prohibit", FieldType.Boolean),
+            ("value", FieldType.Integer),
+        ]
+
+    # ----------------------------------------------------------------------
+    # A requirement stating nothing beyond whether it runs has no expectation to fold in.
+    def test_ToggleOnlyRequirementIsNotCollapsed(self):
+        section = CreateGroups(_CreateDynamicParameters(requirement_parameters={}), {})[0].sections[0]
+
+        assert [(field.label, field.type) for field in section.fields] == [
+            ("skip", FieldType.Boolean),
+        ]
+        assert section.toggle == "MyModule_MyRequirement_skip"
+
+    # ----------------------------------------------------------------------
+    # A boolean stating something other than the requirement's expectation is not one that the three
+    # modes describe.
+    def test_UnrelatedBooleanIsNotCollapsed(self):
+        assert _GetModeField(_CreateModeDynamicParameters("other")) is None
+
+    # ----------------------------------------------------------------------
+    # A module is not a requirement, so its own parameters are never folded together.
+    def test_ModuleParametersAreNotCollapsed(self):
+        group = CreateGroups(
+            _CreateDynamicParameters(
+                module_parameters={"require": TyperParameter(bool, False, OptionInfo(help="Help."))},
+            ),
+            {},
+        )[0]
+
+        assert group.toggle == "MyModule_skip"
+        assert [(field.label, field.type) for field in group.fields] == [
+            ("skip", FieldType.Boolean),
+            ("require", FieldType.Boolean),
+        ]

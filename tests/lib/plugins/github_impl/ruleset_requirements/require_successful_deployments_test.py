@@ -60,8 +60,8 @@ _RATIONALE = textwrap.dedent(
           accepts pull requests from forks may prefer required status checks, which gate a merge
           on evidence that a change is sound without acting outside the repository.
         - The project deploys only after a merge, so there is nothing to deploy while the pull
-          request is open and the rule would block every one of them. Such a project can invert
-          the expectation so that the rule is required to stay off.
+          request is open and the rule would block every one of them. Such a project can request
+          a count of 0 so that the rule is required to stay off.
 
         Note that the rule gates the merge rather than the release. A deployment that succeeds
         against the head of a pull request says nothing about the merge result, so it is a weaker
@@ -108,7 +108,6 @@ def _Evaluate(
     response: list[dict],
     *,
     value: int = 1,
-    prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
@@ -121,7 +120,7 @@ def _Evaluate(
             "branch": branch,
             "session": GitHubSession(url, "my-pat"),
         },
-        {"include": True, "value": value, "prohibit": prohibit},
+        {"include": True, "value": value},
     )
 
 
@@ -142,11 +141,9 @@ def test_Construct():
 def test_GetParameters():
     parameters = RequireSuccessfulDeploymentsRequirement().GetParameters()
 
-    assert list(parameters.keys()) == ["include", "prohibit", "value"]
+    assert list(parameters.keys()) == ["include", "value"]
     assert parameters["value"].type is int
     assert parameters["value"].default == 1
-    assert parameters["prohibit"].type is bool
-    assert parameters["prohibit"].default is False
 
 
 # ----------------------------------------------------------------------
@@ -181,12 +178,11 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
-# A single rationale describes the requirement, so neither the requested count nor the inverted
-# expectation changes it.
-@pytest.mark.parametrize("value", [1, 3])
-@pytest.mark.parametrize("prohibit", [False, True])
-def test_RationaleIsInvariant(value, prohibit):
-    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, prohibit=prohibit)
+# A single rationale describes the requirement, so the requested count does not change it,
+# including the count of 0 that inverts the expectation.
+@pytest.mark.parametrize("value", [0, 1, 3])
+def test_RationaleIsInvariant(value):
+    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value)
 
     assert result.rationale == _RATIONALE
 
@@ -355,10 +351,10 @@ def test_ResolutionUsesEnterpriseUrl():
 
 
 # ----------------------------------------------------------------------
-# 'prohibit' inverts the expectation, so an absent rule is what satisfies the requirement.
+# A count of 0 inverts the expectation, so an absent rule is what satisfies the requirement.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_ProhibitMatching(response):
-    result = _Evaluate(response, prohibit=True)
+def test_ZeroMatching(response):
+    result = _Evaluate(response, value=0)
 
     assert result.result == EvaluateResultValue.Success
     assert result.context is None
@@ -366,12 +362,14 @@ def test_ProhibitMatching(response):
 
 
 # ----------------------------------------------------------------------
+# A rule that names no environments is enabled but inert, so it is still reported as present rather
+# than as satisfying a count of 0.
 @pytest.mark.parametrize(
     "response",
     [[_REQUIRED_DEPLOYMENTS_RULE], [_TWO_ENVIRONMENTS_RULE], [_NO_ENVIRONMENTS_RULE]],
 )
-def test_ProhibitWhenRequired(response):
-    result = _Evaluate(response, prohibit=True)
+def test_ZeroWhenRequired(response):
+    result = _Evaluate(response, value=0)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
@@ -382,8 +380,8 @@ def test_ProhibitWhenRequired(response):
 # ----------------------------------------------------------------------
 # The resolution clears the checkbox rather than naming environments, since the rule is expected to
 # be absent entirely.
-def test_ProhibitResolution():
-    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], prohibit=True)
+def test_ZeroResolution():
+    result = _Evaluate([_REQUIRED_DEPLOYMENTS_RULE], value=0)
 
     assert result.resolution == textwrap.dedent(
         f"""\
@@ -399,19 +397,6 @@ def test_ProhibitResolution():
 
 
 # ----------------------------------------------------------------------
-# The count describes how much the rule must require, so it is not consulted when the rule is
-# expected to be absent.
-@pytest.mark.parametrize("value", [1, 5])
-def test_ProhibitIgnoresValue(value):
-    result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=value, prohibit=True)
-
-    assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The ruleset requires successful deployments, but the requirement specifies that it must not."
-    )
-
-
-# ----------------------------------------------------------------------
 # The requirement is opt-in, so it does not run unless the user includes it.
 def test_NotIncluded():
     requirement = RequireSuccessfulDeploymentsRequirement()
@@ -419,7 +404,7 @@ def test_NotIncluded():
     result = requirement.Evaluate(
         _CreateModule(requirement),
         {},
-        {"include": False, "value": 1, "prohibit": False},
+        {"include": False, "value": 1},
     )
 
     assert result.result == EvaluateResultValue.Skipped
