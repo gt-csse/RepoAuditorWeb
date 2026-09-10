@@ -26,6 +26,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_review_
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_signed_commits import (
     RequireSignedCommitsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_status_checks_to_pass import (
+    RequireStatusChecksToPassRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_successful_deployments import (
     RequireSuccessfulDeploymentsRequirement,
 )
@@ -62,6 +65,7 @@ class RulesetQuery(Query):
                 RequireReviewFromCodeOwnersRequirement(),
                 RequireApprovalOfMostRecentPushRequirement(),
                 RequireConversationResolutionRequirement(),
+                RequireStatusChecksToPassRequirement(),
             ],
         )
 
