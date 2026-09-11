@@ -2,6 +2,9 @@ from typing import cast, override
 
 import requests
 
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.allowed_merge_methods import (
+    AllowedMergeMethodsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.block_force_pushes import (
     BlockForcePushesRequirement,
 )
@@ -78,6 +81,7 @@ class RulesetQuery(Query):
                 RequireBranchesToBeUpToDateBeforeMergingRequirement(),
                 BlockForcePushesRequirement(),
                 RequireCodeScanningResultsRequirement(),
+                AllowedMergeMethodsRequirement(),
             ],
         )
 
