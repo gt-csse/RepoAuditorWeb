@@ -67,6 +67,10 @@ class FormContainer:
 class FormSection(FormContainer):
     """The fields of a single requirement within a module."""
 
+    # Requirements of the same query are displayed together under its name, since what a requirement
+    # is asking about is decided by the data its query collects.
+    query: str = ""
+
 
 # ----------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -87,6 +91,10 @@ def CreateGroups(
     # ahead of the requirements rather than in a section of its own.
     groups: dict[str, dict[str | None, list[FormField]]] = {}
 
+    # The query a requirement belongs to is a property of the requirement rather than of any of its
+    # parameters, so it is collected once alongside the fields.
+    query_lookup: dict[tuple[str, str | None], str] = {}
+
     mode_lookup = _CreateModeLookup(dynamic_parameters)
 
     for name, parameter in dynamic_parameters.dynamic_parameters.items():
@@ -102,6 +110,11 @@ def CreateGroups(
             argument_info.requirement_name,
             [],
         )
+
+        if argument_info.query_name is not None:
+            query_lookup[(argument_info.module_name, argument_info.requirement_name)] = (
+                argument_info.query_name
+            )
 
         mode_parameters = mode_lookup.get((argument_info.module_name, argument_info.requirement_name))
 
@@ -140,6 +153,7 @@ def CreateGroups(
                     requirement_name,
                     requirement_fields,
                     descriptions[name][requirement_name],
+                    query=query_lookup.get((name, requirement_name), ""),
                 )
                 for requirement_name, requirement_fields in fields.items()
                 if requirement_name is not None

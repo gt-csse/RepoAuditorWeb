@@ -19,6 +19,7 @@ _GROUPS = [
                 [FormField("MyModule_MyRequirement_value", "value", FieldType.Text, "")],
                 "My requirement description.",
                 toggle="MyModule_MyRequirement_skip",
+                query="MyQuery",
             ),
         ],
     ),
@@ -84,6 +85,7 @@ def test_GroupsAreEmbedded():
                     "description": "My requirement description.",
                     "toggle": "MyModule_MyRequirement_skip",
                     "toggle_includes": False,
+                    "query": "MyQuery",
                 },
             ],
             "description": "My module description.",
@@ -241,6 +243,49 @@ def test_ModulesAreExpandedAndRequirementsAreCollapsed():
     assert 'CreateContainer(group, "module-fields", true)' in page
     assert 'CreateContainer(section, "requirement-fields", false)' in page
     assert "details.open = open;" in page
+
+
+# ----------------------------------------------------------------------
+# The requirements of a query are displayed together under its name, which is emitted once for the
+# run of them rather than by each one.
+def test_RequirementsAreGroupedByTheirQuery():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.indent(
+            textwrap.dedent(
+                """\
+                if (section.query && section.query !== query) {
+                  query = section.query;
+                  details.appendChild(CreateQueryHeading(query));
+                }
+                """,
+            ),
+            "      ",
+        )
+        in page
+    )
+
+
+# ----------------------------------------------------------------------
+# A query names the data its requirements are evaluated against rather than anything that can be
+# set, so the heading labels them instead of enclosing them in something that could be collapsed.
+def test_QueryHeadingIsNotCollapsible():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            function CreateQueryHeading(name) {
+              const heading = document.createElement("div");
+              heading.className = "query-heading";
+              heading.textContent = name;
+              return heading;
+            }
+            """,
+        )
+        in page
+    )
 
 
 # ----------------------------------------------------------------------
