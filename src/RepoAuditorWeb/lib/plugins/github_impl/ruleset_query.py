@@ -53,6 +53,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_creati
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_deletions import (
     RestrictDeletionsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_dismiss_pull_request_reviews import (
+    RestrictDismissPullRequestReviewsRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_updates import (
     RestrictUpdatesRequirement,
 )
@@ -86,6 +89,7 @@ class RulesetQuery(Query):
                 RequireCodeScanningResultsRequirement(),
                 AllowedMergeMethodsRequirement(),
                 RequiredReviewersRequirement(),
+                RestrictDismissPullRequestReviewsRequirement(),
             ],
         )
 
