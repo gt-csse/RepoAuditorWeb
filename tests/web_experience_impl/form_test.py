@@ -106,6 +106,7 @@ class TestFormSection:
         assert section.description == ""
         assert section.toggle is None
         assert section.toggle_includes is False
+        assert section.query == ""
 
     # ----------------------------------------------------------------------
     def test_Frozen(self):
@@ -305,6 +306,36 @@ class TestCreateGroups:
         )
 
         assert [group.name for group in CreateGroups(dynamic_parameters, {})] == ["One", "Two"]
+
+    # ----------------------------------------------------------------------
+    # A requirement is displayed under the query it belongs to, so the section names that query.
+    def test_SectionNamesItsQuery(self):
+        dynamic_parameters = DynamicParameters(
+            [
+                MyModule(
+                    "MyModule",
+                    "My description.",
+                    [
+                        MyQuery("QueryOne", [MyRequirement("One", "My description.")]),
+                        MyQuery(
+                            "QueryTwo",
+                            [
+                                MyRequirement("Two", "My description."),
+                                MyRequirement("Three", "My description."),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        )
+
+        sections = CreateGroups(dynamic_parameters, {})[0].sections
+
+        assert [(section.name, section.query) for section in sections] == [
+            ("One", "QueryOne"),
+            ("Two", "QueryTwo"),
+            ("Three", "QueryTwo"),
+        ]
 
     # ----------------------------------------------------------------------
     def test_DefaultIsUsedWhenNoValueIsProvided(self):

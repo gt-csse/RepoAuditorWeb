@@ -47,6 +47,10 @@ class ArgumentInfo:
     requirement_name: str | None
     parameter_name: str
 
+    # A parameter of the module itself does not come from a query, so the query is only named for a
+    # parameter of a requirement.
+    query_name: str | None = None
+
 
 # ----------------------------------------------------------------------
 class DynamicParameters:
@@ -110,7 +114,7 @@ class DynamicParameters:
 
                         assert full_parameter_name not in argument_lookup, full_parameter_name
                         argument_lookup[full_parameter_name] = ArgumentInfo(
-                            module.name, requirement.name, parameter_name
+                            module.name, requirement.name, parameter_name, query.name
                         )
 
         self.dynamic_parameters = dynamic_parameters
