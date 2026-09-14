@@ -143,8 +143,9 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) {action} the **Dismiss stale pull request approvals when new commits are pushed** checkbox beneath **Require a pull request before merging** in the **Branch rules** section.
-                4) Click the **Save changes** button at the bottom of the page.
+                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                4) {action} the **Dismiss stale pull request approvals when new commits are pushed** checkbox.
+                5) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
                 for more information.

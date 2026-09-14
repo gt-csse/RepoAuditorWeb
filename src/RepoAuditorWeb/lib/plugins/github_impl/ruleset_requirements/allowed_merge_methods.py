@@ -30,8 +30,8 @@ class Values(StrEnum):
     Rebase = "rebase"
 
 
-# The label GitHub displays for each method in the ruleset's checkbox list, which is what the
-# resolution asks the user to select rather than the value the API reports.
+# The label GitHub displays for each method in the ruleset's merge methods dropdown, which is
+# what the resolution asks the user to select rather than the value the API reports.
 UI_LABELS: dict[Values, str] = {
     Values.Merge: "Merge",
     Values.Squash: "Squash",
@@ -54,7 +54,7 @@ class AllowedMergeMethodsRequirement(Requirement):
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
-            # The setting is a set of checkboxes rather than a single choice, so the parameter is
+            # The setting selects any number of methods rather than a single choice, so the parameter is
             # repeatable and names the methods to allow rather than toggling one of them.
             "value": TyperParameter(
                 list[Values],
@@ -93,7 +93,7 @@ class AllowedMergeMethodsRequirement(Requirement):
             )
 
         # A method named more than once on the command line describes the same set, and the order
-        # the checkboxes are listed in carries no meaning, so both are normalized away.
+        # the methods are listed in carries no meaning, so both are normalized away.
         acceptable_values = _Normalize(cast(list[Values], requirement_data["value"]))
 
         rationale = textwrap.dedent(
@@ -169,13 +169,14 @@ class AllowedMergeMethodsRequirement(Requirement):
             expected_labels = ", ".join(f"**{UI_LABELS[value]}**" for value in acceptable_values)
 
             # The requirement does not apply unless the pull request rule is enabled, so the
-            # checkboxes are already available and the resolution does not need to enable the rule.
+            # dropdown is already available and the resolution does not need to enable the rule.
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Check {expected_labels} beneath **Require a pull request before merging** in the **Branch rules** section, clearing the methods that are not listed.
-                4) Click the **Save changes** button at the bottom of the page.
+                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                4) Check {expected_labels} in the **Allowed merge methods** dropdown, clearing the methods that are not listed.
+                5) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
                 for more information.
@@ -201,11 +202,11 @@ class AllowedMergeMethodsRequirement(Requirement):
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def _Normalize(values: Iterable[Values]) -> list[Values]:
-    """Return the distinct methods in the order the ruleset lists their checkboxes."""
+    """Return the distinct methods in the order the ruleset lists them."""
 
     distinct_values = set(values)
 
-    # The set is reported and resolved in the order the checkboxes appear in the ruleset rather than
+    # The set is reported and resolved in the order the methods appear in the ruleset rather than
     # alphabetically, so that what is read matches what is seen on the settings page.
     return [value for value in Values if value in distinct_values]
 

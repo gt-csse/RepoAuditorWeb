@@ -44,6 +44,9 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_status_
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_successful_deployments import (
     RequireSuccessfulDeploymentsRequirement,
 )
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.required_reviewers import (
+    RequiredReviewersRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_creations import (
     RestrictCreationsRequirement,
 )
@@ -82,6 +85,7 @@ class RulesetQuery(Query):
                 BlockForcePushesRequirement(),
                 RequireCodeScanningResultsRequirement(),
                 AllowedMergeMethodsRequirement(),
+                RequiredReviewersRequirement(),
             ],
         )
 

@@ -224,8 +224,9 @@ def test_ErrorResolution():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Set the **Required approvals** dropdown beneath **Require a pull request before merging** to 1.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        4) Set the **Required approvals** dropdown to 1.
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.
@@ -242,8 +243,9 @@ def test_ErrorResolutionUsesExpectedCount():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Set the **Required approvals** dropdown beneath **Require a pull request before merging** to 2.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        4) Set the **Required approvals** dropdown to 2.
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.
