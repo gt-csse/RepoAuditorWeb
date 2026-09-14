@@ -71,25 +71,28 @@ class RulesetQuery(Query):
         super().__init__(
             "RulesetQuery",
             [
-                RestrictDeletionsRequirement(),
+                # branch rules
                 RestrictCreationsRequirement(),
                 RestrictUpdatesRequirement(),
+                RestrictDeletionsRequirement(),
                 RequireLinearHistoryRequirement(),
                 RequireSuccessfulDeploymentsRequirement(),
                 RequireSignedCommitsRequirement(),
+                # branch rules (Require a pull request before merging)
                 RequirePullRequestsRequirement(),
                 RequireApprovalsRequirement(),
                 DismissStalePullRequestApprovalsRequirement(),
                 RequireReviewFromCodeOwnersRequirement(),
                 RequireApprovalOfMostRecentPushRequirement(),
+                RestrictDismissPullRequestReviewsRequirement(),
+                RequiredReviewersRequirement(),
                 RequireConversationResolutionRequirement(),
+                AllowedMergeMethodsRequirement(),
+                # branch rules (continued)
                 RequireStatusChecksToPassRequirement(),
                 RequireBranchesToBeUpToDateBeforeMergingRequirement(),
                 BlockForcePushesRequirement(),
                 RequireCodeScanningResultsRequirement(),
-                AllowedMergeMethodsRequirement(),
-                RequiredReviewersRequirement(),
-                RestrictDismissPullRequestReviewsRequirement(),
             ],
         )
 
