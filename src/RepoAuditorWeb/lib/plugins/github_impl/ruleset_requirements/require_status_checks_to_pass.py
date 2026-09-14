@@ -188,8 +188,9 @@ class RequireStatusChecksToPassRequirement(Requirement):
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
                 3) Check the **Require status checks to pass** checkbox in the **Branch rules** section.
-                4) Add at least {acceptable_value} status check(s) beneath that checkbox.
-                5) Click the **Save changes** button at the bottom of the page.
+                4) Click **Show additional settings** beneath that checkbox.
+                5) Add at least {acceptable_value} status check(s).
+                6) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
                 for more information.
@@ -215,8 +216,9 @@ class RequireStatusChecksToPassRequirement(Requirement):
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Add at least {acceptable_value} status check(s) beneath the **Require status checks to pass** checkbox in the **Branch rules** section.
-                4) Click the **Save changes** button at the bottom of the page.
+                3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+                4) Add at least {acceptable_value} status check(s).
+                5) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
                 for more information.

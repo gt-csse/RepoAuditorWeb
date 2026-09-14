@@ -249,8 +249,9 @@ def test_StatusChecksNotRequiredResolution():
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
         3) Check the **Require status checks to pass** checkbox in the **Branch rules** section.
-        4) Add at least 1 status check(s) beneath that checkbox.
-        5) Click the **Save changes** button at the bottom of the page.
+        4) Click **Show additional settings** beneath that checkbox.
+        5) Add at least 1 status check(s).
+        6) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_STATUS_CHECKS_DOCUMENTATION_URL})
         for more information.
@@ -281,8 +282,9 @@ def test_RuleWithoutChecksResolution():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Add at least 1 status check(s) beneath the **Require status checks to pass** checkbox in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+        4) Add at least 1 status check(s).
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_STATUS_CHECKS_DOCUMENTATION_URL})
         for more information.
@@ -347,8 +349,9 @@ def test_ErrorResolutionUsesValue():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Add at least 3 status check(s) beneath the **Require status checks to pass** checkbox in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+        4) Add at least 3 status check(s).
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_STATUS_CHECKS_DOCUMENTATION_URL})
         for more information.

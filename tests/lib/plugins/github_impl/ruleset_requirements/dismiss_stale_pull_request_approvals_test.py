@@ -244,8 +244,9 @@ def test_ErrorResolution():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Check the **Dismiss stale pull request approvals when new commits are pushed** checkbox beneath **Require a pull request before merging** in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        4) Check the **Dismiss stale pull request approvals when new commits are pushed** checkbox.
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.
@@ -262,8 +263,9 @@ def test_ErrorResolutionWhenProhibited():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Clear the **Dismiss stale pull request approvals when new commits are pushed** checkbox beneath **Require a pull request before merging** in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        4) Clear the **Dismiss stale pull request approvals when new commits are pushed** checkbox.
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.

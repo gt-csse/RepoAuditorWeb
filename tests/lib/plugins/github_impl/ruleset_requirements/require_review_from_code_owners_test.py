@@ -311,8 +311,9 @@ def test_ErrorResolutionChecks():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Check the **Require review from Code Owners** checkbox beneath **Require a pull request before merging** in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        4) Check the **Require review from Code Owners** checkbox.
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.
@@ -332,8 +333,9 @@ def test_ErrorResolutionClears():
         f"""\
         1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Clear the **Require review from Code Owners** checkbox beneath **Require a pull request before merging** in the **Branch rules** section.
-        4) Click the **Save changes** button at the bottom of the page.
+        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        4) Clear the **Require review from Code Owners** checkbox.
+        5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_DOCUMENTATION_URL})
         for more information.

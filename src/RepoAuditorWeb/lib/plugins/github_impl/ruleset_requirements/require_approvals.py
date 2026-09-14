@@ -162,8 +162,9 @@ class RequireApprovalsRequirement(Requirement):
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Set the **Required approvals** dropdown beneath **Require a pull request before merging** to {acceptable_value}.
-                4) Click the **Save changes** button at the bottom of the page.
+                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                4) Set the **Required approvals** dropdown to {acceptable_value}.
+                5) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
                 for more information.

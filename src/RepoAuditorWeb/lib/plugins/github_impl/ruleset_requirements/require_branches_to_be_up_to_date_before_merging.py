@@ -164,8 +164,9 @@ class RequireBranchesToBeUpToDateBeforeMergingRequirement(Requirement):
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) {action} the **Require branches to be up to date before merging** checkbox beneath **Require status checks to pass** in the **Branch rules** section.
-                4) Click the **Save changes** button at the bottom of the page.
+                3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+                4) {action} the **Require branches to be up to date before merging** checkbox.
+                5) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
                 for more information.
