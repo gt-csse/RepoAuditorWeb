@@ -2,8 +2,8 @@ from typing import cast, override
 
 import requests
 
-from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirements.protected_mainline_branch import (
-    ProtectedMainlineBranchRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirements.protected_default_branch import (
+    ProtectedDefaultBranchRequirement,
 )
 from RepoAuditorWeb.lib.query import Query
 
@@ -17,7 +17,7 @@ class DefaultBranchQuery(Query):
         super().__init__(
             "DefaultBranch",
             [
-                ProtectedMainlineBranchRequirement(),
+                ProtectedDefaultBranchRequirement(),
             ],
         )
 

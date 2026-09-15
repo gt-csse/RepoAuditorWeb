@@ -13,13 +13,13 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-class ProtectedMainlineBranchRequirement(Requirement):
+class ProtectedDefaultBranchRequirement(Requirement):
     """Validates whether the default branch is protected by a branch protection rule or a ruleset, which blocks force pushes and deletion."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
         super().__init__(
-            "ProtectedMainlineBranch",
+            "ProtectedDefaultBranch",
             cast(str, self.__class__.__doc__),
         )
 
