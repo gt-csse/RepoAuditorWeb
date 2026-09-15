@@ -25,7 +25,12 @@ def test_Construct():
 
     assert module.name == "GitHub"
     assert module.description == "Validates GitHub configuration settings."
-    assert [query.name for query in module.queries] == ["Standard", "DefaultBranch", "RulesetQuery"]
+    assert [query.name for query in module.queries] == [
+        "Standard",
+        "DefaultBranch",
+        "RulesetQuery",
+        "ClassicBranchProtectionQuery",
+    ]
     assert module.requires_explicit_include is False
 
 
