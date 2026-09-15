@@ -30,6 +30,7 @@ def CreateApp(
     token: str,
     *,
     execute: bool = False,
+    evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
     verbose: bool = False,
@@ -96,6 +97,7 @@ def CreateApp(
             target=_Run,
             args=(sink, lock, modules, dynamic_parameters, arguments, submitted),
             kwargs={
+                "evaluate_all": evaluate_all,
                 "display_resolution": display_resolution,
                 "display_rationale": display_rationale,
                 "verbose": verbose,
@@ -133,7 +135,7 @@ def CreateApp(
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def _Run(
+def _Run(  # noqa: PLR0913
     sink: StreamSink,
     lock: threading.Lock,
     modules: list[Module],
@@ -141,6 +143,7 @@ def _Run(
     arguments: dict[str, dict[str | None, dict[str, object]]],
     submitted: dict[str, object],
     *,
+    evaluate_all: bool,
     display_resolution: bool,
     display_rationale: bool,
     verbose: bool,
@@ -158,7 +161,7 @@ def _Run(
             "Executing...",
             flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
         ) as dm:
-            results = Execute(dm, modules, arguments)
+            results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
 
         sink.Send(
             "results",

@@ -113,6 +113,7 @@ def _Evaluate(
     prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
+    evaluate_all: bool = False,
 ) -> EvaluateResult:
     requirement = RequireConversationResolutionRequirement()
 
@@ -124,6 +125,7 @@ def _Evaluate(
             "session": GitHubSession(url, "my-pat"),
         },
         {"skip": False, "prohibit": prohibit},
+        evaluate_all=evaluate_all,
     )
 
 
@@ -195,6 +197,32 @@ def test_DoesNotApplyWithoutPullRequestRule(response):
     )
     assert result.resolution is None
     assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
+# A single run is expected to report every failure, so the flag evaluates the setting against the
+# value the rule would carry once it is enabled rather than deferring to a later run.
+@pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
+def test_EvaluatedWithoutPullRequestRuleWhenEvaluatingAll(response):
+    result = _Evaluate(response, evaluate_all=True)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+    )
+
+
+# ----------------------------------------------------------------------
+# The rule hosting the setting is not enabled, so the resolution enables it before directing the
+# user to the setting nested within it.
+def test_ResolutionEnablesPullRequestRuleWhenEvaluatingAll():
+    result = _Evaluate([], evaluate_all=True)
+
+    assert result.resolution is not None
+    assert (
+        "3) Check the **Require a pull request before merging** checkbox in the **Branch rules** section."
+        in result.resolution
+    )
 
 
 # ----------------------------------------------------------------------

@@ -51,6 +51,8 @@ class DescriptionRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         response = cast(dict, query_data["response"])
         value = requirement_data["value"]

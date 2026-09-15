@@ -41,6 +41,8 @@ class LicenseRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         license_value = cast(dict, query_data["response"]).get("license", {}).get("name")
         acceptable_values = cast(list[str], requirement_data["value"])

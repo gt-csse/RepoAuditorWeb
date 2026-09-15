@@ -42,6 +42,7 @@ class MyRequirement(Requirement):
         # Captures the arguments of the most recent _EvaluateImpl invocation so tests can assert
         # what Evaluate forwarded to the derived class.
         self.evaluate_args: tuple[Module, dict[str, object], dict[str, object]] | None = None
+        self.evaluate_all: bool | None = None
 
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
@@ -53,8 +54,11 @@ class MyRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         self.evaluate_args = (module, query_data, requirement_data)
+        self.evaluate_all = evaluate_all
 
         values = EvaluateValues() if self.evaluate_values is None else self.evaluate_values
 

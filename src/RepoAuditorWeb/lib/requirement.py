@@ -94,6 +94,8 @@ class Requirement(ABC):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool = False,
     ) -> EvaluateResult:
         """Evaluate the requirement based on the results of the query."""
 
@@ -102,7 +104,12 @@ class Requirement(ABC):
         ):
             return EvaluateResult(EvaluateResultValue.Skipped, None, None, None, self, module)
 
-        return self._EvaluateImpl(module, query_data, requirement_data)
+        return self._EvaluateImpl(
+            module,
+            query_data,
+            requirement_data,
+            evaluate_all=evaluate_all,
+        )
 
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
@@ -118,5 +125,11 @@ class Requirement(ABC):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
-        """Evaluate the requirement based on the results of the query."""
+        """Evaluate the requirement based on the results of the query.
+
+        'evaluate_all' asks a requirement whose setting is nested within another to evaluate it
+        even when that parent setting is absent, so that a single run reports every failure.
+        """

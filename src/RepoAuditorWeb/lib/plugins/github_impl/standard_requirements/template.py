@@ -41,6 +41,8 @@ class TemplateRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         is_template_value = cast(dict, query_data["response"]).get("is_template", False)
         acceptable_value = cast(bool, requirement_data["require"])

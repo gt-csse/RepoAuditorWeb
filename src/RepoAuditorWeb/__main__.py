@@ -68,6 +68,13 @@ def EntryPoint(
             help="Execute the experience immediately rather than waiting for the user to invoke it.",
         ),
     ] = False,
+    evaluate_all: Annotated[  # noqa: FBT002
+        bool,
+        typer.Option(
+            "--evaluate-all",
+            help="Evaluate every requirement, including those that are otherwise suppressed because a parent setting is not enabled. This surfaces all failures in a single run.",
+        ),
+    ] = False,
     no_resolution: Annotated[  # noqa: FBT002
         bool,
         typer.Option("--no-resolution", help="Do not display the resolution for each requirement."),
@@ -112,6 +119,7 @@ def EntryPoint(
             "dynamic_parameters": _dynamic_parameters,
             "arguments": arguments,
             "execute": execute,
+            "evaluate_all": evaluate_all,
             "display_resolution": not no_resolution,
             "display_rationale": not no_rationale,
         }

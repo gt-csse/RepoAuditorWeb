@@ -5,6 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
@@ -51,6 +52,8 @@ class RequireBranchesToBeUpToDateBeforeMergingRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         rules = cast(list[dict[str, object]], query_data["response"])
 
@@ -69,8 +72,9 @@ class RequireBranchesToBeUpToDateBeforeMergingRequirement(Requirement):
 
         # GitHub does not apply the setting unless the rule names a check to run, so it governs
         # nothing here. Reporting a failure would restate the state of the status checks rule, which
-        # RequireStatusChecksToPass already covers.
-        if not checks:
+        # RequireStatusChecksToPass already covers. Evaluating every requirement instead reports the
+        # setting against the default it would carry once a check is named.
+        if not checks and not evaluate_all:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require any status checks to pass, so there are no check results that depend on the branch being up to date.",
@@ -158,13 +162,18 @@ class RequireBranchesToBeUpToDateBeforeMergingRequirement(Requirement):
 
             action = "Check" if acceptable_value else "Clear"
 
-            # The requirement does not apply unless the status checks rule names a check, so the
-            # checkbox is already available and the resolution does not need to enable the rule.
+            # The rule may name no check when every requirement is being evaluated, in which
+            # case the steps that reach the setting must establish it first.
+            resolution_prefix = parent_rule.GetStatusChecksResolutionPrefix(
+                checks,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+                {resolution_prefix}
                 4) {action} the **Require branches to be up to date before merging** checkbox.
                 5) Click the **Save changes** button at the bottom of the page.
 

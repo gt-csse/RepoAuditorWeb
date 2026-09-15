@@ -53,6 +53,8 @@ class PublicPrivateRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         visibility_value = cast(dict, query_data["response"]).get("visibility")
         expected_value = cast(Values, requirement_data["value"])

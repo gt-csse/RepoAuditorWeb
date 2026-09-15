@@ -5,6 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
 # The rule type reported by the branch rules endpoint for GitHub's "Require a pull request before
 # merging" rule; the dismissal restriction is a parameter of that rule rather than a rule of its own.
-RULE_TYPE = "pull_request"
+RULE_TYPE = parent_rule.PULL_REQUEST_RULE_TYPE
 
 
 # The restriction names the actors that may dismiss in addition to those who always can, so an empty
@@ -66,12 +67,10 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
-        rules = cast(list[dict[str, object]], query_data["response"])
-
-        # The endpoint reports only the rules that apply, so the absence of the pull request rule
-        # means the branch accepts direct pushes.
-        pull_request_rule = next((rule for rule in rules if rule.get("type") == RULE_TYPE), None)
+        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The restriction governs the reviews collected on a pull request, so it has nothing to
         # protect on a branch that does not require one. Reporting a failure here would restate the
@@ -166,13 +165,18 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
         if restriction_value != acceptable_value:
             action = "Check" if acceptable_value else "Clear"
 
-            # The requirement does not apply unless the pull request rule is enabled, so the
-            # checkbox is already available and the resolution does not need to enable it.
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                {resolution_prefix}
                 4) {action} the **Restrict who can dismiss pull request reviews** checkbox.
                 5) Click the **Save changes** button at the bottom of the page.
 
@@ -193,11 +197,18 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
         # The roster is a setting of the restriction, so it grants nobody anything on a ruleset that
         # was required not to enable the restriction in the first place.
         if acceptable_value and len(allowed_actors) > acceptable_actors:
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                {resolution_prefix}
                 4) Remove actors listed beneath the **Restrict who can dismiss pull request reviews** checkbox until at most {acceptable_actors} remain.
                 5) Click the **Save changes** button at the bottom of the page.
 

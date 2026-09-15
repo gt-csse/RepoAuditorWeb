@@ -48,6 +48,8 @@ class BlockForcePushesRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         rules = cast(list[dict[str, object]], query_data["response"])
         block_force_pushes_value = any(rule.get("type") == RULE_TYPE for rule in rules)

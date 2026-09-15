@@ -82,6 +82,7 @@ def _Evaluate(
     value: Values = Values.PullRequestTitleAndCommitDetails,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
     pat: str | None = "my-pat",
+    evaluate_all: bool = False,
 ) -> EvaluateResult:
     requirement = SquashCommitMessageRequirement()
 
@@ -89,6 +90,7 @@ def _Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, pat)},
         {"skip": False, "value": value},
+        evaluate_all=evaluate_all,
     )
 
 
@@ -415,6 +417,24 @@ def test_SquashMergingDisallowedWithMatchingValue():
     result = _Evaluate(_Response("PR_TITLE", "COMMIT_MESSAGES", allow_squash_merge=False))
 
     assert result.result == EvaluateResultValue.DoesNotApply
+
+
+# ----------------------------------------------------------------------
+# This setting stays suppressed while squash merging is disallowed even when every other
+# requirement is being evaluated, so the flag does not change the outcome here.
+@pytest.mark.parametrize("value", list(Values))
+def test_SquashMergingDisallowedWhenEvaluatingAll(value):
+    result = _Evaluate(
+        _Response("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES", allow_squash_merge=False),
+        value=value,
+        evaluate_all=True,
+    )
+
+    assert result.result == EvaluateResultValue.DoesNotApply
+    assert result.context == (
+        "The repository does not allow squash merging, so no default squash commit message is offered."
+    )
+    assert result.resolution is None
 
 
 # ----------------------------------------------------------------------

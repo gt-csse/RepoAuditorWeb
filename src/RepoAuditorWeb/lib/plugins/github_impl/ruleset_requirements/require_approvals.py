@@ -6,6 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 # The rule type reported by the branch rules endpoint for GitHub's "Require a pull request before
 # merging" rule; the approval count is a parameter of that rule rather than a rule of its own.
-RULE_TYPE = "pull_request"
+RULE_TYPE = parent_rule.PULL_REQUEST_RULE_TYPE
 
 
 # A solo maintainer has nobody else to ask for an approval, so any non-zero count would block every
@@ -63,12 +64,10 @@ class RequireApprovalsRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
-        rules = cast(list[dict[str, object]], query_data["response"])
-
-        # The endpoint reports only the rules that apply, so the absence of the pull request rule
-        # means the branch accepts direct pushes.
-        pull_request_rule = next((rule for rule in rules if rule.get("type") == RULE_TYPE), None)
+        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The count is a setting of the pull request rule, so it governs nothing on a branch that
         # does not require one. Reporting a failure here would restate the absence of the pull
@@ -156,13 +155,18 @@ class RequireApprovalsRequirement(Requirement):
             repository_url = cast("GitHubSession", query_data["session"]).github_url
             branch_name = cast(str, query_data["branch"])
 
-            # The requirement does not apply unless the pull request rule is enabled, so the
-            # dropdown is already available and the resolution does not need to enable the rule.
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                {resolution_prefix}
                 4) Set the **Required approvals** dropdown to {acceptable_value}.
                 5) Click the **Save changes** button at the bottom of the page.
 

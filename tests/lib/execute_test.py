@@ -1,5 +1,7 @@
 import io
 
+import pytest
+
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
 from RepoAuditorWeb.lib.execute import Execute
@@ -39,11 +41,11 @@ def _CreateModule(
 
 
 # ----------------------------------------------------------------------
-def _Execute(modules, arguments) -> tuple[list[EvaluateResult], str, int]:
+def _Execute(modules, arguments, *, evaluate_all: bool = False) -> tuple[list[EvaluateResult], str, int]:
     sink = io.StringIO()
 
     with DoneManager.Create(sink, "Testing...", flags=DoneManagerFlags.Create()) as dm:
-        results = Execute(dm, modules, arguments)
+        results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
         result_code = dm.result
 
     return results, sink.getvalue(), result_code
@@ -386,6 +388,29 @@ class TestDataFlow:
         _Execute([module], {"MyModule": module_arguments})
 
         assert query.module_data == {"skip": False, "value": 10}
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("evaluate_all", [True, False])
+    def test_EvaluateAllIsForwardedToRequirements(self, evaluate_all):
+        requirement = _CreateRequirement()
+        module = _CreateModule([MyQuery("MyQuery", [requirement], query_data={"response": {}})])
+
+        _Execute(
+            [module],
+            {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            evaluate_all=evaluate_all,
+        )
+
+        assert requirement.evaluate_all is evaluate_all
+
+    # ----------------------------------------------------------------------
+    def test_EvaluateAllDefaultsToFalse(self):
+        requirement = _CreateRequirement()
+        module = _CreateModule([MyQuery("MyQuery", [requirement], query_data={"response": {}})])
+
+        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}})
+
+        assert requirement.evaluate_all is False
 
     # ----------------------------------------------------------------------
     def test_RequirementReceivesQueryAndRequirementData(self):
