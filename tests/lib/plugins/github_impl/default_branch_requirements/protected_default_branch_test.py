@@ -2,8 +2,8 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirements.protected_mainline_branch import (
-    ProtectedMainlineBranchRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirements.protected_default_branch import (
+    ProtectedDefaultBranchRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
@@ -72,7 +72,7 @@ _RATIONALE = textwrap.dedent(
 
 
 # ----------------------------------------------------------------------
-def _CreateModule(requirement: ProtectedMainlineBranchRequirement) -> MyModule:
+def _CreateModule(requirement: ProtectedDefaultBranchRequirement) -> MyModule:
     return MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
 
 
@@ -84,7 +84,7 @@ def _Evaluate(
     default_branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
 ) -> EvaluateResult:
-    requirement = ProtectedMainlineBranchRequirement()
+    requirement = ProtectedDefaultBranchRequirement()
 
     return requirement.Evaluate(
         _CreateModule(requirement),
@@ -99,9 +99,9 @@ def _Evaluate(
 
 # ----------------------------------------------------------------------
 def test_Construct():
-    requirement = ProtectedMainlineBranchRequirement()
+    requirement = ProtectedDefaultBranchRequirement()
 
-    assert requirement.name == "ProtectedMainlineBranch"
+    assert requirement.name == "ProtectedDefaultBranch"
     assert (
         requirement.description
         == "Validates whether the default branch is protected by a branch protection rule or a ruleset, which blocks force pushes and deletion."
@@ -111,7 +111,7 @@ def test_Construct():
 
 # ----------------------------------------------------------------------
 def test_GetParameters():
-    parameters = ProtectedMainlineBranchRequirement().GetParameters()
+    parameters = ProtectedDefaultBranchRequirement().GetParameters()
 
     assert list(parameters.keys()) == ["skip", "prohibit"]
     assert parameters["prohibit"].type is bool
@@ -243,7 +243,7 @@ def test_ResolutionUsesEnterpriseUrl():
 
 # ----------------------------------------------------------------------
 def test_Skip():
-    requirement = ProtectedMainlineBranchRequirement()
+    requirement = ProtectedDefaultBranchRequirement()
 
     result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
