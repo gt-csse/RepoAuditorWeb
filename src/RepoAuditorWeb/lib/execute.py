@@ -25,6 +25,8 @@ def Execute(
             ],
         ],
     ],
+    *,
+    evaluate_all: bool = False,
 ) -> list[EvaluateResult]:
     """Execute the modules with the given arguments."""
 
@@ -78,6 +80,7 @@ def Execute(
                                     module,
                                     this_query_data,
                                     requirement_data,
+                                    evaluate_all=evaluate_all,
                                 )
                                 eval_results.append(eval_result)
 

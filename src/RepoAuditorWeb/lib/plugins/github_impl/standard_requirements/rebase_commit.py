@@ -42,6 +42,8 @@ class RebaseCommitRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         acceptable_value = cast(bool, requirement_data["require"])
 

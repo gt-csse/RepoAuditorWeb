@@ -6,6 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 # The rule type reported by the branch rules endpoint for GitHub's "Require a pull request before
 # merging" rule; the required reviewers are a parameter of that rule rather than a rule of its own.
-RULE_TYPE = "pull_request"
+RULE_TYPE = parent_rule.PULL_REQUEST_RULE_TYPE
 
 
 # The rule names teams rather than people, so it says nothing until a repository has teams whose
@@ -65,12 +66,10 @@ class RequiredReviewersRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
-        rules = cast(list[dict[str, object]], query_data["response"])
-
-        # The endpoint reports only the rules that apply, so the absence of the pull request rule
-        # means the branch accepts direct pushes.
-        pull_request_rule = next((rule for rule in rules if rule.get("type") == RULE_TYPE), None)
+        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The teams are a setting of the pull request rule, so they govern nothing on a branch that
         # does not require one. Reporting a failure here would restate the absence of the pull
@@ -173,11 +172,18 @@ class RequiredReviewersRequirement(Requirement):
             if not reviewers:
                 return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)
 
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                {resolution_prefix}
                 4) Clear the **Require review from specific teams** checkbox, removing every team listed beneath it.
                 5) Click the **Save changes** button at the bottom of the page.
 
@@ -196,15 +202,18 @@ class RequiredReviewersRequirement(Requirement):
             )
 
         if len(reviewers) < acceptable_value:
-            # The requirement does not apply unless the pull request rule is enabled, so the setting
-            # is already available and the resolution does not need to enable the rule. The teams
-            # and patterns are the project's to choose, so the resolution names the count rather
-            # than prescribing which teams to enter.
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                {resolution_prefix}
                 4) Check the **Require review from specific teams** checkbox.
                 5) Click **Add reviewer** until at least {acceptable_value} team(s) are listed, selecting each one in the **Reviewer** dropdown and entering the **File patterns** it is responsible for.
                 6) Click the **Save changes** button at the bottom of the page.

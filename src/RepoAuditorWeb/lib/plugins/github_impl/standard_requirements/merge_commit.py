@@ -45,6 +45,8 @@ class MergeCommitRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 

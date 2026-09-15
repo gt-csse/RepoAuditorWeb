@@ -74,6 +74,7 @@ def _Evaluate(
     value: Values = Values.PullRequestTitle,
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
     pat: str | None = "my-pat",
+    evaluate_all: bool = False,
 ) -> EvaluateResult:
     requirement = MergeCommitMessageRequirement()
 
@@ -81,6 +82,7 @@ def _Evaluate(
         _CreateModule(requirement),
         {"response": response, "session": GitHubSession(url, pat)},
         {"skip": False, "value": value},
+        evaluate_all=evaluate_all,
     )
 
 
@@ -393,6 +395,24 @@ def test_MergeCommitsDisallowedWithMatchingValue():
     result = _Evaluate(_Response("PR_TITLE", "BLANK", allow_merge_commit=False))
 
     assert result.result == EvaluateResultValue.DoesNotApply
+
+
+# ----------------------------------------------------------------------
+# This setting stays suppressed while merge commits are disallowed even when every other
+# requirement is being evaluated, so the flag does not change the outcome here.
+@pytest.mark.parametrize("value", list(Values))
+def test_MergeCommitsDisallowedWhenEvaluatingAll(value):
+    result = _Evaluate(
+        _Response("MERGE_MESSAGE", "PR_TITLE", allow_merge_commit=False),
+        value=value,
+        evaluate_all=True,
+    )
+
+    assert result.result == EvaluateResultValue.DoesNotApply
+    assert result.context == (
+        "The repository does not allow merge commits, so no default merge commit message is offered."
+    )
+    assert result.resolution is None
 
 
 # ----------------------------------------------------------------------

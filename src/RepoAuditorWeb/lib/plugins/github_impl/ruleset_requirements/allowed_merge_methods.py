@@ -6,6 +6,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 # The rule type reported by the branch rules endpoint for GitHub's "Require a pull request before
 # merging" rule; the allowed merge methods are a parameter of that rule rather than a rule of its
 # own.
-RULE_TYPE = "pull_request"
+RULE_TYPE = parent_rule.PULL_REQUEST_RULE_TYPE
 
 
 # ----------------------------------------------------------------------
@@ -36,6 +37,13 @@ UI_LABELS: dict[Values, str] = {
     Values.Merge: "Merge",
     Values.Squash: "Squash",
     Values.Rebase: "Rebase",
+}
+
+
+# Unlike the rule's other settings, GitHub selects every method when the pull request rule is
+# enabled, so an absent rule must be evaluated against all three rather than against none.
+DEFAULT_PARAMETERS: dict[str, object] = {
+    "allowed_merge_methods": [value.value for value in Values],
 }
 
 
@@ -72,12 +80,15 @@ class AllowedMergeMethodsRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
-        rules = cast(list[dict[str, object]], query_data["response"])
-
-        # The endpoint reports only the rules that apply, so the absence of the pull request rule
-        # means the branch accepts direct pushes.
-        pull_request_rule = next((rule for rule in rules if rule.get("type") == RULE_TYPE), None)
+        pull_request_rule = parent_rule.GetRule(
+            query_data,
+            RULE_TYPE,
+            evaluate_all=evaluate_all,
+            default_parameters=DEFAULT_PARAMETERS,
+        )
 
         # The methods are a setting of the pull request rule, so they govern nothing on a branch
         # that does not require one. Reporting a failure here would restate the absence of the pull
@@ -156,8 +167,8 @@ class AllowedMergeMethodsRequirement(Requirement):
 
         parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
 
-        # GitHub reports every method the rule allows, so a rule that omits the setting is not
-        # restricting the branch to any particular method.
+        # GitHub reports every method the rule allows, so a rule that omits the setting altogether
+        # is not restricting the branch to any particular method.
         merge_methods_value = _Normalize(
             Values(method) for method in cast(list[str], parameters.get("allowed_merge_methods") or [])
         )
@@ -168,13 +179,18 @@ class AllowedMergeMethodsRequirement(Requirement):
 
             expected_labels = ", ".join(f"**{UI_LABELS[value]}**" for value in acceptable_values)
 
-            # The requirement does not apply unless the pull request rule is enabled, so the
-            # dropdown is already available and the resolution does not need to enable the rule.
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+                {resolution_prefix}
                 4) Check {expected_labels} in the **Allowed merge methods** dropdown, clearing the methods that are not listed.
                 5) Click the **Save changes** button at the bottom of the page.
 

@@ -205,6 +205,54 @@ class TestEvaluate:
         assert requirement.evaluate_args[2] is requirement_data
 
     # ----------------------------------------------------------------------
+    # The flag defaults to off so that a requirement suppressed by an absent parent setting stays
+    # suppressed unless the caller asks otherwise.
+    def test_EvaluateAllDefaultsToFalse(self):
+        requirement = _CreateRequirement()
+
+        requirement.Evaluate(_CreateModule(requirement), {}, {"skip": False})
+
+        assert requirement.evaluate_all is False
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("evaluate_all", [True, False])
+    def test_ForwardsEvaluateAllToImpl(self, evaluate_all):
+        requirement = _CreateRequirement()
+
+        requirement.Evaluate(
+            _CreateModule(requirement),
+            {},
+            {"skip": False},
+            evaluate_all=evaluate_all,
+        )
+
+        assert requirement.evaluate_all is evaluate_all
+
+    # ----------------------------------------------------------------------
+    # The flag asks for requirements to be evaluated despite an absent parent setting, which says
+    # nothing about one the user asked to skip.
+    def test_EvaluateAllDoesNotOverrideSkip(self):
+        requirement = _CreateRequirement()
+        module = _CreateModule(requirement)
+
+        result = requirement.Evaluate(module, {}, {"skip": True}, evaluate_all=True)
+
+        assert result.result == EvaluateResultValue.Skipped
+        assert requirement.evaluate_all is None
+
+    # ----------------------------------------------------------------------
+    # The requirement's own arguments are forwarded unchanged, so the flag is not delivered among
+    # them where it could be mistaken for a parameter the requirement declared.
+    def test_EvaluateAllIsNotAddedToRequirementData(self):
+        requirement = _CreateRequirement()
+        requirement_data: dict[str, object] = {"skip": False}
+
+        requirement.Evaluate(_CreateModule(requirement), {}, requirement_data, evaluate_all=True)
+
+        assert requirement.evaluate_args is not None
+        assert requirement.evaluate_args[2] == {"skip": False}
+
+    # ----------------------------------------------------------------------
     def test_ReturnsImplResult(self):
         requirement = _CreateRequirement(
             evaluate_values=EvaluateValues(EvaluateResultValue.Error, "My context."),

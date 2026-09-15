@@ -123,6 +123,7 @@ def _Evaluate(
     prohibit: bool = False,
     branch: str = "main",
     url: str = "https://github.com/gt-csse/RepoAuditorWeb",
+    evaluate_all: bool = False,
 ) -> EvaluateResult:
     requirement = RequireBranchesToBeUpToDateBeforeMergingRequirement()
 
@@ -134,6 +135,7 @@ def _Evaluate(
             "session": GitHubSession(url, "my-pat"),
         },
         {"skip": False, "prohibit": prohibit},
+        evaluate_all=evaluate_all,
     )
 
 
@@ -222,6 +224,32 @@ def test_DoesNotApplyWithoutChecks(parameters):
     assert result.result == EvaluateResultValue.DoesNotApply
     assert result.resolution is None
     assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
+# A single run is expected to report every failure, so the flag evaluates the setting against the
+# value it would carry once the rule names a check rather than deferring to a later run.
+@pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
+def test_EvaluatedWithoutStatusChecksRuleWhenEvaluatingAll(response):
+    result = _Evaluate(response, evaluate_all=True)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+    )
+
+
+# ----------------------------------------------------------------------
+# GitHub does not apply the setting until the rule names a check, so the resolution establishes
+# both before directing the user to the setting nested within the rule.
+def test_ResolutionEnablesStatusChecksRuleWhenEvaluatingAll():
+    result = _Evaluate([], evaluate_all=True)
+
+    assert result.resolution is not None
+    assert (
+        "3) Check the **Require status checks to pass** checkbox in the **Branch rules** section "
+        "and add at least one status check beneath it."
+    ) in result.resolution
 
 
 # ----------------------------------------------------------------------

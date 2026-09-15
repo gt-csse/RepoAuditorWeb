@@ -43,6 +43,8 @@ class WebCommitSignoffRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         web_commit_signoff_value = cast(
             bool, cast(dict, query_data["response"]).get("web_commit_signoff_required", False)

@@ -41,6 +41,8 @@ class SupportProjectsRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         has_projects_value = cast(dict, query_data["response"]).get("has_projects", False)
         acceptable_value = cast(bool, requirement_data["require"])

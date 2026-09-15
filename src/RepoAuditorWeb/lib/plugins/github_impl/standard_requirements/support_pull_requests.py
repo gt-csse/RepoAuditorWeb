@@ -44,6 +44,8 @@ class SupportPullRequestsRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         has_pull_requests_value = cast(dict, query_data["response"]).get("has_pull_requests", False)
         acceptable_value = not cast(bool, requirement_data["prohibit"])

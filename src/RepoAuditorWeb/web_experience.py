@@ -24,6 +24,7 @@ def ExecuteExperience(
     arguments: dict[str, dict[str | None, dict[str, object]]],
     *,
     execute: bool = False,
+    evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
 ) -> None:
@@ -35,6 +36,7 @@ def ExecuteExperience(
         arguments,
         token,
         execute=execute,
+        evaluate_all=evaluate_all,
         display_resolution=display_resolution,
         display_rationale=display_rationale,
         verbose=dm.is_verbose,

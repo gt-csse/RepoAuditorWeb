@@ -32,6 +32,7 @@ def ExecuteExperience(  # noqa: C901
     arguments: dict[str, dict[str | None, dict[str, object]]],
     *,
     execute: bool = False,  # noqa: ARG001
+    evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
 ) -> None:
@@ -39,7 +40,7 @@ def ExecuteExperience(  # noqa: C901
 
     # The console experience has no control to invoke, so `execute` is implied.
 
-    results = Execute(dm, modules, arguments)
+    results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
 
     num_skipped = 0
     num_does_not_apply = 0

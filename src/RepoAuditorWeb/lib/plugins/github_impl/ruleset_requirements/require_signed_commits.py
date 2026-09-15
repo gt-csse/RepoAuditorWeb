@@ -48,6 +48,8 @@ class RequireSignedCommitsRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         rules = cast(list[dict[str, object]], query_data["response"])
         signed_commits_value = any(rule.get("type") == RULE_TYPE for rule in rules)

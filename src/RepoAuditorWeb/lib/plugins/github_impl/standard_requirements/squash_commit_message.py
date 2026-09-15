@@ -57,6 +57,8 @@ class SquashCommitMessageRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         rationale = textwrap.dedent(
             """\

@@ -44,6 +44,8 @@ class SupportIssuesRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         has_issues_value = cast(dict, query_data["response"]).get("has_issues", False)
         acceptable_value = not cast(bool, requirement_data["prohibit"])

@@ -41,6 +41,8 @@ class DefaultBranchRequirement(Requirement):
         module: Module,
         query_data: dict[str, object],
         requirement_data: dict[str, object],
+        *,
+        evaluate_all: bool,
     ) -> EvaluateResult:
         default_branch_value = cast(dict, query_data["response"]).get("default_branch")
         acceptable_values = cast(list[str], requirement_data["value"])
