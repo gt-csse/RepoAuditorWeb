@@ -1,7 +1,7 @@
 import pytest
 
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
-from RepoAuditorWeb.web_experience_impl.results_html import RenderResults, Summary
+from RepoAuditorWeb.web_experience_impl.results_html import RenderResults
 
 from conftest import MyModule, MyQuery, MyRequirement
 
@@ -129,38 +129,6 @@ class TestHeadings:
 
 # ----------------------------------------------------------------------
 class TestSummary:
-    # ----------------------------------------------------------------------
-    def test_Empty(self):
-        summary = Summary.Create([])
-
-        assert summary == Summary()
-        assert summary.total == 0
-
-    # ----------------------------------------------------------------------
-    def test_Counts(self):
-        summary = Summary.Create(
-            [
-                _CreateResult(EvaluateResultValue.Skipped),
-                _CreateResult(EvaluateResultValue.DoesNotApply),
-                _CreateResult(EvaluateResultValue.Success),
-                _CreateResult(EvaluateResultValue.Success),
-                _CreateResult(EvaluateResultValue.Warning),
-                _CreateResult(EvaluateResultValue.Error),
-            ],
-        )
-
-        assert summary == Summary(skipped=1, does_not_apply=1, success=2, warning=1, error=1)
-        assert summary.total == 6
-
-    # ----------------------------------------------------------------------
-    def test_CalcPercentage(self):
-        assert Summary.Create([_CreateResult()] * 4).CalcPercentage(1) == "25.00%"
-
-    # ----------------------------------------------------------------------
-    # Nothing was tallied, so there is no total to divide by.
-    def test_CalcPercentageWithoutResults(self):
-        assert Summary().CalcPercentage(0) == "0.00%"
-
     # ----------------------------------------------------------------------
     # The summary is rendered even when nothing ran so that the page is not blank.
     def test_TableIsRenderedWithoutResults(self):

@@ -1,11 +1,10 @@
-import io
+import json
 
 from collections.abc import Mapping
 from unittest import mock
 
 import typer
 
-from dbrownell_Common.Streams.DoneManager import DoneManager
 from typer.testing import CliRunner, Result
 
 from RepoAuditorWeb import __version__
@@ -21,19 +20,9 @@ def _GetOptionNames(typer_app) -> set[str]:
 
 # ----------------------------------------------------------------------
 def _InvokeAndCapture(args: list[str]) -> tuple[Result, str]:
-    # DoneManager.CreateCommandLine binds sys.stdout as a default argument value when
-    # dbrownell_Common is imported, so its writes bypass both CliRunner's captured stream and
-    # pytest's capture fixtures. Supplying the stream explicitly is the only way to observe them.
-    sink = io.StringIO()
-    original = DoneManager.CreateCommandLine
+    result = CliRunner().invoke(app, args)
 
-    def Patched(stream=sink, **kwargs):
-        return original(stream, **kwargs)
-
-    with mock.patch.object(DoneManager, "CreateCommandLine", Patched):
-        result = CliRunner().invoke(app, args)
-
-    return result, sink.getvalue()
+    return result, result.output
 
 
 # ----------------------------------------------------------------------
@@ -216,6 +205,60 @@ class TestExperience:
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
+
+    # ----------------------------------------------------------------------
+    def test_Json(self):
+        result = CliRunner().invoke(app, ["--GitHub-skip", "--experience", "json"])
+
+        assert result.exit_code == 0, result.output
+        assert json.loads(result.stdout) == {
+            "schema_version": 1,
+            "summary": {
+                "skipped": 0,
+                "does_not_apply": 0,
+                "success": 0,
+                "warning": 0,
+                "error": 0,
+                "total": 0,
+            },
+            "results": [],
+        }
+
+    # ----------------------------------------------------------------------
+    # Everything that DoneManager produces is written to stderr so that the document written to
+    # stdout can be redirected to a file or piped to another process as-is.
+    def test_JsonProgressIsWrittenToStderr(self):
+        result = CliRunner().invoke(app, ["--GitHub-skip", "--experience", "json"])
+
+        assert result.exit_code == 0, result.output
+        assert "Executing module 'GitHub' (1 of 3)..." in result.stderr
+        assert "Executing module" not in result.stdout
+
+    # ----------------------------------------------------------------------
+    # The status output and the document are written to different streams, so the status output
+    # ends with a blank line to separate them when both are displayed together.
+    def test_JsonStatusOutputEndsWithASeparator(self):
+        result = CliRunner().invoke(app, ["--GitHub-skip", "--experience", "json"])
+
+        assert result.exit_code == 0, result.output
+
+        lines = result.stderr.splitlines()
+
+        assert lines[-1] == ""
+        assert lines[-2] == ""
+        assert lines[-3].startswith("Results: DONE!")
+
+    # ----------------------------------------------------------------------
+    # The console experience writes everything to one stream, so it adds no separator.
+    def test_ConsoleStatusOutputHasNoSeparator(self):
+        result = CliRunner().invoke(app, _SKIP_GITHUB)
+
+        assert result.exit_code == 0, result.output
+
+        lines = result.stdout.splitlines()
+
+        assert lines[-1] == ""
+        assert lines[-2].startswith("Results: DONE!")
 
     # ----------------------------------------------------------------------
     def test_InvalidExperience(self):

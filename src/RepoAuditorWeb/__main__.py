@@ -1,3 +1,5 @@
+import sys
+
 from enum import StrEnum
 from typing import Annotated
 
@@ -8,6 +10,7 @@ from typer.core import TyperGroup
 
 from RepoAuditorWeb.console_experience import ExecuteExperience as ExecuteConsoleExperience
 from RepoAuditorWeb.impl import entry_point_utils
+from RepoAuditorWeb.json_experience import ExecuteExperience as ExecuteJsonExperience
 from RepoAuditorWeb.web_experience import ExecuteExperience as ExecuteWebExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
 from RepoAuditorWeb.lib.modules import MODULES
@@ -35,6 +38,7 @@ class Experience(StrEnum):
     """The user's experience interacting with the application."""
 
     Console = "console"
+    Json = "json"
     Web = "web"
 
 
@@ -104,32 +108,47 @@ def EntryPoint(
 ) -> None:
     """Invoke RepoAuditor."""
 
-    with DoneManager.CreateCommandLine(
-        flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
-    ) as dm:
-        port = entry_point_utils.ResolvePort(port)
-        token = entry_point_utils.ResolveToken(token)
-        arguments = _dynamic_parameters.Parse(kwargs)
+    # The json experience writes a document to stdout, so everything that DoneManager produces is
+    # written to stderr in order to keep that document parsable.
+    stream = sys.stderr if experience == Experience.Json else sys.stdout
 
-        experience_kwargs = {
-            "dm": dm,
-            "port": port,
-            "token": token,
-            "modules": MODULES,
-            "dynamic_parameters": _dynamic_parameters,
-            "arguments": arguments,
-            "execute": execute,
-            "evaluate_all": evaluate_all,
-            "display_resolution": not no_resolution,
-            "display_rationale": not no_rationale,
-        }
+    # DoneManager raises typer.Exit when it exits, so the separator is written from a 'finally'
+    # clause in order to land after the final status message rather than before it.
+    try:
+        with DoneManager.CreateCommandLine(
+            stream,
+            flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
+        ) as dm:
+            port = entry_point_utils.ResolvePort(port)
+            token = entry_point_utils.ResolveToken(token)
+            arguments = _dynamic_parameters.Parse(kwargs)
 
-        if experience == Experience.Console:
-            ExecuteConsoleExperience(**experience_kwargs)
-        elif experience == Experience.Web:
-            ExecuteWebExperience(**experience_kwargs)
-        else:
-            assert False, experience  # noqa: B011, PT015  # pragma: no cover
+            experience_kwargs = {
+                "dm": dm,
+                "port": port,
+                "token": token,
+                "modules": MODULES,
+                "dynamic_parameters": _dynamic_parameters,
+                "arguments": arguments,
+                "execute": execute,
+                "evaluate_all": evaluate_all,
+                "display_resolution": not no_resolution,
+                "display_rationale": not no_rationale,
+            }
+
+            if experience == Experience.Console:
+                ExecuteConsoleExperience(**experience_kwargs)
+            elif experience == Experience.Json:
+                ExecuteJsonExperience(**experience_kwargs)
+            elif experience == Experience.Web:
+                ExecuteWebExperience(**experience_kwargs)
+            else:
+                assert False, experience  # noqa: B011, PT015  # pragma: no cover
+    finally:
+        if experience == Experience.Json:
+            # The status output and the document are written to different streams, so
+            # whitespace is added to separate them when both are displayed together.
+            stream.write("\n")
 
 
 # ----------------------------------------------------------------------
