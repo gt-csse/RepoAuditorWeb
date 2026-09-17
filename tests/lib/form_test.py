@@ -8,7 +8,7 @@ import pytest
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
-from RepoAuditorWeb.web_experience_impl.form import (
+from RepoAuditorWeb.lib.form import (
     CreateGroups,
     FieldType,
     FormField,

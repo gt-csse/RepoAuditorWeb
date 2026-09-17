@@ -7,7 +7,7 @@ import textwrap
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from RepoAuditorWeb.web_experience_impl.form import FormGroup
+    from RepoAuditorWeb.lib.form import FormGroup
 
 
 # ----------------------------------------------------------------------
