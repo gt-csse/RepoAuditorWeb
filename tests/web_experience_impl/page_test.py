@@ -2,7 +2,7 @@ import json
 import re
 import textwrap
 
-from RepoAuditorWeb.web_experience_impl.form import FieldType, FormField, FormGroup, FormSection
+from RepoAuditorWeb.lib.form import FieldType, FormField, FormGroup, FormSection
 from RepoAuditorWeb.web_experience_impl.page import CreatePage
 
 

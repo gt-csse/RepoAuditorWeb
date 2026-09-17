@@ -9,7 +9,7 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_review_
 )
 from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
-from RepoAuditorWeb.web_experience_impl.form import CreateGroups, FieldType, ParseValues
+from RepoAuditorWeb.lib.form import CreateGroups, FieldType, ParseValues
 
 from conftest import MyModule, MyQuery
 

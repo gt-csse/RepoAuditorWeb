@@ -1,0 +1,103 @@
+/* The sections stack vertically, each sized to its content, matching the web experience. */
+
+#body {
+    height: 1fr;
+}
+
+.heading {
+    text-style: bold;
+    padding: 0 1;
+}
+
+/* A section that has nothing to display yet occupies no space. */
+.hidden {
+    display: none;
+}
+
+#arguments {
+    height: 1fr;
+    border: round $panel;
+}
+
+#actions {
+    height: auto;
+    padding: 0 1;
+}
+
+#actions Button {
+    margin-right: 1;
+}
+
+#status {
+    color: $text-muted;
+    padding: 1 1;
+}
+
+/* The output reports the run in progress, so it is bounded to leave the arguments and the results
+   the greater share of the display. */
+#output-section {
+    height: auto;
+    max-height: 30%;
+    border: round $panel;
+}
+
+#output {
+    height: auto;
+    max-height: 100%;
+}
+
+/* The arguments and the results are each given an equal share of what the output leaves. */
+#results-section {
+    height: 1fr;
+    border: round $panel;
+}
+
+/* The results scroll within their section, so they are sized to the content they hold rather than
+   to the section, which would otherwise compress them to fit. */
+#results {
+    height: auto;
+}
+
+/* A description states what the module or requirement is for, so it is subordinate to the name. */
+.description {
+    color: $text-muted;
+    padding: 0 1;
+}
+
+/* The query a group of requirements belongs to names what they ask about. */
+.query {
+    text-style: bold;
+    color: $text-muted;
+    padding: 1 1 0 1;
+}
+
+.field {
+    height: auto;
+    padding: 0 1;
+}
+
+.field Label {
+    color: $text-muted;
+}
+
+/* A result value is conveyed by color as well as by name, matching the web experience. */
+.requirement.success > CollapsibleTitle {
+    color: $success;
+}
+
+.requirement.warning > CollapsibleTitle {
+    color: $warning;
+}
+
+.requirement.error > CollapsibleTitle {
+    color: $error;
+}
+
+.requirement.skipped > CollapsibleTitle,
+.requirement.does_not_apply > CollapsibleTitle {
+    color: $text-muted;
+}
+
+.summary {
+    padding: 0 1 1 1;
+}
