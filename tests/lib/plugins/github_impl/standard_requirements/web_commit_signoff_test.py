@@ -107,8 +107,7 @@ def test_MatchingValue(web_commit_signoff_required, require):
 
 
 # ----------------------------------------------------------------------
-# The rationale explains the default regardless of the outcome, so it is present on success even
-# though there is nothing to resolve.
+# The rationale explains the default whether it passes or fails.
 def test_SuccessRationale():
     result = _Evaluate({"web_commit_signoff_required": False})
 
@@ -131,6 +130,14 @@ def test_ErrorResolutionAndRationale():
         """,
     )
     assert result.rationale == _RATIONALE
+
+
+# ----------------------------------------------------------------------
+# The rationale justifies the default, so it does not apply once the requirement is overridden.
+def test_ErrorNoRationaleWhenRequired():
+    result = _Evaluate({"web_commit_signoff_required": False}, require=True)
+
+    assert result.rationale is None
 
 
 # ----------------------------------------------------------------------

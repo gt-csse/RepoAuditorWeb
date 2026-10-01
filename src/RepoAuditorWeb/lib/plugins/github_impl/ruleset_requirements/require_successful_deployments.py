@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -71,7 +71,126 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
 
         acceptable_value = cast(int, requirement_data["value"])
 
-        rationale = textwrap.dedent(
+        # The endpoint reports one rule per ruleset that applies to the branch, so environments
+        # named by any matching rule count toward the total.
+        deployment_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
+
+        environments: list[str] = []
+
+        for rule in deployment_rules:
+            parameters = cast(dict[str, object], rule.get("parameters") or {})
+            environments += cast(
+                list[str],
+                parameters.get("required_deployment_environments") or [],
+            )
+
+        # A rule that must name no environments is a rule that must not be present, since one that
+        # names none is enabled but inert.
+        if acceptable_value == 0:
+            if not deployment_rules:
+                return EvaluateResult(
+                    EvaluateResultValue.Success,
+                    None,
+                    None,
+                    self._CreateRationale(requirement_data),
+                    self,
+                    module,
+                )
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                3) Clear the **Require deployments to succeed** checkbox in the **Branch rules** section.
+                4) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                "The ruleset requires successful deployments, but the requirement specifies that it must not.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        # The rule being absent and the rule naming too few environments are fixed by different
+        # actions, so they are reported separately rather than as one count that happens to be zero.
+        if not deployment_rules:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                3) Check the **Require deployments to succeed** checkbox in the **Branch rules** section.
+                4) Select at least {acceptable_value} environment(s) beneath that checkbox.
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                "The ruleset does not require successful deployments.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        if len(environments) < acceptable_value:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            # The rule is already enabled, so the resolution names the environments to add rather
+            # than directing the user to the checkbox.
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                3) Select at least {acceptable_value} environment(s) beneath the **Require deployments to succeed** checkbox in the **Branch rules** section.
+                4) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The ruleset requires successful deployments to {len(environments)} environment(s), but the requirement specifies it must be at least {acceptable_value}.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             f"""\
             This requirement is not included by default because the rule presumes that the repository
             defines deployment environments and deploys to them from a pull request, which is a
@@ -120,110 +239,3 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
             signal than deploying from the base branch after the merge has landed.
             """,
         )
-
-        # The endpoint reports one rule per ruleset that applies to the branch, so environments
-        # named by any matching rule count toward the total.
-        deployment_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
-
-        environments: list[str] = []
-
-        for rule in deployment_rules:
-            parameters = cast(dict[str, object], rule.get("parameters") or {})
-            environments += cast(
-                list[str],
-                parameters.get("required_deployment_environments") or [],
-            )
-
-        # A rule that must name no environments is a rule that must not be present, since one that
-        # names none is enabled but inert.
-        if acceptable_value == 0:
-            if not deployment_rules:
-                return EvaluateResult(
-                    EvaluateResultValue.Success,
-                    None,
-                    None,
-                    rationale,
-                    self,
-                    module,
-                )
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Clear the **Require deployments to succeed** checkbox in the **Branch rules** section.
-                4) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                "The ruleset requires successful deployments, but the requirement specifies that it must not.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        # The rule being absent and the rule naming too few environments are fixed by different
-        # actions, so they are reported separately rather than as one count that happens to be zero.
-        if not deployment_rules:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Check the **Require deployments to succeed** checkbox in the **Branch rules** section.
-                4) Select at least {acceptable_value} environment(s) beneath that checkbox.
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                "The ruleset does not require successful deployments.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        if len(environments) < acceptable_value:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            # The rule is already enabled, so the resolution names the environments to add rather
-            # than directing the user to the checkbox.
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Select at least {acceptable_value} environment(s) beneath the **Require deployments to succeed** checkbox in the **Branch rules** section.
-                4) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-deployments-to-succeed-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The ruleset requires successful deployments to {len(environments)} environment(s), but the requirement specifies it must be at least {acceptable_value}.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

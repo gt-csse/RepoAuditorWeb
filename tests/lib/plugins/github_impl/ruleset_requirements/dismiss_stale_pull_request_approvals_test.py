@@ -186,6 +186,21 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [
+        [_CreatePullRequestRule(dismiss_stale_reviews_on_push=True)],
+        [_CreatePullRequestRule(dismiss_stale_reviews_on_push=False)],
+    ],
+)
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The setting is nested within the pull request rule, so a branch that does not require a pull
 # request collects no approvals for it to dismiss. The rationale describes a default that is not
 # being applied, so it is omitted along with the resolution.

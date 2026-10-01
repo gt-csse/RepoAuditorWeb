@@ -289,12 +289,16 @@ def test_ResolutionUsesEnterpriseUrl():
 
 
 # ----------------------------------------------------------------------
-# The rationale explains the default regardless of the outcome or the selected value.
-@pytest.mark.parametrize("value", list(Values))
-def test_Rationale(value):
+# The rationale explains the default whether it passes or fails, so it is omitted once a
+# non-default value is selected.
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(value, _RATIONALE if value == Values.PullRequestTitleAndCommitDetails else None) for value in Values],
+)
+def test_RationaleOnlyForDefault(value, expected):
     result = _Evaluate(_Response("PR_TITLE", "COMMIT_MESSAGES"), value=value)
 
-    assert result.rationale == _RATIONALE
+    assert result.rationale == expected
 
 
 # ----------------------------------------------------------------------

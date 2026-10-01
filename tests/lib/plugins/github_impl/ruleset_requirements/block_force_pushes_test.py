@@ -153,6 +153,15 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize("response", [[_NON_FAST_FORWARD_RULE], [_OTHER_RULE]])
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The endpoint reports only the rules that apply, so a branch whose rules do not include the
 # non-fast-forward rule is one that accepts force pushes.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])

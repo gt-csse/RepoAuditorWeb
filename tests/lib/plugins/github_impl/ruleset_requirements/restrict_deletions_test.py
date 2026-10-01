@@ -151,6 +151,15 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize("response", [[_DELETION_RULE], [_OTHER_RULE]])
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The endpoint reports only the rules that apply, so a branch whose rules do not include the
 # deletion rule is one whose deletion is unrestricted.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])

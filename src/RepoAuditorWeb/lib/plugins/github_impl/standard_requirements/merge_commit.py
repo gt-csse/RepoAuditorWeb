@@ -6,7 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import GetRestrictedValue
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -50,7 +50,57 @@ class MergeCommitRequirement(Requirement):
     ) -> EvaluateResult:
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 
-        rationale = textwrap.dedent(
+        allow_merge_commit_value = GetRestrictedValue(
+            module,
+            self,
+            query_data,
+            "allow_merge_commit",
+            "merge settings",
+        )
+
+        if isinstance(allow_merge_commit_value, EvaluateResult):
+            return allow_merge_commit_value
+
+        if allow_merge_commit_value != acceptable_value:
+            action = "Check" if acceptable_value else "Uncheck"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [General settings]({repository_url}/settings) page.
+                2) Scroll to the **Pull Requests** section.
+                3) {action} the **Allow merge commits** checkbox.
+
+                See [Configuring commit merging for pull requests](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-merging-for-pull-requests)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{allow_merge_commit_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that merge commits are allowed, which matches the state
             of a newly created repository.
@@ -93,41 +143,3 @@ class MergeCommitRequirement(Requirement):
             this setting has to remain enabled for a ruleset to permit it anywhere.
             """,
         )
-
-        allow_merge_commit_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            "allow_merge_commit",
-            "merge settings",
-        )
-
-        if isinstance(allow_merge_commit_value, EvaluateResult):
-            return allow_merge_commit_value
-
-        if allow_merge_commit_value != acceptable_value:
-            action = "Check" if acceptable_value else "Uncheck"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Pull Requests** section.
-                3) {action} the **Allow merge commits** checkbox.
-
-                See [Configuring commit merging for pull requests](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-merging-for-pull-requests)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{allow_merge_commit_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

@@ -142,6 +142,15 @@ def test_Rationale(protected):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize("protected", [True, False])
+def test_RationaleOmittedWhenProhibited(protected):
+    result = _Evaluate({"protected": protected}, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 def test_UnprotectedWhenRequired():
     result = _Evaluate({"protected": False})
 

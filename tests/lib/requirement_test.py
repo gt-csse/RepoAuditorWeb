@@ -339,3 +339,27 @@ class TestEvaluate:
 
         with pytest.raises(KeyError, match=missing_key):
             requirement.Evaluate(_CreateModule(requirement), {}, {})
+
+
+# ----------------------------------------------------------------------
+class TestUsesDefaultValues:
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "requirement_data",
+        [
+            {},
+            {"value": 10},
+            # Gating parameters are not specific to the requirement, so they do not count as overrides.
+            {"value": 10, "skip": True, "include": True},
+        ],
+    )
+    def test_Default(self, requirement_data):
+        assert _CreateRequirement().UsesDefaultValues(requirement_data) is True
+
+    # ----------------------------------------------------------------------
+    def test_Override(self):
+        assert _CreateRequirement().UsesDefaultValues({"value": 20}) is False
+
+    # ----------------------------------------------------------------------
+    def test_NoParameters(self):
+        assert _CreateRequirement(parameters={}).UsesDefaultValues({"skip": False}) is True

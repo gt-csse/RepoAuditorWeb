@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -49,52 +49,6 @@ class ProtectedDefaultBranchRequirement(Requirement):
     ) -> EvaluateResult:
         protected_value = cast(bool, cast(dict, query_data["response"]).get("protected", False))
         acceptable_value = not cast(bool, requirement_data["prohibit"])
-
-        rationale = textwrap.dedent(
-            """\
-            The default behavior is to require that the default branch is protected. GitHub reports
-            the branch as protected when a branch protection rule or a ruleset targets it, so either
-            mechanism satisfies this requirement.
-
-            ## Reasons for this Default
-
-            - An unprotected default branch accepts a force push from anyone with write access, which
-              replaces history that existing clones and published references already depend on. The
-              commits the push abandoned are no longer reachable, so recovering them requires knowing
-              that they existed.
-            - Protecting the branch is what makes the rest of the repository's review configuration
-              binding. Settings such as the merge methods and auto-merge describe how a pull request
-              may be merged, but they do not require that a change arrive through one; a direct push
-              bypasses them entirely.
-            - The default branch is the branch a clone checks out, the base branch proposed for new
-              pull requests, and the branch consumers reference by name, so it is the branch where
-              rewritten history is most widely observed.
-            - Protection is the mechanism the rules worth having later are attached to, including
-              required reviews, status checks, and linear history. This requirement establishes that
-              mechanism rather than any particular rule.
-
-            ## Reasons to Override this Default
-
-            - The repository is private and owned by an account on a plan that offers neither branch
-              protection rules nor rulesets for private repositories, in which case protecting the
-              branch is a purchasing decision rather than a configuration one.
-            - The repository is a scratch, mirror, or generated repository whose default branch is
-              rewritten by design, where blocking force pushes prevents the repository from serving
-              its purpose.
-            - Protection is enforced where GitHub does not report it, such as a pre-receive hook on
-              an Enterprise Server instance, so the branch is governed while this value remains
-              false.
-
-            Note that this requirement establishes only that the branch is protected, not what the
-            protection requires. A rule that targets the branch and enables nothing beyond the
-            defaults still reports the branch as protected while permitting unreviewed direct pushes.
-
-            Note also that protection does not by itself constrain everyone. A classic branch
-            protection rule does not apply to those who can bypass it unless **Do not allow
-            bypassing the above settings** is enabled, and a ruleset does not apply to the actors
-            named in its bypass list.
-            """,
-        )
 
         if protected_value != acceptable_value:
             repository_url = cast("GitHubSession", query_data["session"]).github_url
@@ -150,9 +104,67 @@ class ProtectedDefaultBranchRequirement(Requirement):
                 EvaluateResultValue.Error,
                 f"The repository's value is '{protected_value}', but the requirement specifies it must be '{acceptable_value}'.",
                 resolution,
-                rationale,
+                self._CreateRationale(requirement_data),
                 self,
                 module,
             )
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
+            """\
+            The default behavior is to require that the default branch is protected. GitHub reports
+            the branch as protected when a branch protection rule or a ruleset targets it, so either
+            mechanism satisfies this requirement.
+
+            ## Reasons for this Default
+
+            - An unprotected default branch accepts a force push from anyone with write access, which
+              replaces history that existing clones and published references already depend on. The
+              commits the push abandoned are no longer reachable, so recovering them requires knowing
+              that they existed.
+            - Protecting the branch is what makes the rest of the repository's review configuration
+              binding. Settings such as the merge methods and auto-merge describe how a pull request
+              may be merged, but they do not require that a change arrive through one; a direct push
+              bypasses them entirely.
+            - The default branch is the branch a clone checks out, the base branch proposed for new
+              pull requests, and the branch consumers reference by name, so it is the branch where
+              rewritten history is most widely observed.
+            - Protection is the mechanism the rules worth having later are attached to, including
+              required reviews, status checks, and linear history. This requirement establishes that
+              mechanism rather than any particular rule.
+
+            ## Reasons to Override this Default
+
+            - The repository is private and owned by an account on a plan that offers neither branch
+              protection rules nor rulesets for private repositories, in which case protecting the
+              branch is a purchasing decision rather than a configuration one.
+            - The repository is a scratch, mirror, or generated repository whose default branch is
+              rewritten by design, where blocking force pushes prevents the repository from serving
+              its purpose.
+            - Protection is enforced where GitHub does not report it, such as a pre-receive hook on
+              an Enterprise Server instance, so the branch is governed while this value remains
+              false.
+
+            Note that this requirement establishes only that the branch is protected, not what the
+            protection requires. A rule that targets the branch and enables nothing beyond the
+            defaults still reports the branch as protected while permitting unreviewed direct pushes.
+
+            Note also that protection does not by itself constrain everyone. A classic branch
+            protection rule does not apply to those who can bypass it unless **Do not allow
+            bypassing the above settings** is enabled, and a ruleset does not apply to the actors
+            named in its bypass list.
+            """,
+        )

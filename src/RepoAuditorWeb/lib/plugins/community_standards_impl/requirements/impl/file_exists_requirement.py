@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -83,7 +83,7 @@ class FileExistsRequirement(Requirement):
                 EvaluateResultValue.Error,
                 f"{self._filename} was found at {found_locations_str}, but the requirement prohibits it.",
                 f"Remove {found_locations_str} from the repository.",
-                self._rationale,
+                self._CreateRationale(requirement_data),
                 self,
                 module,
             )
@@ -95,9 +95,20 @@ class FileExistsRequirement(Requirement):
                 EvaluateResultValue.Error,
                 f"{self._filename} was not found in any of these directories: {directories_str}.",
                 self._resolution,
-                self._rationale,
+                self._CreateRationale(requirement_data),
                 self,
                 module,
             )
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, self._rationale, self, module)
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        return self._rationale if self.UsesDefaultValues(requirement_data) else None

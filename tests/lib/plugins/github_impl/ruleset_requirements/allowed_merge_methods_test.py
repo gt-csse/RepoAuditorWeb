@@ -186,6 +186,18 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once a different set of methods overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [[_CreatePullRequestRule(["merge"])], [_CreatePullRequestRule(["merge", "squash", "rebase"])]],
+)
+def test_RationaleOmittedWhenValueOverridden(response):
+    result = _Evaluate(response, value=[Values.Merge, Values.Squash])
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The methods are a setting of the pull request rule, so they govern nothing on a branch whose
 # ruleset does not require a pull request. The rationale describes a default that is not being
 # applied, so it is omitted along with the resolution.

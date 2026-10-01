@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -65,7 +65,128 @@ class RequireStatusChecksToPassRequirement(Requirement):
 
         acceptable_value = cast(int, requirement_data["value"])
 
-        rationale = textwrap.dedent(
+        # The endpoint reports one rule per ruleset that applies to the branch, so checks named by
+        # any matching rule count toward the total.
+        status_check_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
+
+        checks: list[dict[str, object]] = []
+
+        for rule in status_check_rules:
+            parameters = cast(dict[str, object], rule.get("parameters") or {})
+            checks += cast(
+                list[dict[str, object]],
+                parameters.get("required_status_checks") or [],
+            )
+
+        # A rule that must name no checks is a rule that must not be present, since one that names
+        # none is enabled but inert.
+        if acceptable_value == 0:
+            if not status_check_rules:
+                return EvaluateResult(
+                    EvaluateResultValue.Success,
+                    None,
+                    None,
+                    self._CreateRationale(requirement_data),
+                    self,
+                    module,
+                )
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                3) Clear the **Require status checks to pass** checkbox in the **Branch rules** section.
+                4) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                "The ruleset requires status checks to pass, but the requirement specifies that it must not.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        # The rule being absent and the rule naming too few checks are fixed by different actions,
+        # so they are reported separately rather than as one count that happens to be zero.
+        if not status_check_rules:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                3) Check the **Require status checks to pass** checkbox in the **Branch rules** section.
+                4) Click **Show additional settings** beneath that checkbox.
+                5) Add at least {acceptable_value} status check(s).
+                6) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                "The ruleset does not require status checks to pass.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        if len(checks) < acceptable_value:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            # The rule is already enabled, so the resolution names the checks to add rather than
+            # directing the user to the checkbox.
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+                4) Add at least {acceptable_value} status check(s).
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The ruleset requires {len(checks)} status check(s), but the requirement specifies it must be at least {acceptable_value}.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             f"""\
             The default behavior is to require that a ruleset mandates at least {DEFAULT_VALUE}
             status check(s) pass before merging.
@@ -128,112 +249,3 @@ class RequireStatusChecksToPassRequirement(Requirement):
             cannot be circumvented.
             """,
         )
-
-        # The endpoint reports one rule per ruleset that applies to the branch, so checks named by
-        # any matching rule count toward the total.
-        status_check_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
-
-        checks: list[dict[str, object]] = []
-
-        for rule in status_check_rules:
-            parameters = cast(dict[str, object], rule.get("parameters") or {})
-            checks += cast(
-                list[dict[str, object]],
-                parameters.get("required_status_checks") or [],
-            )
-
-        # A rule that must name no checks is a rule that must not be present, since one that names
-        # none is enabled but inert.
-        if acceptable_value == 0:
-            if not status_check_rules:
-                return EvaluateResult(
-                    EvaluateResultValue.Success,
-                    None,
-                    None,
-                    rationale,
-                    self,
-                    module,
-                )
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Clear the **Require status checks to pass** checkbox in the **Branch rules** section.
-                4) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                "The ruleset requires status checks to pass, but the requirement specifies that it must not.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        # The rule being absent and the rule naming too few checks are fixed by different actions,
-        # so they are reported separately rather than as one count that happens to be zero.
-        if not status_check_rules:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Check the **Require status checks to pass** checkbox in the **Branch rules** section.
-                4) Click **Show additional settings** beneath that checkbox.
-                5) Add at least {acceptable_value} status check(s).
-                6) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                "The ruleset does not require status checks to pass.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        if len(checks) < acceptable_value:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            # The rule is already enabled, so the resolution names the checks to add rather than
-            # directing the user to the checkbox.
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
-                4) Add at least {acceptable_value} status check(s).
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-status-checks-to-pass-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The ruleset requires {len(checks)} status check(s), but the requirement specifies it must be at least {acceptable_value}.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

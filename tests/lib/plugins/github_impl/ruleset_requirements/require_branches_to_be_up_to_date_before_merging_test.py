@@ -191,6 +191,18 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [[_CreateStatusChecksRule(strict=True)], [_CreateStatusChecksRule(strict=False)]],
+)
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The setting determines which commit the required checks run against, so it governs nothing on a
 # branch whose ruleset requires no checks. The rationale describes a default that is not being
 # applied, so it is omitted along with the resolution.

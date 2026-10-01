@@ -221,6 +221,40 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'require' overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [
+        [_CreatePullRequestRule(require_code_owner_review=True)],
+        [_CreatePullRequestRule(require_code_owner_review=False)],
+    ],
+)
+def test_RationaleOmittedWhenRequired(response):
+    result = _Evaluate(response, require=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
+# An explicit value overrides the one implied by the team size even when the two are equal, so
+# the rationale describing the team size's default is omitted.
+@pytest.mark.parametrize(
+    ("team_size", "require"),
+    [
+        (TeamSize.Solo, False),
+        (TeamSize.Small, False),
+        (TeamSize.Large, True),
+    ],
+)
+def test_RationaleOmittedWhenValueEqualsTeamSizeDefault(team_size, require):
+    result = _Evaluate(
+        [_CreatePullRequestRule(require_code_owner_review=True)], require=require, team_size=team_size
+    )
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The rationale names the team size under evaluation so that the reader can see where the expected
 # value came from.
 @pytest.mark.parametrize(

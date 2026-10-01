@@ -8,6 +8,7 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_val
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from enum import StrEnum
 
     from RepoAuditorWeb.lib.module import Module
@@ -79,7 +80,7 @@ class CommitMessageSetting:
 def EvaluateCommitMessage(
     setting: CommitMessageSetting,
     value: StrEnum,
-    rationale: Markdown,
+    create_rationale_func: Callable[[], Markdown | None],
     module: Module,
     requirement: Requirement,
     query_data: dict[str, object],
@@ -108,7 +109,7 @@ def EvaluateCommitMessage(
             EvaluateResultValue.DoesNotApply,
             f"The repository does not allow {setting.method_availability_description}, so no default {setting.method_description} message is offered.",
             None,
-            rationale,
+            create_rationale_func(),
             requirement,
             module,
         )
@@ -157,9 +158,16 @@ def EvaluateCommitMessage(
             EvaluateResultValue.Error,
             f"The repository's default {setting.method_description} message is {setting.GetUILabel(title_value, message_value)}, but the requirement specifies it must be '{setting.ui_labels[value]}'.",
             resolution,
-            rationale,
+            create_rationale_func(),
             requirement,
             module,
         )
 
-    return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, requirement, module)
+    return EvaluateResult(
+        EvaluateResultValue.Success,
+        None,
+        None,
+        create_rationale_func(),
+        requirement,
+        module,
+    )

@@ -6,7 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -73,7 +73,56 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
 
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 
-        rationale = textwrap.dedent(
+        if dismiss_value != acceptable_value:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            action = "Check" if acceptable_value else "Clear"
+
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                {resolution_prefix}
+                4) {action} the **Dismiss stale pull request approvals when new commits are pushed** checkbox.
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{dismiss_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that a ruleset dismisses stale pull request approvals
             when new commits are pushed.
@@ -129,40 +178,3 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
             contributors take rather than one that cannot be circumvented.
             """,
         )
-
-        if dismiss_value != acceptable_value:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            action = "Check" if acceptable_value else "Clear"
-
-            # The rule may be absent when every requirement is being evaluated, in which case
-            # the steps that reach the setting must enable it first.
-            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
-                query_data,
-                evaluate_all=evaluate_all,
-            )
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                {resolution_prefix}
-                4) {action} the **Dismiss stale pull request approvals when new commits are pushed** checkbox.
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{dismiss_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

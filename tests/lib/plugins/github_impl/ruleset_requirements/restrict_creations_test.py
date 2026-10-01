@@ -151,6 +151,15 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'require' overrides it.
+@pytest.mark.parametrize("response", [[_CREATION_RULE], [_OTHER_RULE]])
+def test_RationaleOmittedWhenRequired(response):
+    result = _Evaluate(response, require=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 def test_RestrictedWhenNotRequired():
     result = _Evaluate([_CREATION_RULE])
 
