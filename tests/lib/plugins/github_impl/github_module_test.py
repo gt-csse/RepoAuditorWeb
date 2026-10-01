@@ -12,7 +12,7 @@ def _GetSession(
     pat: str | None = None,
 ) -> GitHubSession:
     module_data = GitHubModule().GetModuleData(
-        {None: {"skip": False, "url": url, "pat": pat, "branch": None}},
+        {None: {"include": True, "url": url, "pat": pat, "branch": None}},
     )
 
     assert module_data is not None
@@ -31,7 +31,7 @@ def test_Construct():
         "RulesetQuery",
         "ClassicBranchProtectionQuery",
     ]
-    assert module.requires_explicit_include is False
+    assert module.requires_explicit_include is True
 
 
 # ----------------------------------------------------------------------
@@ -43,7 +43,7 @@ def test_TeamSizeValues():
 def test_GetParameters():
     parameters = GitHubModule().GetParameters()
 
-    assert list(parameters.keys()) == ["skip", "url", "pat", "branch", "team_size"]
+    assert list(parameters.keys()) == ["include", "url", "pat", "branch", "team_size"]
     assert parameters["url"].type is str
     assert parameters["url"].default is None
     assert parameters["pat"].type == (str | None)
@@ -59,7 +59,7 @@ class TestGetModuleData:
         module_data = GitHubModule().GetModuleData(
             {
                 None: {
-                    "skip": False,
+                    "include": True,
                     "url": "https://github.com/gt-csse/RepoAuditorWeb",
                     "pat": None,
                     "branch": None,
@@ -77,7 +77,7 @@ class TestGetModuleData:
         module_data = GitHubModule().GetModuleData(
             {
                 None: {
-                    "skip": False,
+                    "include": True,
                     "url": "https://github.com/gt-csse/RepoAuditorWeb",
                     "pat": None,
                     "branch": branch,
@@ -106,7 +106,7 @@ class TestGetModuleData:
         module_data = GitHubModule().GetModuleData(
             {
                 None: {
-                    "skip": False,
+                    "include": True,
                     "url": "https://github.com/gt-csse/RepoAuditorWeb",
                     "pat": None,
                     "branch": None,
@@ -124,7 +124,7 @@ class TestGetModuleData:
             GitHubModule().GetModuleData(
                 {
                     None: {
-                        "skip": False,
+                        "include": True,
                         "url": "https://github.com/gt-csse/RepoAuditorWeb",
                         "pat": None,
                         "branch": None,
@@ -135,12 +135,12 @@ class TestGetModuleData:
 
     # ----------------------------------------------------------------------
     def test_PreservesRequirementArguments(self):
-        requirement_arguments: dict[str, object] = {"skip": False, "value": "populated"}
+        requirement_arguments: dict[str, object] = {"include": True, "value": "populated"}
 
         module_data = GitHubModule().GetModuleData(
             {
                 None: {
-                    "skip": False,
+                    "include": True,
                     "url": "https://github.com/gt-csse/RepoAuditorWeb",
                     "pat": None,
                     "branch": None,
@@ -153,14 +153,21 @@ class TestGetModuleData:
         assert module_data["Description"] is requirement_arguments
 
     # ----------------------------------------------------------------------
-    # A skipped module is never asked for data, so the absent url is not an error.
-    def test_Skip(self):
-        assert GitHubModule().GetModuleData({None: {"skip": True}}) is None
+    # A module that is not included is never asked for data, so the absent url is not an error.
+    def test_NotIncluded(self):
+        assert GitHubModule().GetModuleData({None: {"include": False}}) is None
 
     # ----------------------------------------------------------------------
     def test_ErrorMissingUrl(self):
-        with pytest.raises(ValueError, match=re.escape("'url' is required argument for this module.")):
-            GitHubModule().GetModuleData({None: {"skip": False, "url": None, "pat": None}})
+        with pytest.raises(ValueError, match=re.escape("'url' is a required argument for this module.")):
+            GitHubModule().GetModuleData({None: {"include": True, "url": None, "pat": None}})
+
+    # ----------------------------------------------------------------------
+    def test_ErrorWhitespacePat(self):
+        with pytest.raises(
+            ValueError, match=re.escape("'pat' must not be empty or contain only whitespace.")
+        ):
+            _GetSession(pat="  ")
 
 
 # ----------------------------------------------------------------------

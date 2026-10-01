@@ -1,3 +1,5 @@
+from typing import override
+
 import pytest
 
 from RepoAuditorWeb.lib.query import Query
@@ -41,3 +43,17 @@ def test_GetQueryDataReceivesModuleData():
 def test_ErrorAbstract():
     with pytest.raises(TypeError):
         Query("MyName", [])
+
+
+# ----------------------------------------------------------------------
+def test_ErrorCleanupQueryDataAbstract():
+    # ----------------------------------------------------------------------
+    class NoCleanupQuery(Query):
+        @override
+        def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
+            return module_data
+
+    # ----------------------------------------------------------------------
+
+    with pytest.raises(TypeError):
+        NoCleanupQuery("MyName", [])

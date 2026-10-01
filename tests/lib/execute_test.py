@@ -1,5 +1,7 @@
 import io
 
+from typing import override
+
 import pytest
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
@@ -501,3 +503,118 @@ class TestExceptions:
         assert "My query error." in output
         assert [result.requirement.name for result in results] == ["Two"]
         assert result_code == -1
+
+    # ----------------------------------------------------------------------
+    # Results produced before the cleanup failure are retained and the remaining queries still run.
+    def test_CleanupExceptionIsSuppressed(self):
+        module = _CreateModule(
+            [
+                MyQuery(
+                    "Query1",
+                    [_CreateRequirement("One")],
+                    query_data={},
+                    raise_cleanup_exception=ValueError("My cleanup error."),
+                ),
+                MyQuery("Query2", [_CreateRequirement("Two")], query_data={}),
+            ],
+        )
+
+        results, output, result_code = _Execute(
+            [module],
+            {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+        )
+
+        assert "My cleanup error." in output
+        assert [result.requirement.name for result in results] == ["One", "Two"]
+        assert result_code == -1
+
+
+# ----------------------------------------------------------------------
+class TestCleanup:
+    # ----------------------------------------------------------------------
+    def test_ReceivesQueryData(self):
+        query_data: dict[str, object] = {"response": {}}
+        query = MyQuery("MyQuery", [_CreateRequirement()], query_data=query_data)
+
+        _Execute(
+            [_CreateModule([query])],
+            {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+        )
+
+        assert query.cleanup_query_data is query_data
+
+    # ----------------------------------------------------------------------
+    def test_InvokedAfterAllRequirements(self):
+        # ----------------------------------------------------------------------
+        class OrderingQuery(MyQuery):
+            @override
+            def CleanupQueryData(self, query_data: dict[str, object]) -> None:
+                self.evaluated_at_cleanup = [
+                    requirement.evaluate_args is not None  # ty: ignore[unresolved-attribute]
+                    for requirement in self.requirements
+                ]
+
+        # ----------------------------------------------------------------------
+
+        query = OrderingQuery(
+            "MyQuery", [_CreateRequirement("One"), _CreateRequirement("Two")], query_data={}
+        )
+
+        _Execute(
+            [_CreateModule([query])],
+            {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+        )
+
+        assert query.evaluated_at_cleanup == [True, True]
+
+    # ----------------------------------------------------------------------
+    # Skipped requirements have no influence on whether the data acquired by the query is released.
+    def test_InvokedWhenRequirementsAreSkipped(self):
+        query = MyQuery("MyQuery", [_CreateRequirement()], query_data={})
+
+        _Execute(
+            [_CreateModule([query])],
+            {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": True}}},
+        )
+
+        assert query.cleanup_query_data == {}
+
+    # ----------------------------------------------------------------------
+    def test_NotInvokedForSkippedQuery(self):
+        query = MyQuery("MyQuery", [_CreateRequirement()], query_data=None)
+
+        _Execute(
+            [_CreateModule([query])],
+            {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+        )
+
+        assert query.cleanup_query_data is None
+
+    # ----------------------------------------------------------------------
+    def test_NotInvokedWhenQueryRaises(self):
+        query = MyQuery("MyQuery", [_CreateRequirement()], raise_exception=ValueError("My query error."))
+
+        _Execute(
+            [_CreateModule([query])],
+            {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+        )
+
+        assert query.cleanup_query_data is None
+
+    # ----------------------------------------------------------------------
+    def test_InvokedForEachQuery(self):
+        query_data1: dict[str, object] = {"value": 1}
+        query_data2: dict[str, object] = {"value": 2}
+
+        queries = [
+            MyQuery("Query1", [_CreateRequirement("One")], query_data=query_data1),
+            MyQuery("Query2", [_CreateRequirement("Two")], query_data=query_data2),
+        ]
+
+        _Execute(
+            [_CreateModule(queries)],
+            {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+        )
+
+        assert queries[0].cleanup_query_data is query_data1
+        assert queries[1].cleanup_query_data is query_data2

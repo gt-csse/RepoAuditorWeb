@@ -3,6 +3,7 @@ import json
 from collections.abc import Mapping
 from unittest import mock
 
+import pytest
 import typer
 
 from typer.testing import CliRunner, Result
@@ -26,10 +27,10 @@ def _InvokeAndCapture(args: list[str]) -> tuple[Result, str]:
 
 
 # ----------------------------------------------------------------------
-# The GitHub module is skipped so that no network calls are made. The console experience is
-# requested explicitly because the default experience opens a window and does not return until it
+# The CommunityStandards module is skipped so that no network calls are made. The console experience
+# is requested explicitly because the default experience opens a window and does not return until it
 # is closed.
-_SKIP_GITHUB = ["--GitHub-skip", "--experience", "console"]
+_SKIP_NETWORK = ["--CommunityStandards-skip", "--experience", "console"]
 
 
 # ----------------------------------------------------------------------
@@ -66,13 +67,14 @@ def test_DynamicModuleOptionsAppearInHelp():
     assert result.exit_code == 0, result.output
 
     assert {
-        "--GitHub-skip",
+        "--GitHub-include",
         "--GitHub-url",
         "--GitHub-pat",
         "--GitHub-branch",
-        "--CommunityStandards-include",
-        "--CommunityStandards-one",
-        "--CommunityStandards-two",
+        "--CommunityStandards-skip",
+        "--CommunityStandards-url",
+        "--CommunityStandards-pat",
+        "--CommunityStandards-branch",
         "--ScientificSoftware-include",
         "--ScientificSoftware-five",
         "--ScientificSoftware-six",
@@ -99,14 +101,14 @@ def test_DynamicRequirementOptionsAppearInHelp():
 
 # ----------------------------------------------------------------------
 def test_NoArguments():
-    result, _ = _InvokeAndCapture(_SKIP_GITHUB)
+    result, _ = _InvokeAndCapture(_SKIP_NETWORK)
 
     assert result.exit_code == 0, result.output
 
 
 # ----------------------------------------------------------------------
 def test_ModulesAreExecuted():
-    result, output = _InvokeAndCapture(_SKIP_GITHUB)
+    result, output = _InvokeAndCapture(_SKIP_NETWORK)
 
     assert result.exit_code == 0, output
 
@@ -121,14 +123,14 @@ def test_ModulesAreExecuted():
 # ----------------------------------------------------------------------
 # Modules that are not explicitly included are reported as skipped.
 def test_ModulesAreSkipped():
-    _, output = _InvokeAndCapture(_SKIP_GITHUB)
+    _, output = _InvokeAndCapture(_SKIP_NETWORK)
 
     assert output.count("SKIPPED.") == 3
 
 
 # ----------------------------------------------------------------------
 def test_ModuleIncludeOptionIsResolved():
-    result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--CommunityStandards-include"])
+    result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--ScientificSoftware-include"])
 
     assert result.exit_code == 0, output
     assert output.count("SKIPPED.") == 2
@@ -137,10 +139,12 @@ def test_ModuleIncludeOptionIsResolved():
 # ----------------------------------------------------------------------
 # The GitHub module requires a url, so it fails when it is executed without one.
 def test_ErrorGitHubModuleWithoutUrl():
-    result, output = _InvokeAndCapture(["--experience", "console"])
+    result, output = _InvokeAndCapture(
+        ["--GitHub-include", "--CommunityStandards-skip", "--experience", "console"]
+    )
 
     assert result.exit_code != 0
-    assert "'url' is required argument for this module." in output
+    assert "'url' is a required argument for this module." in output
 
 
 # ----------------------------------------------------------------------
@@ -152,7 +156,7 @@ def test_InvalidPort():
 
 # ----------------------------------------------------------------------
 def test_Verbose():
-    result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--verbose"])
+    result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--verbose"])
 
     assert result.exit_code == 0, output
 
@@ -161,7 +165,7 @@ def test_Verbose():
 class TestExperience:
     # ----------------------------------------------------------------------
     def test_SummaryIsWritten(self):
-        result, output = _InvokeAndCapture(_SKIP_GITHUB)
+        result, output = _InvokeAndCapture(_SKIP_NETWORK)
 
         assert result.exit_code == 0, output
 
@@ -176,14 +180,14 @@ class TestExperience:
 
     # ----------------------------------------------------------------------
     def test_Console(self):
-        result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--experience", "console"])
+        result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--experience", "console"])
 
         assert result.exit_code == 0, output
         assert "Skipped:" in output
 
     # ----------------------------------------------------------------------
     def test_ConsoleIsCaseInsensitive(self):
-        result, output = _InvokeAndCapture([*_SKIP_GITHUB, "--experience", "CONSOLE"])
+        result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--experience", "CONSOLE"])
 
         assert result.exit_code == 0, output
         assert "Skipped:" in output
@@ -193,7 +197,7 @@ class TestExperience:
     # so it is replaced by a double rather than being invoked.
     def test_WebIsTheDefault(self):
         with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--GitHub-skip"])
+            result, output = _InvokeAndCapture(["--CommunityStandards-skip"])
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
@@ -201,7 +205,7 @@ class TestExperience:
     # ----------------------------------------------------------------------
     def test_Web(self):
         with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--GitHub-skip", "--experience", "web"])
+            result, output = _InvokeAndCapture(["--CommunityStandards-skip", "--experience", "web"])
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
@@ -211,14 +215,14 @@ class TestExperience:
     # is replaced by a double rather than being invoked.
     def test_Tui(self):
         with mock.patch("RepoAuditorWeb.__main__.ExecuteTuiExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--GitHub-skip", "--experience", "tui"])
+            result, output = _InvokeAndCapture(["--CommunityStandards-skip", "--experience", "tui"])
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
 
     # ----------------------------------------------------------------------
     def test_Json(self):
-        result = CliRunner().invoke(app, ["--GitHub-skip", "--experience", "json"])
+        result = CliRunner().invoke(app, ["--CommunityStandards-skip", "--experience", "json"])
 
         assert result.exit_code == 0, result.output
         assert json.loads(result.stdout) == {
@@ -238,7 +242,7 @@ class TestExperience:
     # Everything that DoneManager produces is written to stderr so that the document written to
     # stdout can be redirected to a file or piped to another process as-is.
     def test_JsonProgressIsWrittenToStderr(self):
-        result = CliRunner().invoke(app, ["--GitHub-skip", "--experience", "json"])
+        result = CliRunner().invoke(app, ["--CommunityStandards-skip", "--experience", "json"])
 
         assert result.exit_code == 0, result.output
         assert "Executing module 'GitHub' (1 of 3)..." in result.stderr
@@ -248,7 +252,7 @@ class TestExperience:
     # The status output and the document are written to different streams, so the status output
     # ends with a blank line to separate them when both are displayed together.
     def test_JsonStatusOutputEndsWithASeparator(self):
-        result = CliRunner().invoke(app, ["--GitHub-skip", "--experience", "json"])
+        result = CliRunner().invoke(app, ["--CommunityStandards-skip", "--experience", "json"])
 
         assert result.exit_code == 0, result.output
 
@@ -261,7 +265,7 @@ class TestExperience:
     # ----------------------------------------------------------------------
     # The console experience writes everything to one stream, so it adds no separator.
     def test_ConsoleStatusOutputHasNoSeparator(self):
-        result = CliRunner().invoke(app, _SKIP_GITHUB)
+        result = CliRunner().invoke(app, _SKIP_NETWORK)
 
         assert result.exit_code == 0, result.output
 
@@ -272,7 +276,7 @@ class TestExperience:
 
     # ----------------------------------------------------------------------
     def test_InvalidExperience(self):
-        result = CliRunner().invoke(app, [*_SKIP_GITHUB, "--experience", "invalid"])
+        result = CliRunner().invoke(app, [*_SKIP_NETWORK, "--experience", "invalid"])
 
         assert result.exit_code != 0
 
@@ -295,36 +299,151 @@ class TestForwardedOptions:
 
     # ----------------------------------------------------------------------
     def test_DisplayedByDefault(self):
-        kwargs = self._InvokeAndCaptureKwargs(_SKIP_GITHUB)
+        kwargs = self._InvokeAndCaptureKwargs(_SKIP_NETWORK)
 
         assert kwargs["display_resolution"] is True
         assert kwargs["display_rationale"] is True
 
     # ----------------------------------------------------------------------
     def test_NoResolution(self):
-        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--no-resolution"])
+        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_NETWORK, "--no-resolution"])
 
         assert kwargs["display_resolution"] is False
         assert kwargs["display_rationale"] is True
 
     # ----------------------------------------------------------------------
     def test_NoRationale(self):
-        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--no-rationale"])
+        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_NETWORK, "--no-rationale"])
 
         assert kwargs["display_resolution"] is True
         assert kwargs["display_rationale"] is False
 
     # ----------------------------------------------------------------------
     def test_PortAndTokenAreForwarded(self):
-        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--port", "8080", "--token", "my_token"])
+        kwargs = self._InvokeAndCaptureKwargs([*_SKIP_NETWORK, "--port", "8080", "--token", "my_token"])
 
         assert kwargs["port"] == 8080
         assert kwargs["token"] == "my_token"
 
     # ----------------------------------------------------------------------
     def test_NoExecuteByDefault(self):
-        assert self._InvokeAndCaptureKwargs(_SKIP_GITHUB)["execute"] is False
+        assert self._InvokeAndCaptureKwargs(_SKIP_NETWORK)["execute"] is False
 
     # ----------------------------------------------------------------------
     def test_Execute(self):
-        assert self._InvokeAndCaptureKwargs([*_SKIP_GITHUB, "--execute"])["execute"] is True
+        assert self._InvokeAndCaptureKwargs([*_SKIP_NETWORK, "--execute"])["execute"] is True
+
+
+# ----------------------------------------------------------------------
+class TestCommonOptions:
+    # ----------------------------------------------------------------------
+    # The experience is replaced by a double so that the modules (which access the network) are not
+    # executed; the arguments it receives are asserted instead.
+    @staticmethod
+    def _InvokeAndCaptureArguments(
+        args: list[str],
+        env: dict[str, str | None] | None = None,
+    ) -> dict[str, dict[str | None, dict[str, object]]]:
+        # The environment is cleared so that values set on the host do not influence the results.
+        env = {
+            "REPO_AUDITOR_WEB_GITHUB_URL": None,
+            "REPO_AUDITOR_WEB_GITHUB_PAT": None,
+            "REPO_AUDITOR_WEB_GITHUB_BRANCH": None,
+            **(env or {}),
+        }
+
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock:
+            result = CliRunner().invoke(app, [*args, "--experience", "console"], env=env)
+
+        assert result.exit_code == 0, result.output
+        assert experience_mock.call_count == 1
+
+        return experience_mock.call_args.kwargs["arguments"]
+
+    # ----------------------------------------------------------------------
+    def test_InHelp(self):
+        assert {"--url", "--pat", "--branch"} <= _GetOptionNames(app)
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        ("option", "parameter_name", "value"),
+        [
+            ("--url", "url", "https://github.com/gt-csse/RepoAuditorWeb"),
+            ("--pat", "pat", "my_pat"),
+            ("--branch", "branch", "my_branch"),
+        ],
+    )
+    def test_ForwardedToModules(self, option, parameter_name, value):
+        arguments = self._InvokeAndCaptureArguments([option, value])
+
+        assert arguments["GitHub"][None][parameter_name] == value
+        assert arguments["CommunityStandards"][None][parameter_name] == value
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        ("envvar", "parameter_name", "value"),
+        [
+            ("REPO_AUDITOR_WEB_GITHUB_URL", "url", "https://github.com/gt-csse/RepoAuditorWeb"),
+            ("REPO_AUDITOR_WEB_GITHUB_PAT", "pat", "my_pat"),
+            ("REPO_AUDITOR_WEB_GITHUB_BRANCH", "branch", "my_branch"),
+        ],
+    )
+    def test_EnvironmentVariables(self, envvar, parameter_name, value):
+        arguments = self._InvokeAndCaptureArguments([], env={envvar: value})
+
+        assert arguments["GitHub"][None][parameter_name] == value
+        assert arguments["CommunityStandards"][None][parameter_name] == value
+
+    # ----------------------------------------------------------------------
+    # Modules that do not declare the parameter do not receive it.
+    def test_NotForwardedToModulesWithoutParameter(self):
+        arguments = self._InvokeAndCaptureArguments(["--url", "https://github.com/gt-csse/RepoAuditorWeb"])
+
+        assert "url" not in arguments["ScientificSoftware"][None]
+
+    # ----------------------------------------------------------------------
+    # Module-specific values are left untouched when the common option is not provided.
+    def test_ModuleValuesPreservedWhenAbsent(self):
+        arguments = self._InvokeAndCaptureArguments(
+            [
+                "--GitHub-url",
+                "https://github.com/gt-csse/GitHubRepo",
+                "--CommunityStandards-url",
+                "https://github.com/gt-csse/CommunityStandardsRepo",
+            ],
+        )
+
+        assert arguments["GitHub"][None]["url"] == "https://github.com/gt-csse/GitHubRepo"
+        assert (
+            arguments["CommunityStandards"][None]["url"]
+            == "https://github.com/gt-csse/CommunityStandardsRepo"
+        )
+
+    # ----------------------------------------------------------------------
+    # Module-specific values take precedence over the common option, which still applies to the
+    # modules that were not given a specific value.
+    @pytest.mark.parametrize(
+        ("parameter_name", "value"),
+        [
+            ("url", "https://github.com/gt-csse/RepoAuditorWeb"),
+            ("pat", "my_pat"),
+            ("branch", "my_branch"),
+        ],
+    )
+    def test_ModuleValuesTakePrecedence(self, parameter_name, value):
+        arguments = self._InvokeAndCaptureArguments(
+            [f"--{parameter_name}", value, f"--GitHub-{parameter_name}", "module_value"],
+        )
+
+        assert arguments["GitHub"][None][parameter_name] == "module_value"
+        assert arguments["CommunityStandards"][None][parameter_name] == value
+
+    # ----------------------------------------------------------------------
+    def test_ModuleValuesTakePrecedenceOverEnvironmentVariables(self):
+        arguments = self._InvokeAndCaptureArguments(
+            ["--CommunityStandards-branch", "module_branch"],
+            env={"REPO_AUDITOR_WEB_GITHUB_BRANCH": "env_branch"},
+        )
+
+        assert arguments["GitHub"][None]["branch"] == "env_branch"
+        assert arguments["CommunityStandards"][None]["branch"] == "module_branch"

@@ -69,3 +69,8 @@ class ClassicBranchProtectionQuery(Query):
         module_data["branch_protection_data"] = response
 
         return module_data
+
+    # ----------------------------------------------------------------------
+    @override
+    def CleanupQueryData(self, query_data: dict[str, object]) -> None:
+        pass  # No cleanup necessary

@@ -941,6 +941,7 @@ source = { editable = "." }
 dependencies = [
     { name = "dbrownell-common" },
     { name = "fastapi" },
+    { name = "gitpython" },
     { name = "pluggy" },
     { name = "pywebview" },
     { name = "requests" },
@@ -966,6 +967,7 @@ dev = [
 requires-dist = [
     { name = "dbrownell-common", specifier = ">=0.16.8" },
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "gitpython", specifier = ">=3.1.57" },
     { name = "pluggy", specifier = ">=1.6.0" },
     { name = "pywebview", specifier = ">=6.2.1" },
     { name = "requests", specifier = ">=2.34.2" },

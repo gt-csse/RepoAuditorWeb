@@ -50,7 +50,31 @@ _dynamic_parameters = DynamicParameters(MODULES)
 
 # ----------------------------------------------------------------------
 @entry_point_utils.dynamic_command(app, _dynamic_parameters.dynamic_parameters, no_args_is_help=False)
-def EntryPoint(
+def EntryPoint(  # noqa: PLR0913, PLR0917
+    url: Annotated[
+        str | None,
+        typer.Option(
+            "--url",
+            help="GitHub URL (e.g. https://github.com/gt-csse/RepoAuditorWeb).",
+            envvar="REPO_AUDITOR_WEB_GITHUB_URL",
+        ),
+    ] = None,
+    pat: Annotated[
+        str | None,
+        typer.Option(
+            "--pat",
+            help="GitHub Personal Access Token (PAT) or path to a local file containing the PAT.",
+            envvar="REPO_AUDITOR_WEB_GITHUB_PAT",
+        ),
+    ] = None,
+    branch: Annotated[
+        str | None,
+        typer.Option(
+            "--branch",
+            help="Branch to evaluate. The default branch will be used if not specified.",
+            envvar="REPO_AUDITOR_WEB_GITHUB_BRANCH",
+        ),
+    ] = None,
     port: Annotated[
         int | None,
         typer.Option("--port", min=1024, max=65535, help="The port to run the server on."),
@@ -124,6 +148,29 @@ def EntryPoint(
             port = entry_point_utils.ResolvePort(port)
             token = entry_point_utils.ResolveToken(token)
             arguments = _dynamic_parameters.Parse(kwargs)
+
+            # Common options are applied to every module that declares a parameter with the same name,
+            # so that modules opt in through their parameters rather than being listed here.
+            common_arguments = {
+                name: value
+                for name, value in {"url": url, "pat": pat, "branch": branch}.items()
+                if value is not None
+            }
+
+            for argument_info in _dynamic_parameters.argument_lookup.values():
+                if (
+                    argument_info.requirement_name is None
+                    and argument_info.parameter_name in common_arguments
+                ):
+                    current_value = (
+                        arguments.setdefault(argument_info.module_name, {})
+                        .setdefault(None, {})
+                        .get(argument_info.parameter_name)
+                    )
+                    if current_value is None:
+                        arguments[argument_info.module_name][None][argument_info.parameter_name] = (
+                            common_arguments[argument_info.parameter_name]
+                        )
 
             experience_kwargs = {
                 "dm": dm,

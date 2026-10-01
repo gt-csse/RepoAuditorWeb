@@ -15,16 +15,16 @@ from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import Scientifi
             GitHubModule,
             "GitHub",
             "Validates GitHub configuration settings.",
-            False,
-            ["skip", "url", "pat", "branch", "team_size"],
+            True,
+            ["include", "url", "pat", "branch", "team_size"],
         ),
         (
             community_standards_plugin,
             CommunityStandardsModule,
             "CommunityStandards",
             "Validates files that are considered community standards.",
-            True,
-            ["include", "one", "two"],
+            False,
+            ["skip", "url", "pat", "branch"],
         ),
         (
             scientific_software_plugin,
@@ -53,14 +53,22 @@ def test_GetModule(plugin, module_type, name, description, requires_explicit_inc
         (
             GitHubModule,
             {
-                "skip": (bool, False),
+                "include": (bool, False),
                 "url": (str, None),
                 "pat": (str | None, None),
                 "branch": (str | None, None),
                 "team_size": (TeamSize, TeamSize.Small),
             },
         ),
-        (CommunityStandardsModule, {"include": (bool, False), "one": (int, 10), "two": (str, "2")}),
+        (
+            CommunityStandardsModule,
+            {
+                "skip": (bool, False),
+                "url": (str, None),
+                "pat": (str | None, None),
+                "branch": (str | None, None),
+            },
+        ),
         (ScientificSoftwareModule, {"include": (bool, False), "five": (int, 50), "six": (bool, False)}),
     ],
 )
@@ -73,14 +81,12 @@ def test_GetParameters(module_type, expected):
 
 # ----------------------------------------------------------------------
 # Modules that have no data of their own pass their arguments straight through to their queries.
-@pytest.mark.parametrize("module_type", [CommunityStandardsModule, ScientificSoftwareModule])
-def test_GetModuleData(module_type):
+def test_GetModuleData():
     arguments: dict[str | None, dict[str, object]] = {None: {"include": True}}
 
-    assert module_type().GetModuleData(arguments) is arguments
+    assert ScientificSoftwareModule().GetModuleData(arguments) is arguments
 
 
 # ----------------------------------------------------------------------
-@pytest.mark.parametrize("module_type", [CommunityStandardsModule, ScientificSoftwareModule])
-def test_GetModuleDataNotIncluded(module_type):
-    assert module_type().GetModuleData({None: {"include": False}}) is None
+def test_GetModuleDataNotIncluded():
+    assert ScientificSoftwareModule().GetModuleData({None: {"include": False}}) is None
