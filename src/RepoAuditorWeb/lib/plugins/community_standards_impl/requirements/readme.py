@@ -12,7 +12,7 @@ class ReadmeRequirement(FileExistsRequirement):
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
         super().__init__(
-            "README",
+            "Readme",
             "README",
             # The directories GitHub searches.
             [".", "docs", ".github"],

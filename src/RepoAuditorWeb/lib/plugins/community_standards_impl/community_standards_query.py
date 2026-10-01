@@ -5,6 +5,9 @@ from typing import cast, override
 from urllib.parse import urlparse
 
 from RepoAuditorWeb.lib.query import Query
+from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.code_of_conduct import (
+    CodeOfConductRequirement,
+)
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.readme import ReadmeRequirement
 
 
@@ -16,7 +19,10 @@ class CommunityStandardsQuery(Query):
     def __init__(self) -> None:
         super().__init__(
             "Community Standards",
-            [ReadmeRequirement()],
+            [
+                ReadmeRequirement(),
+                CodeOfConductRequirement(),
+            ],
         )
 
     # ----------------------------------------------------------------------
