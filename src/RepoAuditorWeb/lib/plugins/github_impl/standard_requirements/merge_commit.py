@@ -88,7 +88,7 @@ class MergeCommitRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The repository's value is '{allow_merge_commit_value}', which the requirement was configured to require.",
             None,
             self._CreateRationale(requirement_data),
             self,

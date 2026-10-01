@@ -90,7 +90,7 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
             if not deployment_rules:
                 return EvaluateResult(
                     EvaluateResultValue.Success,
-                    None,
+                    "The ruleset does not require successful deployments, and the requirement was configured to prohibit it.",
                     None,
                     self._CreateRationale(requirement_data),
                     self,
@@ -178,7 +178,7 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The ruleset requires successful deployments to {len(environments)} environment(s), and the requirement was configured to require at least {acceptable_value}.",
             None,
             self._CreateRationale(requirement_data),
             self,

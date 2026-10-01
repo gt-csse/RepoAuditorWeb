@@ -47,9 +47,9 @@ class LicenseRequirement(Requirement):
         license_value = cast(dict, query_data["response"]).get("license", {}).get("name")
         acceptable_values = cast(list[str], requirement_data["value"])
 
-        if license_value is None or license_value not in acceptable_values:
-            acceptable_values_str = ", ".join(f"'{v}'" for v in acceptable_values)
+        acceptable_values_str = ", ".join(f"'{v}'" for v in acceptable_values)
 
+        if license_value is None or license_value not in acceptable_values:
             repository_url = cast("GitHubSession", query_data["session"]).github_url
 
             resolution = textwrap.dedent(
@@ -83,7 +83,7 @@ class LicenseRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The license '{license_value}' is in the list of acceptable licenses ({acceptable_values_str}).",
             None,
             self._CreateRationale(requirement_data),
             self,

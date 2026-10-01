@@ -84,7 +84,7 @@ class RequireStatusChecksToPassRequirement(Requirement):
             if not status_check_rules:
                 return EvaluateResult(
                     EvaluateResultValue.Success,
-                    None,
+                    "The ruleset does not require status checks to pass, and the requirement was configured to prohibit it.",
                     None,
                     self._CreateRationale(requirement_data),
                     self,
@@ -174,7 +174,7 @@ class RequireStatusChecksToPassRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The ruleset requires {len(checks)} status check(s), and the requirement was configured to require at least {acceptable_value}.",
             None,
             self._CreateRationale(requirement_data),
             self,

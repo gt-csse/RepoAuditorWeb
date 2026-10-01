@@ -90,7 +90,9 @@ def test_AcceptableLicense():
     result = _Evaluate({"license": {"name": "MIT License"}})
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The license 'MIT License' is in the list of acceptable licenses ('MIT License')."
+    )
     assert result.resolution is None
 
 

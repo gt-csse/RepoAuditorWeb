@@ -124,7 +124,9 @@ def test_EnabledWithNoActors():
     result = _Evaluate([_CreatePullRequestRule({"enabled": True})])
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset allows 0 actor(s) to dismiss reviews, and the requirement was configured to require at most 0."
+    )
     assert result.resolution is None
 
 

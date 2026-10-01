@@ -105,7 +105,7 @@ class RequiredReviewersRequirement(Requirement):
             if not reviewers:
                 return EvaluateResult(
                     EvaluateResultValue.Success,
-                    None,
+                    "The ruleset does not require reviews from any team, and the requirement was configured to prohibit them.",
                     None,
                     self._CreateRationale(requirement_data, team_size),
                     self,
@@ -174,7 +174,7 @@ class RequiredReviewersRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The ruleset requires reviews from {len(reviewers)} team(s), and the requirement was configured to require at least {acceptable_value}.",
             None,
             self._CreateRationale(requirement_data, team_size),
             self,

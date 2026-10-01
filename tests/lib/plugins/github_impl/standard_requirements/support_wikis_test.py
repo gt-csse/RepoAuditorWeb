@@ -104,7 +104,9 @@ def test_MatchingStatus(has_wiki, require):
     result = _Evaluate({"has_wiki": has_wiki}, require=require)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{has_wiki}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 
@@ -200,7 +202,9 @@ def test_MissingStatus():
     result = _Evaluate({})
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The repository's value is 'False', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

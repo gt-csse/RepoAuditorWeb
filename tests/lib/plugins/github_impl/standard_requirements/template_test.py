@@ -95,7 +95,9 @@ def test_MatchingStatus(is_template, require):
     result = _Evaluate({"is_template": is_template}, require=require)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{is_template}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 
@@ -191,7 +193,9 @@ def test_MissingStatus():
     result = _Evaluate({})
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The repository's value is 'False', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

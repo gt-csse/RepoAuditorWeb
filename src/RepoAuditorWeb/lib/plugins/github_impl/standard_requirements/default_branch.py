@@ -47,9 +47,9 @@ class DefaultBranchRequirement(Requirement):
         default_branch_value = cast(dict, query_data["response"]).get("default_branch")
         acceptable_values = cast(list[str], requirement_data["value"])
 
-        if default_branch_value is None or default_branch_value not in acceptable_values:
-            acceptable_values_str = ", ".join(f"'{v}'" for v in acceptable_values)
+        acceptable_values_str = ", ".join(f"'{v}'" for v in acceptable_values)
 
+        if default_branch_value is None or default_branch_value not in acceptable_values:
             repository_url = cast("GitHubSession", query_data["session"]).github_url
 
             resolution = textwrap.dedent(
@@ -86,7 +86,7 @@ class DefaultBranchRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The default branch '{default_branch_value}' is in the list of acceptable default branches ({acceptable_values_str}).",
             None,
             self._CreateRationale(requirement_data),
             self,

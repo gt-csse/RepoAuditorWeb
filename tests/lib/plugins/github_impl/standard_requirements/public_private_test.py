@@ -123,7 +123,7 @@ def test_AcceptableVisibility():
     result = _Evaluate({"visibility": "public"})
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == "The visibility is 'public', which the requirement was configured to require."
     assert result.resolution is None
 
 

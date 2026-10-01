@@ -148,19 +148,21 @@ def test_GetParameters():
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("response", "value"),
+    ("response", "value", "count"),
     [
-        ([_REQUIRED_DEPLOYMENTS_RULE], 1),
-        ([_TWO_ENVIRONMENTS_RULE], 1),
-        ([_TWO_ENVIRONMENTS_RULE], 2),
-        ([_OTHER_RULE, _REQUIRED_DEPLOYMENTS_RULE], 1),
+        ([_REQUIRED_DEPLOYMENTS_RULE], 1, 1),
+        ([_TWO_ENVIRONMENTS_RULE], 1, 2),
+        ([_TWO_ENVIRONMENTS_RULE], 2, 2),
+        ([_OTHER_RULE, _REQUIRED_DEPLOYMENTS_RULE], 1, 1),
     ],
 )
-def test_MatchingValue(response, value):
+def test_MatchingValue(response, value, count):
     result = _Evaluate(response, value=value)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The ruleset requires successful deployments to {count} environment(s), and the requirement was configured to require at least {value}."
+    )
     assert result.resolution is None
 
 
@@ -294,7 +296,9 @@ def test_MoreEnvironmentsThanRequested():
     result = _Evaluate([_TWO_ENVIRONMENTS_RULE], value=1)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset requires successful deployments to 2 environment(s), and the requirement was configured to require at least 1."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -307,7 +311,9 @@ def test_EnvironmentsAcrossMultipleRules():
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset requires successful deployments to 1 environment(s), and the requirement was configured to require at least 1."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -357,7 +363,9 @@ def test_ZeroMatching(response):
     result = _Evaluate(response, value=0)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset does not require successful deployments, and the requirement was configured to prohibit it."
+    )
     assert result.resolution is None
 
 

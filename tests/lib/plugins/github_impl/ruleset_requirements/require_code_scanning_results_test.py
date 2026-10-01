@@ -181,19 +181,21 @@ def test_GetParameters():
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("response", "value"),
+    ("response", "value", "num_tools"),
     [
-        ([_CODE_SCANNING_RULE], 1),
-        ([_TWO_TOOLS_RULE], 1),
-        ([_TWO_TOOLS_RULE], 2),
-        ([_OTHER_RULE, _CODE_SCANNING_RULE], 1),
+        ([_CODE_SCANNING_RULE], 1, 1),
+        ([_TWO_TOOLS_RULE], 1, 2),
+        ([_TWO_TOOLS_RULE], 2, 2),
+        ([_OTHER_RULE, _CODE_SCANNING_RULE], 1, 1),
     ],
 )
-def test_MatchingValue(response, value):
+def test_MatchingValue(response, value, num_tools):
     result = _Evaluate(response, value=value)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The ruleset requires {num_tools} code scanning tool(s), and the requirement was configured to require at least {value}."
+    )
     assert result.resolution is None
 
 
@@ -327,7 +329,9 @@ def test_MoreToolsThanRequested():
     result = _Evaluate([_TWO_TOOLS_RULE], value=1)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset requires 2 code scanning tool(s), and the requirement was configured to require at least 1."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -337,7 +341,9 @@ def test_ToolsAcrossMultipleRules():
     result = _Evaluate([_NO_TOOLS_RULE, _CODE_SCANNING_RULE], value=1)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset requires 1 code scanning tool(s), and the requirement was configured to require at least 1."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -362,7 +368,9 @@ def test_ToolWithoutThresholds():
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset requires 1 code scanning tool(s), and the requirement was configured to require at least 1."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -412,7 +420,9 @@ def test_ZeroMatching(response):
     result = _Evaluate(response, value=0)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The ruleset does not require code scanning results, and the requirement was configured to prohibit it."
+    )
     assert result.resolution is None
 
 

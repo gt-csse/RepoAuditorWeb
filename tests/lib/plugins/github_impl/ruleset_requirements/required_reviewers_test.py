@@ -129,18 +129,30 @@ def test_GetParameters():
 # The rule names teams rather than people, so a solo maintainer cannot use it at all and a small
 # team has no division of ownership for it to express.
 @pytest.mark.parametrize(
-    ("team_size", "reviewers"),
+    ("team_size", "reviewers", "expected_context"),
     [
-        (TeamSize.Solo, None),
-        (TeamSize.Small, None),
-        (TeamSize.Large, [_CreateReviewer(1)]),
+        (
+            TeamSize.Solo,
+            None,
+            "The ruleset does not require reviews from any team, and the requirement was configured to prohibit them.",
+        ),
+        (
+            TeamSize.Small,
+            None,
+            "The ruleset does not require reviews from any team, and the requirement was configured to prohibit them.",
+        ),
+        (
+            TeamSize.Large,
+            [_CreateReviewer(1)],
+            "The ruleset requires reviews from 1 team(s), and the requirement was configured to require at least 1.",
+        ),
     ],
 )
-def test_TeamSizeDefault(team_size, reviewers):
+def test_TeamSizeDefault(team_size, reviewers, expected_context):
     result = _Evaluate([_CreatePullRequestRule(reviewers)], team_size=team_size)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == expected_context
     assert result.resolution is None
 
 
