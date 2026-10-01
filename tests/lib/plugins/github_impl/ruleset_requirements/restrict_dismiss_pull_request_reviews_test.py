@@ -159,7 +159,7 @@ def test_EvaluatedWithoutPullRequestRuleWhenEvaluatingAll(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 
@@ -222,7 +222,7 @@ def test_MissingDismissalRestriction():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 
@@ -233,7 +233,7 @@ def test_DisabledDismissalRestriction():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 
@@ -244,7 +244,7 @@ def test_ActorsNamedWhenNoneExpected():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset allows 1 actor(s) to dismiss reviews, but the requirement specifies it must be at most 0."
+        "The ruleset allows 1 actor(s) to dismiss reviews, but the requirement was configured to require at most 0."
     )
 
 
@@ -264,7 +264,7 @@ def test_TooManyActors():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset allows 3 actor(s) to dismiss reviews, but the requirement specifies it must be at most 2."
+        "The ruleset allows 3 actor(s) to dismiss reviews, but the requirement was configured to require at most 2."
     )
 
 
@@ -295,7 +295,7 @@ def test_ProhibitFailsWhenRestricted():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'True', but the requirement specifies it must be 'False'."
+        "The repository's value is 'True', but the requirement was configured to require 'False'."
     )
 
 

@@ -99,7 +99,7 @@ class RequireApprovalOfMostRecentPushRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The repository's value is '{last_push_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                f"The repository's value is '{last_push_value}', but the requirement was configured to require '{acceptable_value}'.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,

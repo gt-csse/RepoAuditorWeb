@@ -145,7 +145,7 @@ class AllowedMergeMethodsRequirement(Requirement):
             # API uses, because the labels are what the resolution asks the user to select.
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The repository's value is '{_FormatValues(merge_methods_value)}', but the requirement specifies it must be '{_FormatValues(acceptable_values)}'.",
+                f"The repository's value is '{_FormatValues(merge_methods_value)}', but the requirement was configured to require '{_FormatValues(acceptable_values)}'.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,

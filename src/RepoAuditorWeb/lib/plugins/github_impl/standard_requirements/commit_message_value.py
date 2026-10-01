@@ -156,7 +156,7 @@ def EvaluateCommitMessage(
         # user sees in the settings page and what the resolution asks them to select.
         return EvaluateResult(
             EvaluateResultValue.Error,
-            f"The repository's default {setting.method_description} message is {setting.GetUILabel(title_value, message_value)}, but the requirement specifies it must be '{setting.ui_labels[value]}'.",
+            f"The repository's default {setting.method_description} message is {setting.GetUILabel(title_value, message_value)}, but the requirement was configured to require '{setting.ui_labels[value]}'.",
             resolution,
             create_rationale_func(),
             requirement,

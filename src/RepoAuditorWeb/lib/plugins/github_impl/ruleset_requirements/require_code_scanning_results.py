@@ -108,7 +108,7 @@ class RequireCodeScanningResultsRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                "The ruleset requires code scanning results, but the requirement specifies that it must not.",
+                "The ruleset requires code scanning results, but the requirement was configured to prohibit it.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,
@@ -163,7 +163,7 @@ class RequireCodeScanningResultsRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The ruleset requires {len(tools)} code scanning tool(s), but the requirement specifies it must be at least {acceptable_value}.",
+                f"The ruleset requires {len(tools)} code scanning tool(s), but the requirement was configured to require at least {acceptable_value}.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,

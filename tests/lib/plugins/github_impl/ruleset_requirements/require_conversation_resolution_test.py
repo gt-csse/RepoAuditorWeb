@@ -223,7 +223,7 @@ def test_EvaluatedWithoutPullRequestRuleWhenEvaluatingAll(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 
@@ -248,7 +248,7 @@ def test_PullRequestRuleWithoutResolution():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 
@@ -261,7 +261,7 @@ def test_RequiredWhenProhibited():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'True', but the requirement specifies it must be 'False'."
+        "The repository's value is 'True', but the requirement was configured to require 'False'."
     )
 
 
@@ -276,7 +276,7 @@ def test_MissingParameter():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 

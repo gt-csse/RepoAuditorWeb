@@ -270,7 +270,7 @@ def test_RuleWithoutTools():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires 0 code scanning tool(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires 0 code scanning tool(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -304,7 +304,7 @@ def test_RuleWithoutToolParameters(parameters):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires 0 code scanning tool(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires 0 code scanning tool(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -316,7 +316,7 @@ def test_FewerToolsThanRequested():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires 1 code scanning tool(s), but the requirement specifies it must be at least 2."
+        "The ruleset requires 1 code scanning tool(s), but the requirement was configured to require at least 2."
     )
 
 
@@ -428,7 +428,7 @@ def test_ZeroWhenRequired(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires code scanning results, but the requirement specifies that it must not."
+        "The ruleset requires code scanning results, but the requirement was configured to prohibit it."
     )
 
 

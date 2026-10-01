@@ -170,7 +170,7 @@ def test_UnblockedWhenRequired(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'False', but the requirement specifies it must be 'True'."
+        "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
 
 
@@ -180,7 +180,7 @@ def test_BlockedWhenProhibited():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'True', but the requirement specifies it must be 'False'."
+        "The repository's value is 'True', but the requirement was configured to require 'False'."
     )
 
 
