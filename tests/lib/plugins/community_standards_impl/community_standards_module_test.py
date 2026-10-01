@@ -94,12 +94,12 @@ class TestGetModuleData:
         requirement_arguments: dict[str, object] = {"skip": False, "prohibit": False}
 
         arguments = _CreateArguments(url="https://github.com/gt-csse/RepoAuditorWeb")
-        arguments["README"] = requirement_arguments
+        arguments["Readme"] = requirement_arguments
 
         module_data = CommunityStandardsModule().GetModuleData(arguments)
 
         assert module_data is not None
-        assert module_data["README"] is requirement_arguments
+        assert module_data["Readme"] is requirement_arguments
 
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize("values", [{}, {"url": None}])
