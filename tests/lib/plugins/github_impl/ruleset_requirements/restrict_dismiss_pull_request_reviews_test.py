@@ -191,6 +191,30 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [[_CreatePullRequestRule({"enabled": True})], [_CreatePullRequestRule(None)]],
+)
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once a different count overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [[_CreatePullRequestRule({"enabled": True})], [_CreatePullRequestRule(None)]],
+)
+def test_RationaleOmittedWhenValueOverridden(response):
+    result = _Evaluate(response, value=1)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # GitHub omits the setting when the restriction is not in use, which is the state the default is
 # expected to move away from.
 def test_MissingDismissalRestriction():

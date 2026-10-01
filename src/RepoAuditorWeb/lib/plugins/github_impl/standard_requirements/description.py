@@ -6,7 +6,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -81,7 +81,38 @@ class DescriptionRequirement(Requirement):
         else:
             assert False, value  # noqa: B011, PT015  # pragma: no cover
 
-        rationale = textwrap.dedent(
+        resolution = None
+
+        if action is not None:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [home]({repository_url}) page.
+                2) Click the **Edit** button (or the gear icon) next to the **About** section.
+                3) {action}
+                4) Click the **Save changes** button.
+
+                See [About repositories](https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories)
+                for more information.
+                """,
+            )
+
+        return EvaluateResult(
+            result,
+            context,
+            resolution,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that the repository has a description.
 
@@ -101,22 +132,3 @@ class DescriptionRequirement(Requirement):
               repository is for, so requiring a description adds no value (`allow_empty`).
             """,
         )
-
-        resolution = None
-
-        if action is not None:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [home]({repository_url}) page.
-                2) Click the **Edit** button (or the gear icon) next to the **About** section.
-                3) {action}
-                4) Click the **Save changes** button.
-
-                See [About repositories](https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories)
-                for more information.
-                """,
-            )
-
-        return EvaluateResult(result, context, resolution, rationale, self, module)

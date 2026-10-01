@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -51,7 +51,46 @@ class WebCommitSignoffRequirement(Requirement):
         )
         acceptable_value = cast(bool, requirement_data["require"])
 
-        rationale = textwrap.dedent(
+        if web_commit_signoff_value != acceptable_value:
+            action = "Check" if acceptable_value else "Uncheck"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [General settings]({repository_url}/settings) page.
+                2) Scroll to the **Commits** section.
+                3) {action} the **Require contributors to sign off on web-based commits** checkbox.
+
+                See [Managing the commit signoff policy for your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/managing-the-commit-signoff-policy-for-your-repository)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{web_commit_signoff_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to not require contributors to sign off on web-based commits. When
             the requirement is enabled, GitHub's web interface tells the contributor that committing
@@ -79,30 +118,3 @@ class WebCommitSignoffRequirement(Requirement):
             line are unaffected, so it does not by itself guarantee that every commit is signed off.
             """,
         )
-
-        if web_commit_signoff_value != acceptable_value:
-            action = "Check" if acceptable_value else "Uncheck"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Commits** section.
-                3) {action} the **Require contributors to sign off on web-based commits** checkbox.
-
-                See [Managing the commit signoff policy for your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/managing-the-commit-signoff-policy-for-your-repository)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{web_commit_signoff_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

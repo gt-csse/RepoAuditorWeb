@@ -6,7 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import GetRestrictedValue
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -50,7 +50,57 @@ class DeleteBranchOnMergeRequirement(Requirement):
     ) -> EvaluateResult:
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 
-        rationale = textwrap.dedent(
+        delete_branch_on_merge_value = GetRestrictedValue(
+            module,
+            self,
+            query_data,
+            "delete_branch_on_merge",
+            "branch deletion settings",
+        )
+
+        if isinstance(delete_branch_on_merge_value, EvaluateResult):
+            return delete_branch_on_merge_value
+
+        if delete_branch_on_merge_value != acceptable_value:
+            action = "Check" if acceptable_value else "Uncheck"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [General settings]({repository_url}/settings) page.
+                2) Scroll to the **Pull Requests** section.
+                3) {action} the **Automatically delete head branches** checkbox.
+
+                See [Managing the automatic deletion of branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{delete_branch_on_merge_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that head branches are automatically deleted when
             pull requests are merged.
@@ -94,41 +144,3 @@ class DeleteBranchOnMergeRequirement(Requirement):
             a fork has its head branch in the fork, which this repository's setting does not control.
             """,
         )
-
-        delete_branch_on_merge_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            "delete_branch_on_merge",
-            "branch deletion settings",
-        )
-
-        if isinstance(delete_branch_on_merge_value, EvaluateResult):
-            return delete_branch_on_merge_value
-
-        if delete_branch_on_merge_value != acceptable_value:
-            action = "Check" if acceptable_value else "Uncheck"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Pull Requests** section.
-                3) {action} the **Automatically delete head branches** checkbox.
-
-                See [Managing the automatic deletion of branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{delete_branch_on_merge_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

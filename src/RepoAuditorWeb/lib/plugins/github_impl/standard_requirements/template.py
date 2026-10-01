@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -47,7 +47,46 @@ class TemplateRequirement(Requirement):
         is_template_value = cast(dict, query_data["response"]).get("is_template", False)
         acceptable_value = cast(bool, requirement_data["require"])
 
-        rationale = textwrap.dedent(
+        if is_template_value != acceptable_value:
+            action = "Check" if acceptable_value else "Uncheck"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [General settings]({repository_url}/settings) page.
+                2) Scroll to the **Template repository** checkbox.
+                3) {action} the **Template repository** checkbox.
+
+                See [Creating a template repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-template-repository)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{is_template_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that the repository is not a template repository, which
             controls whether GitHub offers a **Use this template** button to generate new repositories
@@ -72,30 +111,3 @@ class TemplateRequirement(Requirement):
             Note that a template repository cannot include files stored using Git LFS.
             """,
         )
-
-        if is_template_value != acceptable_value:
-            action = "Check" if acceptable_value else "Uncheck"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Template repository** checkbox.
-                3) {action} the **Template repository** checkbox.
-
-                See [Creating a template repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-template-repository)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{is_template_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

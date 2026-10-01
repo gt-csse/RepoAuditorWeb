@@ -137,9 +137,10 @@ class TestProhibited:
         assert result.result == EvaluateResultValue.Success
         assert result.context is None
         assert result.resolution is None
-        assert result.rationale == "My rationale."
+        assert result.rationale is None
 
     # ----------------------------------------------------------------------
+    # The rationale justifies the default (required), so it does not apply once prohibit overrides it.
     def test_Found(self, repo):
         _CreateFile(repo, "docs/MY_FILE.md")
 
@@ -148,7 +149,7 @@ class TestProhibited:
         assert result.result == EvaluateResultValue.Error
         assert result.context == "MY_FILE was found at `docs/MY_FILE.md`, but the requirement prohibits it."
         assert result.resolution == "Remove `docs/MY_FILE.md` from the repository."
-        assert result.rationale == "My rationale."
+        assert result.rationale is None
 
     # ----------------------------------------------------------------------
     # Every offending location is reported so that all of them can be removed in a single pass.

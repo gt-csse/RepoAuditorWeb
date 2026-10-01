@@ -89,6 +89,18 @@ class Requirement(ABC):
         return {**base_parameters, **derived_parameters}
 
     # ----------------------------------------------------------------------
+    def UsesDefaultValues(self, requirement_data: dict[str, object]) -> bool:
+        """Return True if every requirement-specific parameter has its default value.
+
+        A rationale justifies a requirement's defaults, so it is misleading once one is overridden.
+        """
+
+        return all(
+            requirement_data.get(name, parameter.default) == parameter.default
+            for name, parameter in self._GetParametersImpl().items()
+        )
+
+    # ----------------------------------------------------------------------
     def Evaluate(
         self,
         module: Module,

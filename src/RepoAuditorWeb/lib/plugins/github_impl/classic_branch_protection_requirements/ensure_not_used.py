@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -51,7 +51,52 @@ class EnsureNotUsedRequirement(Requirement):
         classic_branch_protection_value = True
         acceptable_value = cast(bool, requirement_data["permit"])
 
-        rationale = textwrap.dedent(
+        if classic_branch_protection_value != acceptable_value:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Branches settings]({repository_url}/settings/branches) page.
+                2) Click the **Convert to ruleset** button on the classic branch protection rule whose branch name pattern matches `{branch_name}`.
+                3) Enter a name for each ruleset that will be created.
+                4) Review the **New behavior** section to confirm that the rules carry over as expected.
+                5) Check the **Delete branch protection rule once migration is done** checkbox.
+                6) Click the **Create ruleset** button.
+
+                Note that **Require conversation resolution before merging** is not carried over,
+                because rulesets express it within the pull request rule; enable it there afterwards
+                if the classic rule required it.
+
+                See [Converting branch protections to rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/converting-branch-protections-to-rulesets)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{classic_branch_protection_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that the branch is governed by a ruleset rather than
             a classic branch protection rule. Both mechanisms protect a branch and GitHub enforces
@@ -92,36 +137,3 @@ class EnsureNotUsedRequirement(Requirement):
             ruleset that would replace it.
             """,
         )
-
-        if classic_branch_protection_value != acceptable_value:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Branches settings]({repository_url}/settings/branches) page.
-                2) Click the **Convert to ruleset** button on the classic branch protection rule whose branch name pattern matches `{branch_name}`.
-                3) Enter a name for each ruleset that will be created.
-                4) Review the **New behavior** section to confirm that the rules carry over as expected.
-                5) Check the **Delete branch protection rule once migration is done** checkbox.
-                6) Click the **Create ruleset** button.
-
-                Note that **Require conversation resolution before merging** is not carried over,
-                because rulesets express it within the pull request rule; enable it there afterwards
-                if the classic rule required it.
-
-                See [Converting branch protections to rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/converting-branch-protections-to-rulesets)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{classic_branch_protection_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

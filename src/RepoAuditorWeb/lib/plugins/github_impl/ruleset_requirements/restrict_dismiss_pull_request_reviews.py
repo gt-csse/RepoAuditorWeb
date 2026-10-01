@@ -6,7 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -88,7 +88,99 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
         acceptable_value = not cast(bool, requirement_data["prohibit"])
         acceptable_actors = cast(int, requirement_data["value"])
 
-        rationale = textwrap.dedent(
+        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
+
+        # GitHub omits the setting rather than reporting a disabled restriction when it is not in
+        # use, so an absent value and a disabled one describe the same ruleset.
+        dismissal_restriction = cast(dict[str, object], parameters.get("dismissal_restriction") or {})
+
+        restriction_value = bool(dismissal_restriction.get("enabled"))
+
+        # The roster is omitted rather than reported as empty when no actors are named.
+        allowed_actors = cast(list[dict[str, object]], dismissal_restriction.get("allowed_actors") or [])
+
+        repository_url = cast("GitHubSession", query_data["session"]).github_url
+        branch_name = cast(str, query_data["branch"])
+
+        if restriction_value != acceptable_value:
+            action = "Check" if acceptable_value else "Clear"
+
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                {resolution_prefix}
+                4) {action} the **Restrict who can dismiss pull request reviews** checkbox.
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{restriction_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        # The roster is a setting of the restriction, so it grants nobody anything on a ruleset that
+        # was required not to enable the restriction in the first place.
+        if acceptable_value and len(allowed_actors) > acceptable_actors:
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                {resolution_prefix}
+                4) Remove actors listed beneath the **Restrict who can dismiss pull request reviews** checkbox until at most {acceptable_actors} remain.
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The ruleset allows {len(allowed_actors)} actor(s) to dismiss reviews, but the requirement specifies it must be at most {acceptable_actors}.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             f"""\
             The default behavior is to require that a ruleset restricts review dismissal to named
             actors and that it names at most {DEFAULT_VALUE} of them.
@@ -147,83 +239,3 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
             rather than one that cannot be circumvented.
             """,
         )
-
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-
-        # GitHub omits the setting rather than reporting a disabled restriction when it is not in
-        # use, so an absent value and a disabled one describe the same ruleset.
-        dismissal_restriction = cast(dict[str, object], parameters.get("dismissal_restriction") or {})
-
-        restriction_value = bool(dismissal_restriction.get("enabled"))
-
-        # The roster is omitted rather than reported as empty when no actors are named.
-        allowed_actors = cast(list[dict[str, object]], dismissal_restriction.get("allowed_actors") or [])
-
-        repository_url = cast("GitHubSession", query_data["session"]).github_url
-        branch_name = cast(str, query_data["branch"])
-
-        if restriction_value != acceptable_value:
-            action = "Check" if acceptable_value else "Clear"
-
-            # The rule may be absent when every requirement is being evaluated, in which case
-            # the steps that reach the setting must enable it first.
-            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
-                query_data,
-                evaluate_all=evaluate_all,
-            )
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                {resolution_prefix}
-                4) {action} the **Restrict who can dismiss pull request reviews** checkbox.
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{restriction_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        # The roster is a setting of the restriction, so it grants nobody anything on a ruleset that
-        # was required not to enable the restriction in the first place.
-        if acceptable_value and len(allowed_actors) > acceptable_actors:
-            # The rule may be absent when every requirement is being evaluated, in which case
-            # the steps that reach the setting must enable it first.
-            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
-                query_data,
-                evaluate_all=evaluate_all,
-            )
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                {resolution_prefix}
-                4) Remove actors listed beneath the **Restrict who can dismiss pull request reviews** checkbox until at most {acceptable_actors} remain.
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The ruleset allows {len(allowed_actors)} actor(s) to dismiss reviews, but the requirement specifies it must be at most {acceptable_actors}.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

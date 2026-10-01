@@ -10,7 +10,7 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_val
     ENABLED_STATUS,
     GetRestrictedValue,
 )
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -54,7 +54,63 @@ class SecretPushProtectionRequirement(Requirement):
     ) -> EvaluateResult:
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 
-        rationale = textwrap.dedent(
+        # Unlike the other restricted settings, 'security_and_analysis' requires admin access rather
+        # than push access, and reports the setting as a nested status string rather than a boolean.
+        status_value = GetRestrictedValue(
+            module,
+            self,
+            query_data,
+            ("security_and_analysis", "secret_scanning_push_protection", "status"),
+            "security and analysis settings",
+            AccessLevel.Admin,
+        )
+
+        if isinstance(status_value, EvaluateResult):
+            return status_value
+
+        secret_push_protection_value = status_value == ENABLED_STATUS
+
+        if secret_push_protection_value != acceptable_value:
+            action = "Enable" if acceptable_value else "Disable"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Advanced Security settings]({repository_url}/settings/security_analysis) page.
+                2) Scroll to the **Secret Protection** section.
+                3) Click the **{action}** button next to **Push protection**.
+                4) Click the **Save changes** button at the bottom of the page.
+
+                See [Enabling push protection for your repository](https://docs.github.com/en/code-security/secret-scanning/enabling-secret-scanning-features/enabling-push-protection-for-your-repository)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{secret_push_protection_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that push protection is enabled.
 
@@ -101,47 +157,3 @@ class SecretPushProtectionRequirement(Requirement):
             establishing that none can.
             """,
         )
-
-        # Unlike the other restricted settings, 'security_and_analysis' requires admin access rather
-        # than push access, and reports the setting as a nested status string rather than a boolean.
-        status_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            ("security_and_analysis", "secret_scanning_push_protection", "status"),
-            "security and analysis settings",
-            AccessLevel.Admin,
-        )
-
-        if isinstance(status_value, EvaluateResult):
-            return status_value
-
-        secret_push_protection_value = status_value == ENABLED_STATUS
-
-        if secret_push_protection_value != acceptable_value:
-            action = "Enable" if acceptable_value else "Disable"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Advanced Security settings]({repository_url}/settings/security_analysis) page.
-                2) Scroll to the **Secret Protection** section.
-                3) Click the **{action}** button next to **Push protection**.
-                4) Click the **Save changes** button at the bottom of the page.
-
-                See [Enabling push protection for your repository](https://docs.github.com/en/code-security/secret-scanning/enabling-secret-scanning-features/enabling-push-protection-for-your-repository)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{secret_push_protection_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

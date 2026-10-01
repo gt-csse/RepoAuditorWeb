@@ -6,7 +6,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -59,7 +59,53 @@ class PublicPrivateRequirement(Requirement):
         visibility_value = cast(dict, query_data["response"]).get("visibility")
         expected_value = cast(Values, requirement_data["value"])
 
-        rationale = textwrap.dedent(
+        if visibility_value != expected_value:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [General settings]({repository_url}/settings) page.
+                2) Scroll to the **Danger Zone** section.
+                3) Click the **Change visibility** button.
+                4) Select '{expected_value}'.
+                5) Click the **I have read and understand these effects** button.
+                6) Enter the repository's name to confirm, then click the button that completes the change.
+
+                See [Setting repository visibility](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility)
+                for more information.
+                """,
+            )
+
+            context = (
+                "No visibility value was set."
+                if visibility_value is None
+                else f"The visibility is '{visibility_value}' but '{expected_value}' was expected."
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                context,
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that the repository is public.
 
@@ -104,37 +150,3 @@ class PublicPrivateRequirement(Requirement):
             to everyone.
             """,
         )
-
-        if visibility_value != expected_value:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Danger Zone** section.
-                3) Click the **Change visibility** button.
-                4) Select '{expected_value}'.
-                5) Click the **I have read and understand these effects** button.
-                6) Enter the repository's name to confirm, then click the button that completes the change.
-
-                See [Setting repository visibility](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility)
-                for more information.
-                """,
-            )
-
-            context = (
-                "No visibility value was set."
-                if visibility_value is None
-                else f"The visibility is '{visibility_value}' but '{expected_value}' was expected."
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                context,
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

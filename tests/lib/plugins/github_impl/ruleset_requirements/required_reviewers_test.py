@@ -200,6 +200,35 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once a different count overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [[_CreatePullRequestRule([_CreateReviewer(1)])], [_CreatePullRequestRule(None)]],
+)
+def test_RationaleOmittedWhenValueOverridden(response):
+    result = _Evaluate(response, value=2)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
+# An explicit count overrides the one implied by the team size even when the two are equal, so
+# the rationale describing the team size's default is omitted.
+@pytest.mark.parametrize(
+    ("team_size", "value"),
+    [
+        (TeamSize.Solo, 0),
+        (TeamSize.Small, 0),
+        (TeamSize.Large, 1),
+    ],
+)
+def test_RationaleOmittedWhenValueEqualsTeamSizeDefault(team_size, value):
+    result = _Evaluate([_CreatePullRequestRule([_CreateReviewer(1)])], value=value, team_size=team_size)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The rationale names the team size under evaluation so that the reader can see where the expected
 # count came from.
 @pytest.mark.parametrize(

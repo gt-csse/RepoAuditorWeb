@@ -168,6 +168,15 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize("response", [[_REQUIRED_SIGNATURES_RULE], [_OTHER_RULE]])
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The endpoint reports only the rules that apply, so a branch whose rules do not include the
 # required signatures rule is one that accepts unsigned commits.
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])

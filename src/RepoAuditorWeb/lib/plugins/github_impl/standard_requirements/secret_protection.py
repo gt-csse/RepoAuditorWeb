@@ -10,7 +10,7 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_val
     ENABLED_STATUS,
     GetRestrictedValue,
 )
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -54,7 +54,64 @@ class SecretProtectionRequirement(Requirement):
     ) -> EvaluateResult:
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 
-        rationale = textwrap.dedent(
+        # Unlike the other restricted settings, 'security_and_analysis' requires admin access rather
+        # than push access, and reports the setting as a nested status string rather than a boolean.
+        status_value = GetRestrictedValue(
+            module,
+            self,
+            query_data,
+            ("security_and_analysis", "secret_scanning", "status"),
+            "security and analysis settings",
+            AccessLevel.Admin,
+        )
+
+        if isinstance(status_value, EvaluateResult):
+            return status_value
+
+        secret_protection_value = status_value == ENABLED_STATUS
+
+        if secret_protection_value != acceptable_value:
+            action = "Enable" if acceptable_value else "Disable"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Advanced Security settings]({repository_url}/settings/security_analysis) page.
+                2) Scroll to the **Secret Protection** row.
+                3) Click the **{action}** button.
+                4) Confirm the change when prompted.
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Enabling secret scanning for your repository](https://docs.github.com/en/code-security/how-tos/secure-your-secrets/detect-secret-leaks/enable-secret-scanning)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{secret_protection_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that secret protection is enabled.
 
@@ -101,48 +158,3 @@ class SecretProtectionRequirement(Requirement):
             format no provider has registered is not detected.
             """,
         )
-
-        # Unlike the other restricted settings, 'security_and_analysis' requires admin access rather
-        # than push access, and reports the setting as a nested status string rather than a boolean.
-        status_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            ("security_and_analysis", "secret_scanning", "status"),
-            "security and analysis settings",
-            AccessLevel.Admin,
-        )
-
-        if isinstance(status_value, EvaluateResult):
-            return status_value
-
-        secret_protection_value = status_value == ENABLED_STATUS
-
-        if secret_protection_value != acceptable_value:
-            action = "Enable" if acceptable_value else "Disable"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Advanced Security settings]({repository_url}/settings/security_analysis) page.
-                2) Scroll to the **Secret Protection** row.
-                3) Click the **{action}** button.
-                4) Confirm the change when prompted.
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Enabling secret scanning for your repository](https://docs.github.com/en/code-security/how-tos/secure-your-secrets/detect-secret-leaks/enable-secret-scanning)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{secret_protection_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

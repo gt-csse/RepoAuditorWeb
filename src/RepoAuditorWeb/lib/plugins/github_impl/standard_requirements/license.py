@@ -5,7 +5,7 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -47,32 +47,6 @@ class LicenseRequirement(Requirement):
         license_value = cast(dict, query_data["response"]).get("license", {}).get("name")
         acceptable_values = cast(list[str], requirement_data["value"])
 
-        rationale = textwrap.dedent(
-            """\
-            The default behavior is to require that the repository is licensed under the MIT License.
-
-            ## Reasons for this Default
-
-            - Without a license, default copyright law applies and the author retains all rights; no
-              one may reproduce, distribute, or create derivative works from the code. Publishing a
-              repository does not by itself grant anyone permission to use it.
-            - The MIT License is short, permissive, and widely recognized, which minimizes the review
-              burden on anyone deciding whether they may adopt the code.
-
-            ## Reasons to Override this Default
-
-            - The organization standardizes on a different license.
-            - The repository incorporates code under a license that requires derived works to carry the
-              same terms (for example, the GNU General Public License), which the MIT License cannot
-              satisfy.
-            - The project intends to require that modifications be shared, which a permissive license
-              does not do.
-
-            Note that GitHub identifies the license by comparing the `LICENSE` file against a list of
-            known licenses, so an accurate copy of the chosen license is what causes it to be reported.
-            """,
-        )
-
         if license_value is None or license_value not in acceptable_values:
             acceptable_values_str = ", ".join(f"'{v}'" for v in acceptable_values)
 
@@ -102,9 +76,47 @@ class LicenseRequirement(Requirement):
                 EvaluateResultValue.Error,
                 context,
                 resolution,
-                rationale,
+                self._CreateRationale(requirement_data),
                 self,
                 module,
             )
 
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
+            """\
+            The default behavior is to require that the repository is licensed under the MIT License.
+
+            ## Reasons for this Default
+
+            - Without a license, default copyright law applies and the author retains all rights; no
+              one may reproduce, distribute, or create derivative works from the code. Publishing a
+              repository does not by itself grant anyone permission to use it.
+            - The MIT License is short, permissive, and widely recognized, which minimizes the review
+              burden on anyone deciding whether they may adopt the code.
+
+            ## Reasons to Override this Default
+
+            - The organization standardizes on a different license.
+            - The repository incorporates code under a license that requires derived works to carry the
+              same terms (for example, the GNU General Public License), which the MIT License cannot
+              satisfy.
+            - The project intends to require that modifications be shared, which a permissive license
+              does not do.
+
+            Note that GitHub identifies the license by comparing the `LICENSE` file against a list of
+            known licenses, so an accurate copy of the chosen license is what causes it to be reported.
+            """,
+        )

@@ -116,8 +116,7 @@ def test_MatchingStatus(allow_merge_commit, prohibit):
 
 
 # ----------------------------------------------------------------------
-# The rationale explains the default regardless of the outcome, so it is present on success even
-# though there is nothing to resolve.
+# The rationale explains the default whether it passes or fails.
 def test_SuccessRationale():
     result = _Evaluate({"allow_merge_commit": True})
 
@@ -129,6 +128,14 @@ def test_ErrorRationale():
     result = _Evaluate({"allow_merge_commit": False})
 
     assert result.rationale == _RATIONALE
+
+
+# ----------------------------------------------------------------------
+# The rationale justifies the default, so it does not apply once the requirement is overridden.
+def test_ErrorNoRationaleWhenProhibited():
+    result = _Evaluate({"allow_merge_commit": True}, prohibit=True)
+
+    assert result.rationale is None
 
 
 # ----------------------------------------------------------------------

@@ -192,6 +192,21 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'require' overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [
+        [_CreatePullRequestRule(require_last_push_approval=True)],
+        [_CreatePullRequestRule(require_last_push_approval=False)],
+    ],
+)
+def test_RationaleOmittedWhenRequired(response):
+    result = _Evaluate(response, require=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The setting is nested within the pull request rule, so a branch that does not require a pull
 # request has no push for it to gate. The rationale describes a default that is not being applied,
 # so it is omitted along with the resolution.

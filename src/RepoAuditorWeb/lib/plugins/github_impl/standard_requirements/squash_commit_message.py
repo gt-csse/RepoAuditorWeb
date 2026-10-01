@@ -10,7 +10,7 @@ from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.commit_message
     CommitMessageSetting,
     EvaluateCommitMessage,
 )
-from RepoAuditorWeb.lib.requirement import EvaluateResult, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -60,7 +60,21 @@ class SquashCommitMessageRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        rationale = textwrap.dedent(
+        return EvaluateCommitMessage(
+            _SETTING,
+            cast(Values, requirement_data["value"]),
+            lambda: self._CreateRationale(requirement_data),
+            module,
+            self,
+            query_data,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that the squash commit's subject is the pull request
             title and that its body contains the messages of the commits being squashed (the **Pull
@@ -110,15 +124,6 @@ class SquashCommitMessageRequirement(Requirement):
             authorship or signatures of the commits it replaces regardless of this setting, which is
             a property of the method rather than of the message.
             """,
-        )
-
-        return EvaluateCommitMessage(
-            _SETTING,
-            cast(Values, requirement_data["value"]),
-            rationale,
-            module,
-            self,
-            query_data,
         )
 
 

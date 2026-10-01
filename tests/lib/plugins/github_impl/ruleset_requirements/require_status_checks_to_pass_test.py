@@ -208,13 +208,13 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
-# A single rationale describes the requirement, so the requested count does not change it,
-# including the count of 0 that inverts the expectation.
-@pytest.mark.parametrize("value", [0, 1, 3])
-def test_RationaleIsInvariant(value):
+# The rationale justifies the default count, so it is omitted once the count is overridden,
+# including with the count of 0 that inverts the expectation.
+@pytest.mark.parametrize("value", [0, 3])
+def test_RationaleOmittedWhenValueOverridden(value):
     result = _Evaluate([_TWO_CHECKS_RULE], value=value)
 
-    assert result.rationale == _RATIONALE
+    assert result.rationale is None
 
 
 # ----------------------------------------------------------------------

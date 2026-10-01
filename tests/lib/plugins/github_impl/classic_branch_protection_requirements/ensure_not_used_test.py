@@ -128,11 +128,11 @@ def test_ClassicProtectionWhenPermitted():
 
 
 # ----------------------------------------------------------------------
-# The rationale explains the default regardless of the outcome, so it is present on success even
-# though there is nothing to resolve.
+# The rationale justifies the default, so it accompanies an evaluation against that default and is
+# omitted once the default is overridden.
 def test_Rationale():
     assert _Evaluate().rationale == _RATIONALE
-    assert _Evaluate(permit=True).rationale == _RATIONALE
+    assert _Evaluate(permit=True).rationale is None
 
 
 # ----------------------------------------------------------------------

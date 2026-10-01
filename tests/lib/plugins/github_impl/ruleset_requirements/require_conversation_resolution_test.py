@@ -184,6 +184,21 @@ def test_Rationale(response):
 
 
 # ----------------------------------------------------------------------
+# The rationale justifies the default, so it is omitted once 'prohibit' overrides it.
+@pytest.mark.parametrize(
+    "response",
+    [
+        [_CreatePullRequestRule(required_review_thread_resolution=True)],
+        [_CreatePullRequestRule(required_review_thread_resolution=False)],
+    ],
+)
+def test_RationaleOmittedWhenProhibited(response):
+    result = _Evaluate(response, prohibit=True)
+
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
 # The setting is nested within the pull request rule, so a branch that does not require a pull
 # request hosts no review comment threads for it to govern. The rationale describes a default that
 # is not being applied, so it is omitted along with the resolution.

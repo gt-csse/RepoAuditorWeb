@@ -6,7 +6,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import GetRestrictedValue
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -47,7 +47,57 @@ class SquashCommitRequirement(Requirement):
     ) -> EvaluateResult:
         acceptable_value = cast(bool, requirement_data["require"])
 
-        rationale = textwrap.dedent(
+        allow_squash_merge_value = GetRestrictedValue(
+            module,
+            self,
+            query_data,
+            "allow_squash_merge",
+            "squash merge settings",
+        )
+
+        if isinstance(allow_squash_merge_value, EvaluateResult):
+            return allow_squash_merge_value
+
+        if allow_squash_merge_value != acceptable_value:
+            action = "Check" if acceptable_value else "Uncheck"
+
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [General settings]({repository_url}/settings) page.
+                2) Scroll to the **Pull Requests** section.
+                3) {action} the **Allow squash merging** checkbox.
+
+                See [Configuring commit squashing for pull requests](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{allow_squash_merge_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             """\
             The default behavior is to require that squash merging is disallowed.
 
@@ -93,41 +143,3 @@ class SquashCommitRequirement(Requirement):
             ruleset's allowed merge methods rather than here.
             """,
         )
-
-        allow_squash_merge_value = GetRestrictedValue(
-            module,
-            self,
-            query_data,
-            "allow_squash_merge",
-            "squash merge settings",
-        )
-
-        if isinstance(allow_squash_merge_value, EvaluateResult):
-            return allow_squash_merge_value
-
-        if allow_squash_merge_value != acceptable_value:
-            action = "Check" if acceptable_value else "Uncheck"
-
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [General settings]({repository_url}/settings) page.
-                2) Scroll to the **Pull Requests** section.
-                3) {action} the **Allow squash merging** checkbox.
-
-                See [Configuring commit squashing for pull requests](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{allow_squash_merge_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)

@@ -7,7 +7,7 @@ from typer.models import OptionInfo
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
@@ -88,7 +88,57 @@ class RequireApprovalsRequirement(Requirement):
         if acceptable_value is None:
             acceptable_value = DEFAULT_VALUES[team_size]
 
-        rationale = textwrap.dedent(
+        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
+        approvals_value = cast(int, parameters.get("required_approving_review_count") or 0)
+
+        if approvals_value != acceptable_value:
+            repository_url = cast("GitHubSession", query_data["session"]).github_url
+            branch_name = cast(str, query_data["branch"])
+
+            # The rule may be absent when every requirement is being evaluated, in which case
+            # the steps that reach the setting must enable it first.
+            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
+                query_data,
+                evaluate_all=evaluate_all,
+            )
+
+            resolution = textwrap.dedent(
+                f"""\
+                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                2) Click the name of the ruleset that targets `{branch_name}`.
+                {resolution_prefix}
+                4) Set the **Required approvals** dropdown to {acceptable_value}.
+                5) Click the **Save changes** button at the bottom of the page.
+
+                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
+                for more information.
+                """,
+            )
+
+            return EvaluateResult(
+                EvaluateResultValue.Error,
+                f"The repository's value is '{approvals_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                resolution,
+                self._CreateRationale(requirement_data, team_size),
+                self,
+                module,
+            )
+
+        return EvaluateResult(
+            EvaluateResultValue.Success,
+            None,
+            None,
+            self._CreateRationale(requirement_data, team_size),
+            self,
+            module,
+        )
+
+    # ----------------------------------------------------------------------
+    def _CreateRationale(self, requirement_data: dict[str, object], team_size: TeamSize) -> Markdown | None:
+        if not self.UsesDefaultValues(requirement_data):
+            return None
+
+        return textwrap.dedent(
             f"""\
             The default behavior is to require the number of approving reviews implied by the size
             of the team maintaining the repository, which is {DEFAULT_VALUES[TeamSize.Solo]} for a
@@ -147,41 +197,3 @@ class RequireApprovalsRequirement(Requirement):
             cannot be circumvented.
             """,
         )
-
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-        approvals_value = cast(int, parameters.get("required_approving_review_count") or 0)
-
-        if approvals_value != acceptable_value:
-            repository_url = cast("GitHubSession", query_data["session"]).github_url
-            branch_name = cast(str, query_data["branch"])
-
-            # The rule may be absent when every requirement is being evaluated, in which case
-            # the steps that reach the setting must enable it first.
-            resolution_prefix = parent_rule.GetPullRequestRuleResolutionPrefix(
-                query_data,
-                evaluate_all=evaluate_all,
-            )
-
-            resolution = textwrap.dedent(
-                f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
-                2) Click the name of the ruleset that targets `{branch_name}`.
-                {resolution_prefix}
-                4) Set the **Required approvals** dropdown to {acceptable_value}.
-                5) Click the **Save changes** button at the bottom of the page.
-
-                See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
-                for more information.
-                """,
-            )
-
-            return EvaluateResult(
-                EvaluateResultValue.Error,
-                f"The repository's value is '{approvals_value}', but the requirement specifies it must be '{acceptable_value}'.",
-                resolution,
-                rationale,
-                self,
-                module,
-            )
-
-        return EvaluateResult(EvaluateResultValue.Success, None, None, rationale, self, module)
