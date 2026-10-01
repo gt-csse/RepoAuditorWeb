@@ -108,7 +108,7 @@ class RequireStatusChecksToPassRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                "The ruleset requires status checks to pass, but the requirement specifies that it must not.",
+                "The ruleset requires status checks to pass, but the requirement was configured to prohibit it.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,
@@ -165,7 +165,7 @@ class RequireStatusChecksToPassRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The ruleset requires {len(checks)} status check(s), but the requirement specifies it must be at least {acceptable_value}.",
+                f"The ruleset requires {len(checks)} status check(s), but the requirement was configured to require at least {acceptable_value}.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,

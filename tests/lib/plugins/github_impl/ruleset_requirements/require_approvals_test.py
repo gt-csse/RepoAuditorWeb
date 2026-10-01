@@ -151,7 +151,9 @@ def test_EvaluatedWithoutPullRequestRuleWhenEvaluatingAll(response):
     result = _Evaluate(response, team_size=TeamSize.Small, evaluate_all=True)
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == ("The repository's value is '0', but the requirement specifies it must be '1'.")
+    assert result.context == (
+        "The repository's value is '0', but the requirement was configured to require '1'."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -229,7 +231,9 @@ def test_PullRequestRuleWithoutApprovals():
     result = _Evaluate([_CreatePullRequestRule(0)])
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == ("The repository's value is '0', but the requirement specifies it must be '1'.")
+    assert result.context == (
+        "The repository's value is '0', but the requirement was configured to require '1'."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -237,7 +241,9 @@ def test_TooFewApprovals():
     result = _Evaluate([_CreatePullRequestRule(1)], team_size=TeamSize.Large)
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == ("The repository's value is '1', but the requirement specifies it must be '2'.")
+    assert result.context == (
+        "The repository's value is '1', but the requirement was configured to require '2'."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -247,7 +253,9 @@ def test_TooManyApprovals():
     result = _Evaluate([_CreatePullRequestRule(2)], team_size=TeamSize.Solo)
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == ("The repository's value is '2', but the requirement specifies it must be '0'.")
+    assert result.context == (
+        "The repository's value is '2', but the requirement was configured to require '0'."
+    )
 
 
 # ----------------------------------------------------------------------

@@ -223,7 +223,7 @@ def test_EvaluatedWithoutPullRequestRuleWhenEvaluatingAll(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'Merge, Squash, Rebase', but the requirement specifies it must be 'Merge'."
+        "The repository's value is 'Merge, Squash, Rebase', but the requirement was configured to require 'Merge'."
     )
 
 
@@ -248,7 +248,7 @@ def test_AllMethodsAllowed():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is 'Merge, Squash, Rebase', but the requirement specifies it must be 'Merge'."
+        "The repository's value is 'Merge, Squash, Rebase', but the requirement was configured to require 'Merge'."
     )
 
 
@@ -267,7 +267,7 @@ def test_WrongMethods(allowed_merge_methods, expected):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        f"The repository's value is '{expected}', but the requirement specifies it must be 'Merge'."
+        f"The repository's value is '{expected}', but the requirement was configured to require 'Merge'."
     )
 
 
@@ -326,7 +326,7 @@ def test_MissingParameter(parameters):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The repository's value is '<none>', but the requirement specifies it must be 'Merge'."
+        "The repository's value is '<none>', but the requirement was configured to require 'Merge'."
     )
 
 

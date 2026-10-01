@@ -81,7 +81,7 @@ class FileExistsRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"{self._filename} was found at {found_locations_str}, but the requirement prohibits it.",
+                f"{self._filename} was found at {found_locations_str}, but the requirement was configured to prohibit it.",
                 f"Remove {found_locations_str} from the repository.",
                 self._CreateRationale(requirement_data),
                 self,

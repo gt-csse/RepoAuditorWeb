@@ -168,7 +168,7 @@ def test_NewRepositoryDefaultFails():
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
         "The repository's default merge commit message is 'Default message', but the requirement "
-        "specifies it must be 'Pull request title'."
+        "was configured to require 'Pull request title'."
     )
 
 
@@ -187,7 +187,7 @@ def test_ContextUsesUiLabel(title, message, label):
 
     assert result.context == (
         f"The repository's default merge commit message is '{label}', but the requirement "
-        "specifies it must be 'Pull request title'."
+        "was configured to require 'Pull request title'."
     )
 
 
@@ -205,7 +205,7 @@ def test_ContextUsesUiLabelForRequiredValue(value, label):
     result = _Evaluate(_Response("MERGE_MESSAGE", "BLANK"), value=value)
 
     assert result.context is not None
-    assert result.context.endswith(f"but the requirement specifies it must be '{label}'.")
+    assert result.context.endswith(f"but the requirement was configured to require '{label}'.")
 
 
 # ----------------------------------------------------------------------
@@ -217,7 +217,7 @@ def test_UnreachablePairing():
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
         "The repository's default merge commit message is title 'MERGE_MESSAGE' with message "
-        "'PR_BODY', but the requirement specifies it must be 'Pull request title'."
+        "'PR_BODY', but the requirement was configured to require 'Pull request title'."
     )
 
 

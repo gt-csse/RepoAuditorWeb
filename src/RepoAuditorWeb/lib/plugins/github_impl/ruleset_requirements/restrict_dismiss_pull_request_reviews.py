@@ -127,7 +127,7 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The repository's value is '{restriction_value}', but the requirement specifies it must be '{acceptable_value}'.",
+                f"The repository's value is '{restriction_value}', but the requirement was configured to require '{acceptable_value}'.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,
@@ -159,7 +159,7 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The ruleset allows {len(allowed_actors)} actor(s) to dismiss reviews, but the requirement specifies it must be at most {acceptable_actors}.",
+                f"The ruleset allows {len(allowed_actors)} actor(s) to dismiss reviews, but the requirement was configured to require at most {acceptable_actors}.",
                 resolution,
                 self._CreateRationale(requirement_data),
                 self,

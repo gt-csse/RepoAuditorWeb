@@ -268,7 +268,7 @@ def test_RuleWithoutChecks():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires 0 status check(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires 0 status check(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -303,7 +303,7 @@ def test_RuleWithoutCheckParameters(parameters):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires 0 status check(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires 0 status check(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -315,7 +315,7 @@ def test_FewerChecksThanRequested():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires 1 status check(s), but the requirement specifies it must be at least 2."
+        "The ruleset requires 1 status check(s), but the requirement was configured to require at least 2."
     )
 
 
@@ -403,7 +403,7 @@ def test_ZeroWhenRequired(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires status checks to pass, but the requirement specifies that it must not."
+        "The ruleset requires status checks to pass, but the requirement was configured to prohibit it."
     )
 
 

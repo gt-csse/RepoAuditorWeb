@@ -134,7 +134,7 @@ class RequiredReviewersRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The ruleset requires reviews from {len(reviewers)} team(s), but the requirement specifies that it must not name any.",
+                f"The ruleset requires reviews from {len(reviewers)} team(s), but the requirement was configured to prohibit them.",
                 resolution,
                 self._CreateRationale(requirement_data, team_size),
                 self,
@@ -165,7 +165,7 @@ class RequiredReviewersRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"The ruleset requires reviews from {len(reviewers)} team(s), but the requirement specifies it must be at least {acceptable_value}.",
+                f"The ruleset requires reviews from {len(reviewers)} team(s), but the requirement was configured to require at least {acceptable_value}.",
                 resolution,
                 self._CreateRationale(requirement_data, team_size),
                 self,

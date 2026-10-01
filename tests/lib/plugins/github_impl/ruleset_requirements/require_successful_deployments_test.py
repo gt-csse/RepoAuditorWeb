@@ -237,7 +237,7 @@ def test_RuleWithoutEnvironments():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires successful deployments to 0 environment(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires successful deployments to 0 environment(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -271,7 +271,7 @@ def test_RuleWithoutEnvironmentParameters(parameters):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires successful deployments to 0 environment(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires successful deployments to 0 environment(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -283,7 +283,7 @@ def test_FewerEnvironmentsThanRequested():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires successful deployments to 1 environment(s), but the requirement specifies it must be at least 2."
+        "The ruleset requires successful deployments to 1 environment(s), but the requirement was configured to require at least 2."
     )
 
 
@@ -373,7 +373,7 @@ def test_ZeroWhenRequired(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires successful deployments, but the requirement specifies that it must not."
+        "The ruleset requires successful deployments, but the requirement was configured to prohibit it."
     )
 
 

@@ -147,7 +147,10 @@ class TestProhibited:
         result = _Evaluate(repo, prohibit=True)
 
         assert result.result == EvaluateResultValue.Error
-        assert result.context == "MY_FILE was found at `docs/MY_FILE.md`, but the requirement prohibits it."
+        assert (
+            result.context
+            == "MY_FILE was found at `docs/MY_FILE.md`, but the requirement was configured to prohibit it."
+        )
         assert result.resolution == "Remove `docs/MY_FILE.md` from the repository."
         assert result.rationale is None
 
@@ -162,7 +165,7 @@ class TestProhibited:
         assert result.result == EvaluateResultValue.Error
         assert (
             result.context
-            == "MY_FILE was found at `MY_FILE.md`, `docs/MY_FILE.md`, but the requirement prohibits it."
+            == "MY_FILE was found at `MY_FILE.md`, `docs/MY_FILE.md`, but the requirement was configured to prohibit it."
         )
         assert result.resolution == "Remove `MY_FILE.md`, `docs/MY_FILE.md` from the repository."
 

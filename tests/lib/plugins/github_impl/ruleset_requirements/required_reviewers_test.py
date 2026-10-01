@@ -168,7 +168,7 @@ def test_EvaluatedWithoutPullRequestRuleWhenEvaluatingAll(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires reviews from 0 team(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires reviews from 0 team(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -254,7 +254,7 @@ def test_MissingReviewers():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires reviews from 0 team(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires reviews from 0 team(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -266,7 +266,7 @@ def test_EmptyReviewers():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires reviews from 0 team(s), but the requirement specifies it must be at least 1."
+        "The ruleset requires reviews from 0 team(s), but the requirement was configured to require at least 1."
     )
 
 
@@ -276,7 +276,7 @@ def test_TooFewReviewers():
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires reviews from 2 team(s), but the requirement specifies it must be at least 3."
+        "The ruleset requires reviews from 2 team(s), but the requirement was configured to require at least 3."
     )
 
 
@@ -307,7 +307,7 @@ def test_ReviewersNamedWhenNoneExpected(team_size):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
-        "The ruleset requires reviews from 1 team(s), but the requirement specifies that it must not name any."
+        "The ruleset requires reviews from 1 team(s), but the requirement was configured to prohibit them."
     )
 
 
