@@ -16,6 +16,7 @@ requires-python = ">= 3.14"
 dependencies = [
     "dbrownell-common>=0.16.8",
     "fastapi>=0.141.1",
+    "gitpython>=3.1.57",
     "pluggy>=1.6.0",
     "pywebview>=6.2.1",
     "requests>=2.34.2",

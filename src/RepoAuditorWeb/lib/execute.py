@@ -2,6 +2,8 @@ import copy
 
 from typing import TYPE_CHECKING
 
+from dbrownell_Common.ContextlibEx import ExitStack
+
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 
 if TYPE_CHECKING:
@@ -66,41 +68,46 @@ def Execute(
                                 extract_dm.WriteLine("SKIPPED.")
                                 continue
 
-                        for requirement_index, requirement in enumerate(query.requirements):
-                            query_status: str | None = None
+                        with ExitStack(
+                            lambda query=query, this_query_data=this_query_data: query.CleanupQueryData(
+                                this_query_data
+                            )
+                        ):
+                            for requirement_index, requirement in enumerate(query.requirements):
+                                query_status: str | None = None
 
-                            with query_dm.Nested(
-                                f"Evaluating requirement '{requirement.name}' ({requirement_index + 1} of {len(query.requirements)})...",
-                                lambda: query_status,  # noqa: B023
-                                suppress_exceptions=True,
-                            ) as requirement_dm:
-                                requirement_data = module_data.get(requirement.name, {})
+                                with query_dm.Nested(
+                                    f"Evaluating requirement '{requirement.name}' ({requirement_index + 1} of {len(query.requirements)})...",
+                                    lambda: query_status,  # noqa: B023
+                                    suppress_exceptions=True,
+                                ) as requirement_dm:
+                                    requirement_data = module_data.get(requirement.name, {})
 
-                                eval_result = requirement.Evaluate(
-                                    module,
-                                    this_query_data,
-                                    requirement_data,
-                                    evaluate_all=evaluate_all,
-                                )
-                                eval_results.append(eval_result)
+                                    eval_result = requirement.Evaluate(
+                                        module,
+                                        this_query_data,
+                                        requirement_data,
+                                        evaluate_all=evaluate_all,
+                                    )
+                                    eval_results.append(eval_result)
 
-                                if eval_result.result == EvaluateResultValue.Skipped:
-                                    query_status = "SKIPPED"
-                                elif eval_result.result == EvaluateResultValue.DoesNotApply:
-                                    query_status = "DOES NOT APPLY"
-                                elif eval_result.result == EvaluateResultValue.Success:
-                                    pass
-                                elif eval_result.result == EvaluateResultValue.Warning:
-                                    requirement_dm.result = 1
+                                    if eval_result.result == EvaluateResultValue.Skipped:
+                                        query_status = "SKIPPED"
+                                    elif eval_result.result == EvaluateResultValue.DoesNotApply:
+                                        query_status = "DOES NOT APPLY"
+                                    elif eval_result.result == EvaluateResultValue.Success:
+                                        pass
+                                    elif eval_result.result == EvaluateResultValue.Warning:
+                                        requirement_dm.result = 1
 
-                                    if isinstance(eval_result.context, str):
-                                        requirement_dm.WriteWarning(eval_result.context)
-                                elif eval_result.result == EvaluateResultValue.Error:
-                                    requirement_dm.result = -1
+                                        if isinstance(eval_result.context, str):
+                                            requirement_dm.WriteWarning(eval_result.context)
+                                    elif eval_result.result == EvaluateResultValue.Error:
+                                        requirement_dm.result = -1
 
-                                    if isinstance(eval_result.context, str):
-                                        requirement_dm.WriteError(eval_result.context)
-                                else:
-                                    assert False, eval_result.result  # noqa: B011, PT015  # pragma: no cover
+                                        if isinstance(eval_result.context, str):
+                                            requirement_dm.WriteError(eval_result.context)
+                                    else:
+                                        assert False, eval_result.result  # noqa: B011, PT015  # pragma: no cover
 
     return eval_results

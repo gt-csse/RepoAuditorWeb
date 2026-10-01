@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import override
 from urllib.parse import urlparse
 
@@ -12,6 +11,10 @@ from RepoAuditorWeb.lib.plugins.github_impl.classic_branch_protection_query impo
     ClassicBranchProtectionQuery,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_query import DefaultBranchQuery
+from RepoAuditorWeb.lib.plugins.github_impl.repository_arguments import (
+    GetRepositoryParameters,
+    ResolveRepositoryArguments,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_query import RulesetQuery
 from RepoAuditorWeb.lib.plugins.github_impl.standard_query import StandardQuery
 from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
@@ -32,31 +35,14 @@ class GitHubModule(Module):
                 RulesetQuery(),
                 ClassicBranchProtectionQuery(),
             ],
-            requires_explicit_include=False,  # TODO: True,
+            requires_explicit_include=True,
         )
 
     # ----------------------------------------------------------------------
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
-            "url": TyperParameter(
-                str,
-                None,
-                OptionInfo(help="[REQUIRED] GitHub  URL (e.g. https://github.com/gt-csse/RepoAuditorWeb)."),
-            ),
-            "pat": TyperParameter(
-                str | None,
-                None,
-                OptionInfo(
-                    help="GitHub Personal Access Token (PAT) or path to a local file containing the PAT.",
-                    envvar="REPO_AUDITOR_WEB_GITHUB_PAT",
-                ),
-            ),
-            "branch": TyperParameter(
-                str | None,
-                None,
-                OptionInfo(help="Branch to evaluate. The default branch will be used if not specified."),
-            ),
+            **GetRepositoryParameters(),
             "team_size": TyperParameter(
                 TeamSize,
                 TeamSize.Small,
@@ -71,29 +57,11 @@ class GitHubModule(Module):
         arguments: dict[str | None, dict[str, object]],
     ) -> dict[str | None, dict[str, object]]:
         module_data = arguments.get(None, {})
-
-        # Get the URL
-        url = module_data.get("url")
-
-        if url is None:
-            msg = "'url' is required argument for this module."
-            raise ValueError(msg)
-
-        assert isinstance(url, str), (url, type(url))
-
-        # Get the PAT
-        github_pat = module_data.get("pat")
-        if github_pat is not None:
-            assert isinstance(github_pat, str), (github_pat, type(github_pat))
-
-            potential_filename = Path(github_pat)
-            if potential_filename.is_file():
-                with potential_filename.open(encoding="utf-8") as f:
-                    github_pat = f.read().strip()
+        repository_arguments = ResolveRepositoryArguments(module_data)
 
         arguments[None] = {
-            "session": GitHubSession(url, github_pat),
-            "branch": module_data["branch"],
+            "session": GitHubSession(repository_arguments.url, repository_arguments.pat),
+            "branch": repository_arguments.branch,
             "team_size": TeamSize(module_data.get("team_size") or TeamSize.Small),
         }
 

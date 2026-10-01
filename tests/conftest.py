@@ -79,15 +79,20 @@ class MyQuery(Query):
         *args,
         query_data: dict[str, object] | None = None,
         raise_exception: Exception | None = None,
+        raise_cleanup_exception: Exception | None = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self.query_data = query_data
         self.raise_exception = raise_exception
+        self.raise_cleanup_exception = raise_cleanup_exception
 
         # Captures the module data most recently passed to GetQueryData.
         self.module_data: dict[str, object] | None = None
+
+        # Captures the query data most recently passed to CleanupQueryData.
+        self.cleanup_query_data: dict[str, object] | None = None
 
     @override
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
@@ -96,6 +101,13 @@ class MyQuery(Query):
 
         self.module_data = module_data
         return self.query_data
+
+    @override
+    def CleanupQueryData(self, query_data: dict[str, object]) -> None:
+        self.cleanup_query_data = query_data
+
+        if self.raise_cleanup_exception is not None:
+            raise self.raise_cleanup_exception
 
 
 # ----------------------------------------------------------------------

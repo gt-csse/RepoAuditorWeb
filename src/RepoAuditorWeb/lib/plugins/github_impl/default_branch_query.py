@@ -43,3 +43,8 @@ class DefaultBranchQuery(Query):
         module_data["response"] = response
 
         return module_data
+
+    # ----------------------------------------------------------------------
+    @override
+    def CleanupQueryData(self, query_data: dict[str, object]) -> None:
+        pass  # No cleanup necessary

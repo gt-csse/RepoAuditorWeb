@@ -28,3 +28,11 @@ class Query(ABC):
         Derived classes may return the provided module data unmodified, add values, or return a completely different
         dictionary of data. The query will be skipped if None is returned.
         """
+
+    # ----------------------------------------------------------------------
+    @abstractmethod
+    def CleanupQueryData(self, query_data: dict[str, object]) -> None:
+        """Perform any cleanup on the query data after all requirements have been evaluated.
+
+        Derived classes may modify the provided query data dictionary, but should not return a value.
+        """
