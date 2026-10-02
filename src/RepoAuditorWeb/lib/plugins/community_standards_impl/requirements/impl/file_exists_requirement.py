@@ -60,7 +60,7 @@ class FileExistsRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        repo_dir = Path(cast(TemporaryDirectory, query_data["repo_dir"]).name)
+        repo_dir = Path(cast(TemporaryDirectory, query_data["repo_dir"]).name).resolve()
         prohibit = cast(bool, requirement_data["prohibit"])
 
         found_locations: list[str] = []
@@ -68,7 +68,9 @@ class FileExistsRequirement(Requirement):
         for directory in self._directories:
             this_dir = repo_dir / directory
 
-            if not this_dir.is_dir():
+            # The repository is untrusted, so symlinks that escape it are ignored; following them
+            # would reveal whether paths on the host exist.
+            if not this_dir.is_dir() or not this_dir.resolve().is_relative_to(repo_dir):
                 continue
 
             # follows GitHub's detection: case-insensitive, and files may have any extension (e.g. `readme.md`, `README`).
@@ -80,6 +82,7 @@ class FileExistsRequirement(Requirement):
                     if self._is_directory
                     else item.is_file() and item.name.split(".", 1)[0].lower() == self._filename.lower()
                 )
+                and item.resolve().is_relative_to(repo_dir)
             )
 
         if prohibit and found_locations:

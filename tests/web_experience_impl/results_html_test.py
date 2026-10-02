@@ -100,6 +100,17 @@ class TestContext:
         assert '<div class="context"><p>The value is <code>10</code>.</p></div>' in html
 
     # ----------------------------------------------------------------------
+    # Context can embed values from the untrusted repository, such as a filename that closes a code
+    # span to inject markup.
+    def test_RawHtmlIsEscaped(self):
+        html = RenderResults([_CreateResult(context="Found at `LICENSE.` <img src=x onerror=alert(1)> ``.")])
+
+        assert (
+            '<div class="context"><p>Found at <code>LICENSE.</code> '
+            "&lt;img src=x onerror=alert(1)&gt; ``.</p></div>"
+        ) in html
+
+    # ----------------------------------------------------------------------
     def test_ContextIsOmittedWhenEmpty(self):
         assert 'class="context"' not in RenderResults([_CreateResult()])
 

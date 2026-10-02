@@ -15,6 +15,9 @@ from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.issue_temp
     IssueTemplateRequirement,
 )
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.license import LicenseRequirement
+from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.pull_request_template import (
+    PullRequestTemplateRequirement,
+)
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.readme import ReadmeRequirement
 
 
@@ -32,6 +35,7 @@ class CommunityStandardsQuery(Query):
                 ContributingRequirement(),
                 LicenseRequirement(),
                 IssueTemplateRequirement(),
+                PullRequestTemplateRequirement(),
             ],
         )
 
