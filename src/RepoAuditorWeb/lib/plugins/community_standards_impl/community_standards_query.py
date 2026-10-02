@@ -19,6 +19,7 @@ from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.pull_reque
     PullRequestTemplateRequirement,
 )
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.readme import ReadmeRequirement
+from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.security import SecurityRequirement
 
 
 # ----------------------------------------------------------------------
@@ -34,6 +35,7 @@ class CommunityStandardsQuery(Query):
                 CodeOfConductRequirement(),
                 ContributingRequirement(),
                 LicenseRequirement(),
+                SecurityRequirement(),
                 IssueTemplateRequirement(),
                 PullRequestTemplateRequirement(),
             ],
