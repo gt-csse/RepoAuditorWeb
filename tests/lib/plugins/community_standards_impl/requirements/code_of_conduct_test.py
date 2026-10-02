@@ -17,6 +17,11 @@ from conftest import MyModule, MyQuery
 _RESOLUTION = textwrap.dedent(
     """\
     Add a CODE_OF_CONDUCT file to the repository. The file should define the standards of behavior expected from contributors, describe unacceptable behavior, and explain how to report violations and how they will be enforced. Adopting an established code of conduct, such as the Contributor Covenant, is a common approach.
+
+    GitHub provides these templates when adding a CODE_OF_CONDUCT file through its web interface:
+
+    - [Contributor Covenant](https://www.contributor-covenant.org/)
+    - [Citizen Code of Conduct](https://github.com/stumpsyn/policies/blob/master/citizen_code_of_conduct.md)
     """,
 )
 
@@ -114,7 +119,7 @@ def test_NotFound(repo):
 
     assert result.result == EvaluateResultValue.Error
     assert (
-        result.context == "CODE_OF_CONDUCT was not found in any of these directories: `.`, `docs`, `.github`."
+        result.context == "CODE_OF_CONDUCT was not found in any of these directories: `.github`, `.`, `docs`."
     )
     assert result.resolution == _RESOLUTION
     assert result.rationale == _RATIONALE

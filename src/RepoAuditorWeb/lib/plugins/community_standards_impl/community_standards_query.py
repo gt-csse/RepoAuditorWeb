@@ -8,6 +8,9 @@ from RepoAuditorWeb.lib.query import Query
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.code_of_conduct import (
     CodeOfConductRequirement,
 )
+from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.contributing import (
+    ContributingRequirement,
+)
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.readme import ReadmeRequirement
 
 
@@ -22,6 +25,7 @@ class CommunityStandardsQuery(Query):
             [
                 ReadmeRequirement(),
                 CodeOfConductRequirement(),
+                ContributingRequirement(),
             ],
         )
 

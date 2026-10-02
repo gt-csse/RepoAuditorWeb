@@ -110,6 +110,6 @@ def test_NotFound(repo):
     result = _Evaluate(repo)
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == "README was not found in any of these directories: `.`, `docs`, `.github`."
+    assert result.context == "README was not found in any of these directories: `.github`, `.`, `docs`."
     assert result.resolution == _RESOLUTION
     assert result.rationale == _RATIONALE

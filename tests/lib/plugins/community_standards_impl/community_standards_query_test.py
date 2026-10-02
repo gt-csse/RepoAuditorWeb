@@ -50,7 +50,11 @@ def test_Construct():
     query = CommunityStandardsQuery()
 
     assert query.name == "Community Standards"
-    assert [requirement.name for requirement in query.requirements] == ["Readme", "CodeOfConduct"]
+    assert [requirement.name for requirement in query.requirements] == [
+        "Readme",
+        "CodeOfConduct",
+        "Contributing",
+    ]
 
 
 # ----------------------------------------------------------------------
@@ -177,7 +181,8 @@ def test_EndToEnd(tmp_path):
 
     (source_dir / "README.md").write_text("content", encoding="utf-8")
     (source_dir / "CODE_OF_CONDUCT.md").write_text("content", encoding="utf-8")
-    source_repo.index.add(["README.md", "CODE_OF_CONDUCT.md"])
+    (source_dir / "CONTRIBUTING.md").write_text("content", encoding="utf-8")
+    source_repo.index.add(["README.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md"])
     source_repo.index.commit("Initial commit", author=git.Actor("Me", "me@example.com"))
 
     query = CommunityStandardsQuery()
@@ -194,4 +199,4 @@ def test_EndToEnd(tmp_path):
     finally:
         query.CleanupQueryData(query_data)
 
-    assert [result.result for result in results] == [EvaluateResultValue.Success, EvaluateResultValue.Success]
+    assert [result.result for result in results] == [EvaluateResultValue.Success] * 3
