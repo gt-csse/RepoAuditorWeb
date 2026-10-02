@@ -19,7 +19,7 @@ class FileExistsRequirement(Requirement):
     def __init__(
         self,
         name: str,
-        filename: str,
+        filename_or_filenames: str | list[str],
         directories: list[str],
         resolution: str,
         rationale: str,
@@ -27,13 +27,24 @@ class FileExistsRequirement(Requirement):
         requires_explicit_include: bool = False,
         is_directory: bool = False,
     ) -> None:
+        filenames = (
+            [filename_or_filenames] if isinstance(filename_or_filenames, str) else filename_or_filenames
+        )
+
+        if not filenames:
+            msg = f"'{name}' must specify at least one filename."
+            raise ValueError(msg)
+
+        display_name = " or ".join(filenames)
+
         super().__init__(
             name,
-            f"Validates that {filename} exists in the repository.",
+            f"Validates that {display_name} exists in the repository.",
             requires_explicit_include=requires_explicit_include,
         )
 
-        self._filename = filename
+        self._display_name = display_name
+        self._match_names = {filename.lower() for filename in filenames}
         self._directories = list(directories)
         self._resolution = resolution
         self._rationale = rationale
@@ -78,9 +89,9 @@ class FileExistsRequirement(Requirement):
                 item.relative_to(repo_dir).as_posix()
                 for item in sorted(this_dir.glob("*"))
                 if (
-                    item.is_dir() and item.name.lower() == self._filename.lower()
+                    item.is_dir() and item.name.lower() in self._match_names
                     if self._is_directory
-                    else item.is_file() and item.name.split(".", 1)[0].lower() == self._filename.lower()
+                    else item.is_file() and item.name.split(".", 1)[0].lower() in self._match_names
                 )
                 and item.resolve().is_relative_to(repo_dir)
             )
@@ -90,7 +101,7 @@ class FileExistsRequirement(Requirement):
 
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"{self._filename} was found at {found_locations_str}, but the requirement was configured to prohibit it.",
+                f"{self._display_name} was found at {found_locations_str}, but the requirement was configured to prohibit it.",
                 f"Remove {found_locations_str} from the repository.",
                 self._CreateRationale(requirement_data),
                 self,
@@ -111,7 +122,7 @@ class FileExistsRequirement(Requirement):
             context = f"{self._CreateNotFoundMessage()}, and the requirement was configured to prohibit it."
         else:
             found_locations_str = ", ".join(f"`{location}`" for location in found_locations)
-            context = f"{self._filename} was found at {found_locations_str}."
+            context = f"{self._display_name} was found at {found_locations_str}."
 
         return EvaluateResult(
             EvaluateResultValue.Success,
@@ -125,11 +136,11 @@ class FileExistsRequirement(Requirement):
     # ----------------------------------------------------------------------
     def _CreateNotFoundMessage(self) -> str:
         if len(self._directories) == 1:
-            return f"{self._filename} was not found in the `{self._directories[0]}` directory"
+            return f"{self._display_name} was not found in the `{self._directories[0]}` directory"
 
         directories_str = ", ".join(f"`{directory}`" for directory in self._directories)
 
-        return f"{self._filename} was not found in any of these directories: {directories_str}"
+        return f"{self._display_name} was not found in any of these directories: {directories_str}"
 
     # ----------------------------------------------------------------------
     def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:

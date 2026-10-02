@@ -1,13 +1,11 @@
-from typing import override
-
-from typer.models import OptionInfo
-
-from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.module import Module
+from RepoAuditorWeb.lib.plugins.scientific_software_impl.scientific_software_query import (
+    ScientificSoftwareQuery,
+)
+from RepoAuditorWeb.lib.plugins.shared.cloned_repository_module import ClonedRepositoryModule
 
 
 # ----------------------------------------------------------------------
-class ScientificSoftwareModule(Module):
+class ScientificSoftwareModule(ClonedRepositoryModule):
     """Module for validating the existence of repository files that are required for scientific software."""
 
     # ----------------------------------------------------------------------
@@ -15,21 +13,7 @@ class ScientificSoftwareModule(Module):
         super().__init__(
             "ScientificSoftware",
             "Validates files that are required for scientific software.",
-            [],
-            requires_explicit_include=True,
+            [
+                ScientificSoftwareQuery(),
+            ],
         )
-
-    # ----------------------------------------------------------------------
-    @override
-    def _GetParametersImpl(self) -> dict[str, TyperParameter]:
-        return {
-            "five": TyperParameter(int, 50, OptionInfo(help="Five", min=10, max=100)),
-            "six": TyperParameter(bool, default=False, info=OptionInfo(help="Six")),
-        }
-
-    # ----------------------------------------------------------------------
-    @override
-    def _GetModuleDataImpl(
-        self, arguments: dict[str | None, dict[str, object]]
-    ) -> dict[str | None, dict[str, object]]:
-        return arguments
