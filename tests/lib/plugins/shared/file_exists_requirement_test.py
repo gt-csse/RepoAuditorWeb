@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.impl.file_exists_requirement import (
+from RepoAuditorWeb.lib.plugins.shared.file_exists_requirement import (
     FileExistsRequirement,
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
