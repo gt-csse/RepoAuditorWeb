@@ -58,7 +58,9 @@ _RESULT_VALUE_DISPLAY_NAMES = {
     EvaluateResultValue.Error: "Error",
 }
 
-_markdown = MarkdownIt("commonmark").enable("table")
+# Content can embed values from the untrusted repository (such as filenames), so raw HTML is
+# escaped rather than passed through to the page.
+_markdown = MarkdownIt("commonmark", {"html": False}).enable("table")
 
 # The requirement's name occupies 'h2' and the 'Resolution'/'Rationale' labels sit a level beneath
 # it, so headings authored within the content are demoted to nest beneath them rather than compete

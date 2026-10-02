@@ -136,6 +136,33 @@ class TestRequired:
 
         assert _Evaluate(repo).result == EvaluateResultValue.Error
 
+    # ----------------------------------------------------------------------
+    def test_SymlinkWithinRepository(self, repo):
+        _CreateFile(repo, "other/MY_FILE.md")
+        (Path(repo.name) / "MY_FILE.md").symlink_to(Path(repo.name) / "other" / "MY_FILE.md")
+
+        result = _Evaluate(repo)
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == "MY_FILE was found at `MY_FILE.md`."
+
+    # ----------------------------------------------------------------------
+    # Following symlinks out of the untrusted repository would reveal whether paths on the host exist.
+    def test_SymlinkedFileOutsideRepository(self, repo, tmp_path):
+        (tmp_path / "MY_FILE.md").write_text("content", encoding="utf-8")
+        (Path(repo.name) / "MY_FILE.md").symlink_to(tmp_path / "MY_FILE.md")
+
+        assert _Evaluate(repo).result == EvaluateResultValue.Error
+
+    # ----------------------------------------------------------------------
+    # The file links back into the repository so that only the directory check can reject it.
+    def test_SymlinkedDirectoryOutsideRepository(self, repo, tmp_path):
+        _CreateFile(repo, "other/MY_FILE.md")
+        (tmp_path / "MY_FILE.md").symlink_to(Path(repo.name) / "other" / "MY_FILE.md")
+        (Path(repo.name) / "docs").symlink_to(tmp_path, target_is_directory=True)
+
+        assert _Evaluate(repo).result == EvaluateResultValue.Error
+
 
 # ----------------------------------------------------------------------
 class TestIsDirectory:

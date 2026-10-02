@@ -56,6 +56,7 @@ def test_Construct():
         "Contributing",
         "License",
         "IssueTemplate",
+        "PullRequestTemplate",
     ]
 
 
@@ -187,6 +188,7 @@ def test_EndToEnd(tmp_path):
     (source_dir / "LICENSE").write_text("content", encoding="utf-8")
     (source_dir / ".github" / "ISSUE_TEMPLATE").mkdir(parents=True)
     (source_dir / ".github" / "ISSUE_TEMPLATE" / "bug_report.md").write_text("content", encoding="utf-8")
+    (source_dir / ".github" / "pull_request_template.md").write_text("content", encoding="utf-8")
     source_repo.index.add(
         [
             "README.md",
@@ -194,6 +196,7 @@ def test_EndToEnd(tmp_path):
             "CONTRIBUTING.md",
             "LICENSE",
             ".github/ISSUE_TEMPLATE/bug_report.md",
+            ".github/pull_request_template.md",
         ],
     )
     source_repo.index.commit("Initial commit", author=git.Actor("Me", "me@example.com"))
@@ -212,4 +215,4 @@ def test_EndToEnd(tmp_path):
     finally:
         query.CleanupQueryData(query_data)
 
-    assert [result.result for result in results] == [EvaluateResultValue.Success] * 5
+    assert [result.result for result in results] == [EvaluateResultValue.Success] * 6
