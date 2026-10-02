@@ -54,6 +54,7 @@ def test_Construct():
         "Readme",
         "CodeOfConduct",
         "Contributing",
+        "License",
         "IssueTemplate",
     ]
 
@@ -183,10 +184,17 @@ def test_EndToEnd(tmp_path):
     (source_dir / "README.md").write_text("content", encoding="utf-8")
     (source_dir / "CODE_OF_CONDUCT.md").write_text("content", encoding="utf-8")
     (source_dir / "CONTRIBUTING.md").write_text("content", encoding="utf-8")
+    (source_dir / "LICENSE").write_text("content", encoding="utf-8")
     (source_dir / ".github" / "ISSUE_TEMPLATE").mkdir(parents=True)
     (source_dir / ".github" / "ISSUE_TEMPLATE" / "bug_report.md").write_text("content", encoding="utf-8")
     source_repo.index.add(
-        ["README.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", ".github/ISSUE_TEMPLATE/bug_report.md"],
+        [
+            "README.md",
+            "CODE_OF_CONDUCT.md",
+            "CONTRIBUTING.md",
+            "LICENSE",
+            ".github/ISSUE_TEMPLATE/bug_report.md",
+        ],
     )
     source_repo.index.commit("Initial commit", author=git.Actor("Me", "me@example.com"))
 
@@ -204,4 +212,4 @@ def test_EndToEnd(tmp_path):
     finally:
         query.CleanupQueryData(query_data)
 
-    assert [result.result for result in results] == [EvaluateResultValue.Success] * 4
+    assert [result.result for result in results] == [EvaluateResultValue.Success] * 5
