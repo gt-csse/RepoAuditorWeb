@@ -25,6 +25,7 @@ class FileExistsRequirement(Requirement):
         rationale: str,
         *,
         requires_explicit_include: bool = False,
+        is_directory: bool = False,
     ) -> None:
         super().__init__(
             name,
@@ -36,6 +37,7 @@ class FileExistsRequirement(Requirement):
         self._directories = list(directories)
         self._resolution = resolution
         self._rationale = rationale
+        self._is_directory = is_directory
 
     # ----------------------------------------------------------------------
     @override
@@ -69,11 +71,15 @@ class FileExistsRequirement(Requirement):
             if not this_dir.is_dir():
                 continue
 
-            # follows GitHub's detection: case-insensitive and with any extension (e.g. `readme.md`, `README`).
+            # follows GitHub's detection: case-insensitive, and files may have any extension (e.g. `readme.md`, `README`).
             found_locations.extend(
                 item.relative_to(repo_dir).as_posix()
                 for item in sorted(this_dir.glob("*"))
-                if item.is_file() and item.name.split(".", 1)[0].lower() == self._filename.lower()
+                if (
+                    item.is_dir() and item.name.lower() == self._filename.lower()
+                    if self._is_directory
+                    else item.is_file() and item.name.split(".", 1)[0].lower() == self._filename.lower()
+                )
             )
 
         if prohibit and found_locations:
@@ -89,11 +95,9 @@ class FileExistsRequirement(Requirement):
             )
 
         if not prohibit and not found_locations:
-            directories_str = ", ".join(f"`{directory}`" for directory in self._directories)
-
             return EvaluateResult(
                 EvaluateResultValue.Error,
-                f"{self._filename} was not found in any of these directories: {directories_str}.",
+                f"{self._CreateNotFoundMessage()}.",
                 self._resolution,
                 self._CreateRationale(requirement_data),
                 self,
@@ -101,8 +105,7 @@ class FileExistsRequirement(Requirement):
             )
 
         if prohibit:
-            directories_str = ", ".join(f"`{directory}`" for directory in self._directories)
-            context = f"{self._filename} was not found in any of these directories: {directories_str}, and the requirement was configured to prohibit it."
+            context = f"{self._CreateNotFoundMessage()}, and the requirement was configured to prohibit it."
         else:
             found_locations_str = ", ".join(f"`{location}`" for location in found_locations)
             context = f"{self._filename} was found at {found_locations_str}."
@@ -115,6 +118,15 @@ class FileExistsRequirement(Requirement):
             self,
             module,
         )
+
+    # ----------------------------------------------------------------------
+    def _CreateNotFoundMessage(self) -> str:
+        if len(self._directories) == 1:
+            return f"{self._filename} was not found in the `{self._directories[0]}` directory"
+
+        directories_str = ", ".join(f"`{directory}`" for directory in self._directories)
+
+        return f"{self._filename} was not found in any of these directories: {directories_str}"
 
     # ----------------------------------------------------------------------
     def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:

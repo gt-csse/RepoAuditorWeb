@@ -108,6 +108,15 @@ class TestRequired:
         assert result.rationale == "My rationale."
 
     # ----------------------------------------------------------------------
+    def test_NotFoundSingleDirectory(self, repo):
+        requirement = FileExistsRequirement("MyFile", "MY_FILE", ["docs"], "My resolution.", "My rationale.")
+
+        result = _Evaluate(repo, requirement=requirement)
+
+        assert result.result == EvaluateResultValue.Error
+        assert result.context == "MY_FILE was not found in the `docs` directory."
+
+    # ----------------------------------------------------------------------
     # Only the listed directories are searched, so a file elsewhere in the repository does not count.
     def test_UnlistedLocation(self, repo):
         _CreateFile(repo, "other/MY_FILE.md")
@@ -129,6 +138,51 @@ class TestRequired:
 
 
 # ----------------------------------------------------------------------
+class TestIsDirectory:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _CreateDirectoryRequirement() -> FileExistsRequirement:
+        return FileExistsRequirement(
+            "MyDir",
+            "MY_DIR",
+            [".", "docs"],
+            "My resolution.",
+            "My rationale.",
+            is_directory=True,
+        )
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("location", ["MY_DIR", "docs/my_dir"])
+    def test_Found(self, repo, location):
+        _CreateFile(repo, f"{location}/template.md")
+
+        result = _Evaluate(repo, requirement=self._CreateDirectoryRequirement())
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == f"MY_DIR was found at `{location}`."
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("location", ["MY_DIR", "MY_DIR.md"])
+    def test_FileIsNotADirectory(self, repo, location):
+        _CreateFile(repo, location)
+
+        assert (
+            _Evaluate(repo, requirement=self._CreateDirectoryRequirement()).result
+            == EvaluateResultValue.Error
+        )
+
+    # ----------------------------------------------------------------------
+    # Extensions are only ignored for files, so a directory must match the name exactly.
+    def test_DirectoryWithExtensionIsNotAMatch(self, repo):
+        _CreateFile(repo, "MY_DIR.old/template.md")
+
+        assert (
+            _Evaluate(repo, requirement=self._CreateDirectoryRequirement()).result
+            == EvaluateResultValue.Error
+        )
+
+
+# ----------------------------------------------------------------------
 class TestProhibited:
     # ----------------------------------------------------------------------
     def test_NotFound(self, repo):
@@ -140,6 +194,17 @@ class TestProhibited:
         )
         assert result.resolution is None
         assert result.rationale is None
+
+    # ----------------------------------------------------------------------
+    def test_NotFoundSingleDirectory(self, repo):
+        requirement = FileExistsRequirement("MyFile", "MY_FILE", ["docs"], "My resolution.", "My rationale.")
+
+        result = _Evaluate(repo, prohibit=True, requirement=requirement)
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == (
+            "MY_FILE was not found in the `docs` directory, and the requirement was configured to prohibit it."
+        )
 
     # ----------------------------------------------------------------------
     # The rationale justifies the default (required), so it does not apply once prohibit overrides it.
