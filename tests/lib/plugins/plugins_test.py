@@ -23,8 +23,8 @@ from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import Scientifi
             CommunityStandardsModule,
             "CommunityStandards",
             "Validates files that are considered community standards.",
-            False,
-            ["skip", "url", "pat", "branch"],
+            True,
+            ["include", "url", "pat", "branch"],
         ),
         (
             scientific_software_plugin,
@@ -63,7 +63,7 @@ def test_GetModule(plugin, module_type, name, description, requires_explicit_inc
         (
             CommunityStandardsModule,
             {
-                "skip": (bool, False),
+                "include": (bool, False),
                 "url": (str, None),
                 "pat": (str | None, None),
                 "branch": (str | None, None),
