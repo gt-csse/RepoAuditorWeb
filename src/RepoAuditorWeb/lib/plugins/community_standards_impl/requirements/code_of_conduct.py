@@ -14,11 +14,16 @@ class CodeOfConductRequirement(FileExistsRequirement):
         super().__init__(
             "CodeOfConduct",
             "CODE_OF_CONDUCT",
-            # The directories GitHub searches.
-            [".", "docs", ".github"],
+            # The directories GitHub searches, in the order it searches them.
+            [".github", ".", "docs"],
             textwrap.dedent(
                 """\
                 Add a CODE_OF_CONDUCT file to the repository. The file should define the standards of behavior expected from contributors, describe unacceptable behavior, and explain how to report violations and how they will be enforced. Adopting an established code of conduct, such as the Contributor Covenant, is a common approach.
+
+                GitHub provides these templates when adding a CODE_OF_CONDUCT file through its web interface:
+
+                - [Contributor Covenant](https://www.contributor-covenant.org/)
+                - [Citizen Code of Conduct](https://github.com/stumpsyn/policies/blob/master/citizen_code_of_conduct.md)
                 """
             ),
             textwrap.dedent(

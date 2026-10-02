@@ -14,8 +14,8 @@ class ReadmeRequirement(FileExistsRequirement):
         super().__init__(
             "Readme",
             "README",
-            # The directories GitHub searches.
-            [".", "docs", ".github"],
+            # The directories GitHub searches, in the order it searches them.
+            [".github", ".", "docs"],
             textwrap.dedent(
                 """\
                 Add a README file to the repository. The README file should provide information about the project, including its purpose, how to install and use it, and any other relevant details. It should be written in a clear and concise manner, and it should be easy to understand for users who are new to the project.
