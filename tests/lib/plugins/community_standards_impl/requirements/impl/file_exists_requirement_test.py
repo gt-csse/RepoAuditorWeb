@@ -94,7 +94,7 @@ class TestRequired:
         result = _Evaluate(repo)
 
         assert result.result == EvaluateResultValue.Success
-        assert result.context is None
+        assert result.context == f"MY_FILE was found at `{location}`."
         assert result.resolution is None
         assert result.rationale == "My rationale."
 
@@ -135,7 +135,9 @@ class TestProhibited:
         result = _Evaluate(repo, prohibit=True)
 
         assert result.result == EvaluateResultValue.Success
-        assert result.context is None
+        assert result.context == (
+            "MY_FILE was not found in any of these directories: `.`, `docs`, and the requirement was configured to prohibit it."
+        )
         assert result.resolution is None
         assert result.rationale is None
 

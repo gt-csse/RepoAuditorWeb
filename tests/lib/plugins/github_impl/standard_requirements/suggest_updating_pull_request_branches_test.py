@@ -108,7 +108,9 @@ def test_MatchingStatus(allow_update_branch, require):
     result = _Evaluate({"allow_update_branch": allow_update_branch}, require=require)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{allow_update_branch}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

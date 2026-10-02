@@ -171,7 +171,10 @@ def test_MatchingValue(response, require):
     result = _Evaluate(response, require=require)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == f"The repository's value is '{require}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 
@@ -230,7 +233,10 @@ def test_SucceedsWithoutPullRequestRuleWhenEvaluatingAll(response):
     result = _Evaluate(response, evaluate_all=True)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "The repository's value is 'False', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

@@ -152,12 +152,14 @@ def test_EmptyFailureContext():
 
 
 # ----------------------------------------------------------------------
-# AllowEmpty accepts any value, so it never reports context.
+# AllowEmpty accepts any value, so its context does not depend on the description.
 @pytest.mark.parametrize("description", ["My description.", "", None])
-def test_AllowEmptyHasNoContext(description):
+def test_AllowEmptyContext(description):
     result = _EvaluateResponse({"description": description}, Values.AllowEmpty)
 
-    assert result.context is None
+    assert result.context == (
+        "The requirement was configured to allow the repository description to be empty or populated."
+    )
     assert result.resolution is None
 
 
@@ -219,7 +221,9 @@ def test_ResultAttributes():
         {"skip": False, "value": Values.Populated},
     )
 
-    assert result.context is None
+    assert result.context == (
+        "The repository description is populated, which the requirement was configured to require."
+    )
     assert result.resolution is None
     assert result.rationale == _RATIONALE
     assert result.requirement is requirement

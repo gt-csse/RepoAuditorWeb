@@ -74,7 +74,7 @@ class TemplateRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The repository's value is '{is_template_value}', which the requirement was configured to require.",
             None,
             self._CreateRationale(requirement_data),
             self,

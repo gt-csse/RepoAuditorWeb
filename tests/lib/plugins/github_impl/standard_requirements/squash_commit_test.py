@@ -114,7 +114,9 @@ def test_MatchingStatus(allow_squash_merge, require):
     result = _Evaluate({"allow_squash_merge": allow_squash_merge}, require=require)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{allow_squash_merge}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

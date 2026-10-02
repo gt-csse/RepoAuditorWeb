@@ -93,7 +93,9 @@ def test_AcceptableDefaultBranch():
     result = _Evaluate({"default_branch": "main"})
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The default branch 'main' is in the list of acceptable default branches ('main')."
+    )
     assert result.resolution is None
 
 

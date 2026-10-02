@@ -140,19 +140,31 @@ def test_ValuesMembers():
 # Each human-facing value corresponds to a pairing of the two API fields, and the pairing is what
 # the requirement compares against.
 @pytest.mark.parametrize(
-    ("value", "title", "message"),
+    ("value", "title", "message", "label"),
     [
-        (Values.DefaultMessage, "COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES"),
-        (Values.PullRequestTitle, "PR_TITLE", "BLANK"),
-        (Values.PullRequestTitleAndCommitDetails, "PR_TITLE", "COMMIT_MESSAGES"),
-        (Values.PullRequestTitleAndDescription, "PR_TITLE", "PR_BODY"),
+        (Values.DefaultMessage, "COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES", "Default message"),
+        (Values.PullRequestTitle, "PR_TITLE", "BLANK", "Pull request title"),
+        (
+            Values.PullRequestTitleAndCommitDetails,
+            "PR_TITLE",
+            "COMMIT_MESSAGES",
+            "Pull request title and commit details",
+        ),
+        (
+            Values.PullRequestTitleAndDescription,
+            "PR_TITLE",
+            "PR_BODY",
+            "Pull request title and description",
+        ),
     ],
 )
-def test_MatchingValues(value, title, message):
+def test_MatchingValues(value, title, message, label):
     result = _Evaluate(_Response(title, message), value=value)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's default squash commit message is '{label}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

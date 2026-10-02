@@ -123,7 +123,10 @@ def test_ClassicProtectionWhenPermitted():
     result = _Evaluate(permit=True)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "Classic branch protection is in use, and the requirement was configured to permit it."
+    )
     assert result.resolution is None
 
 

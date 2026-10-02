@@ -112,7 +112,9 @@ def test_MatchingStatus(allow_rebase_merge, require):
     result = _Evaluate({"allow_rebase_merge": allow_rebase_merge}, require=require)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{allow_rebase_merge}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

@@ -111,7 +111,9 @@ def test_MatchingStatus(allow_merge_commit, prohibit):
     result = _Evaluate({"allow_merge_commit": allow_merge_commit}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{allow_merge_commit}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

@@ -78,7 +78,7 @@ class WebCommitSignoffRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The repository's value is '{web_commit_signoff_value}', which the requirement was configured to require.",
             None,
             self._CreateRationale(requirement_data),
             self,

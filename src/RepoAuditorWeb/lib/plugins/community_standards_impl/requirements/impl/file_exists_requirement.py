@@ -100,9 +100,16 @@ class FileExistsRequirement(Requirement):
                 module,
             )
 
+        if prohibit:
+            directories_str = ", ".join(f"`{directory}`" for directory in self._directories)
+            context = f"{self._filename} was not found in any of these directories: {directories_str}, and the requirement was configured to prohibit it."
+        else:
+            found_locations_str = ", ".join(f"`{location}`" for location in found_locations)
+            context = f"{self._filename} was found at {found_locations_str}."
+
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            context,
             None,
             self._CreateRationale(requirement_data),
             self,

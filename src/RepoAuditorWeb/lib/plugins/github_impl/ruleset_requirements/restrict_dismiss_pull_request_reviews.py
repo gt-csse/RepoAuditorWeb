@@ -166,9 +166,15 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
                 module,
             )
 
+        context = (
+            f"The ruleset allows {len(allowed_actors)} actor(s) to dismiss reviews, and the requirement was configured to require at most {acceptable_actors}."
+            if acceptable_value
+            else f"The repository's value is '{restriction_value}', which the requirement was configured to require."
+        )
+
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            context,
             None,
             self._CreateRationale(requirement_data),
             self,

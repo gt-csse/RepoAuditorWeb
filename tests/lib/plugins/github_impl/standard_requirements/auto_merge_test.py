@@ -117,7 +117,9 @@ def test_MatchingStatus(allow_auto_merge, prohibit):
     result = _Evaluate({"allow_auto_merge": allow_auto_merge}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{allow_auto_merge}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

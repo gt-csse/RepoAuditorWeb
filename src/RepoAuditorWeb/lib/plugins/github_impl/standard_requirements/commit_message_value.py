@@ -165,7 +165,7 @@ def EvaluateCommitMessage(
 
     return EvaluateResult(
         EvaluateResultValue.Success,
-        None,
+        f"The repository's default {setting.method_description} message is '{setting.ui_labels[value]}', which the requirement was configured to require.",
         None,
         create_rationale_func(),
         requirement,

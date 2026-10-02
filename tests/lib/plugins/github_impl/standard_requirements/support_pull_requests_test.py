@@ -111,7 +111,9 @@ def test_MatchingStatus(has_pull_requests, prohibit):
     result = _Evaluate({"has_pull_requests": has_pull_requests}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{has_pull_requests}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 
@@ -217,7 +219,9 @@ def test_MissingStatusWhenProhibited():
     result = _Evaluate({}, prohibit=True)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The repository's value is 'False', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

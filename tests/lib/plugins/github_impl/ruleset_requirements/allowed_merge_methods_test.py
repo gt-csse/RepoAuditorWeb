@@ -160,7 +160,10 @@ def test_MatchingValue():
     result = _Evaluate([_CreatePullRequestRule(["merge"])])
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "The repository's value is 'Merge', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 
@@ -169,7 +172,10 @@ def test_MatchingValueWithOtherRules():
     result = _Evaluate([_OTHER_RULE, _CreatePullRequestRule(["merge"])])
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "The repository's value is 'Merge', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -275,18 +281,25 @@ def test_WrongMethods(allowed_merge_methods, expected):
 # The value parameter is repeatable, so a project that permits more than one method names each of
 # them rather than choosing a single one.
 @pytest.mark.parametrize(
-    ("allowed_merge_methods", "value"),
+    ("allowed_merge_methods", "value", "expected"),
     [
-        (["squash"], [Values.Squash]),
-        (["squash", "rebase"], [Values.Squash, Values.Rebase]),
-        (["merge", "squash", "rebase"], [Values.Merge, Values.Squash, Values.Rebase]),
+        (["squash"], [Values.Squash], "Squash"),
+        (["squash", "rebase"], [Values.Squash, Values.Rebase], "Squash, Rebase"),
+        (
+            ["merge", "squash", "rebase"],
+            [Values.Merge, Values.Squash, Values.Rebase],
+            "Merge, Squash, Rebase",
+        ),
     ],
 )
-def test_ValueOverridesDefault(allowed_merge_methods, value):
+def test_ValueOverridesDefault(allowed_merge_methods, value, expected):
     result = _Evaluate([_CreatePullRequestRule(allowed_merge_methods)], value=value)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == f"The repository's value is '{expected}', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -299,7 +312,10 @@ def test_OrderIsInsignificant():
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "The repository's value is 'Merge, Squash, Rebase', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -311,7 +327,10 @@ def test_DuplicateValuesAreEquivalent():
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "The repository's value is 'Squash', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -339,7 +358,10 @@ def test_MultiplePullRequestRules():
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == "The repository's value is 'Merge', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

@@ -173,7 +173,10 @@ def test_MatchingValue(response, prohibit):
     result = _Evaluate(response, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == f"The repository's value is '{not prohibit}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 
@@ -313,7 +316,9 @@ def test_StrictAcrossMultipleRules():
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context == "The repository's value is 'True', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

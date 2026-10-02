@@ -103,7 +103,9 @@ def test_MatchingValue(web_commit_signoff_required, require):
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{web_commit_signoff_required}', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -183,7 +185,9 @@ def test_MissingValue():
     result = _Evaluate({})
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        "The repository's value is 'False', which the requirement was configured to require."
+    )
 
 
 # ----------------------------------------------------------------------

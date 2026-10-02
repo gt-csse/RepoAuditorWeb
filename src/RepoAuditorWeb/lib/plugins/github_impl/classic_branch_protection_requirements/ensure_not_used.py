@@ -84,7 +84,7 @@ class EnsureNotUsedRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            "Classic branch protection is in use, and the requirement was configured to permit it.",
             None,
             self._CreateRationale(requirement_data),
             self,

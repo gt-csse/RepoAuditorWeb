@@ -93,7 +93,7 @@ class PublicPrivateRequirement(Requirement):
 
         return EvaluateResult(
             EvaluateResultValue.Success,
-            None,
+            f"The visibility is '{visibility_value}', which the requirement was configured to require.",
             None,
             self._CreateRationale(requirement_data),
             self,

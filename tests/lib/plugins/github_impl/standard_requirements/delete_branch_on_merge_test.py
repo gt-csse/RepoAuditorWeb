@@ -114,7 +114,9 @@ def test_MatchingStatus(delete_branch_on_merge, prohibit):
     result = _Evaluate({"delete_branch_on_merge": delete_branch_on_merge}, prohibit=prohibit)
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert result.context == (
+        f"The repository's value is '{delete_branch_on_merge}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

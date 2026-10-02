@@ -158,7 +158,10 @@ def test_TeamSizeDefault(team_size, expected):
     )
 
     assert result.result == EvaluateResultValue.Success
-    assert result.context is None
+    assert (
+        result.context
+        == f"The repository's value is '{expected}', which the requirement was configured to require."
+    )
     assert result.resolution is None
 
 

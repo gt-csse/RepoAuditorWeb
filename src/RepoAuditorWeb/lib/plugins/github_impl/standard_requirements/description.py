@@ -62,14 +62,16 @@ class DescriptionRequirement(Requirement):
         if value == Values.Populated:
             if response.get("description"):
                 result = EvaluateResultValue.Success
-                context = None
+                context = "The repository description is populated, which the requirement was configured to require."
             else:
                 result = EvaluateResultValue.Error
                 context = "The repository description is empty."
                 action = "Enter a description in the **Description** text box."
         elif value == Values.AllowEmpty:
             result = EvaluateResultValue.Success
-            context = None
+            context = (
+                "The requirement was configured to allow the repository description to be empty or populated."
+            )
         elif value == Values.Empty:
             if response.get("description"):
                 result = EvaluateResultValue.Error
@@ -77,7 +79,9 @@ class DescriptionRequirement(Requirement):
                 action = "Clear the contents of the **Description** text box."
             else:
                 result = EvaluateResultValue.Success
-                context = None
+                context = (
+                    "The repository description is empty, which the requirement was configured to require."
+                )
         else:
             assert False, value  # noqa: B011, PT015  # pragma: no cover
 
