@@ -26,7 +26,7 @@ class CommunityStandardsModule(Module):
             [
                 CommunityStandardsQuery(),
             ],
-            requires_explicit_include=False,  # TODO: True
+            requires_explicit_include=True,
         )
 
     # ----------------------------------------------------------------------

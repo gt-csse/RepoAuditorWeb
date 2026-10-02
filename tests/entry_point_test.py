@@ -27,10 +27,10 @@ def _InvokeAndCapture(args: list[str]) -> tuple[Result, str]:
 
 
 # ----------------------------------------------------------------------
-# The CommunityStandards module is skipped so that no network calls are made. The console experience
+# Modules are not included by default, so no network calls are made. The console experience
 # is requested explicitly because the default experience opens a window and does not return until it
 # is closed.
-_SKIP_NETWORK = ["--CommunityStandards-skip", "--experience", "console"]
+_SKIP_NETWORK = ["--experience", "console"]
 
 
 # ----------------------------------------------------------------------
@@ -71,7 +71,7 @@ def test_DynamicModuleOptionsAppearInHelp():
         "--GitHub-url",
         "--GitHub-pat",
         "--GitHub-branch",
-        "--CommunityStandards-skip",
+        "--CommunityStandards-include",
         "--CommunityStandards-url",
         "--CommunityStandards-pat",
         "--CommunityStandards-branch",
@@ -139,9 +139,7 @@ def test_ModuleIncludeOptionIsResolved():
 # ----------------------------------------------------------------------
 # The GitHub module requires a url, so it fails when it is executed without one.
 def test_ErrorGitHubModuleWithoutUrl():
-    result, output = _InvokeAndCapture(
-        ["--GitHub-include", "--CommunityStandards-skip", "--experience", "console"]
-    )
+    result, output = _InvokeAndCapture(["--GitHub-include", "--experience", "console"])
 
     assert result.exit_code != 0
     assert "'url' is a required argument for this module." in output
@@ -197,7 +195,7 @@ class TestExperience:
     # so it is replaced by a double rather than being invoked.
     def test_WebIsTheDefault(self):
         with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--CommunityStandards-skip"])
+            result, output = _InvokeAndCapture([])
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
@@ -205,7 +203,7 @@ class TestExperience:
     # ----------------------------------------------------------------------
     def test_Web(self):
         with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--CommunityStandards-skip", "--experience", "web"])
+            result, output = _InvokeAndCapture(["--experience", "web"])
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
@@ -215,14 +213,14 @@ class TestExperience:
     # is replaced by a double rather than being invoked.
     def test_Tui(self):
         with mock.patch("RepoAuditorWeb.__main__.ExecuteTuiExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--CommunityStandards-skip", "--experience", "tui"])
+            result, output = _InvokeAndCapture(["--experience", "tui"])
 
         assert result.exit_code == 0, output
         assert experience_mock.call_count == 1
 
     # ----------------------------------------------------------------------
     def test_Json(self):
-        result = CliRunner().invoke(app, ["--CommunityStandards-skip", "--experience", "json"])
+        result = CliRunner().invoke(app, ["--experience", "json"])
 
         assert result.exit_code == 0, result.output
         assert json.loads(result.stdout) == {
@@ -242,7 +240,7 @@ class TestExperience:
     # Everything that DoneManager produces is written to stderr so that the document written to
     # stdout can be redirected to a file or piped to another process as-is.
     def test_JsonProgressIsWrittenToStderr(self):
-        result = CliRunner().invoke(app, ["--CommunityStandards-skip", "--experience", "json"])
+        result = CliRunner().invoke(app, ["--experience", "json"])
 
         assert result.exit_code == 0, result.output
         assert "Executing module 'GitHub' (1 of 3)..." in result.stderr
@@ -252,7 +250,7 @@ class TestExperience:
     # The status output and the document are written to different streams, so the status output
     # ends with a blank line to separate them when both are displayed together.
     def test_JsonStatusOutputEndsWithASeparator(self):
-        result = CliRunner().invoke(app, ["--CommunityStandards-skip", "--experience", "json"])
+        result = CliRunner().invoke(app, ["--experience", "json"])
 
         assert result.exit_code == 0, result.output
 
