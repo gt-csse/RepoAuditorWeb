@@ -11,6 +11,9 @@ from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.code_of_co
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.contributing import (
     ContributingRequirement,
 )
+from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.issue_template import (
+    IssueTemplateRequirement,
+)
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.readme import ReadmeRequirement
 
 
@@ -26,6 +29,7 @@ class CommunityStandardsQuery(Query):
                 ReadmeRequirement(),
                 CodeOfConductRequirement(),
                 ContributingRequirement(),
+                IssueTemplateRequirement(),
             ],
         )
 
