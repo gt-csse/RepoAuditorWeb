@@ -1,4 +1,4 @@
-<!-- Version: 0.2.0 -->
+<!-- python_development Version: 0.9.0 -->
 
 # File Format
 Adhere to these principles when writing files.
@@ -9,7 +9,7 @@ Adhere to these principles when writing files.
 Adhere to these architectural principles when planning and writing code.
 
 - Don't Repeat Yourself (DRY)
-- SOLID
+- SOLID design principles
 - Generate the least amount of code possible
 - Never modify code associated with the system under test when writing tests.
 
@@ -19,9 +19,16 @@ Adhere to these principles when generating code comments or documentation.
 - Do not introduce documentation for code that is common or easily understood.
 - Explain why code was introduced, not what the code is doing.
 - Generate short, crisp documentation rather than verbose prose.
+- Do not generate files in `docs/changes` unless running the `prepare-pr` skill.
+
+# Static Analysis/Linting Errors
+Do not suppress static analysis/linting-style errors; attempt to address the problem instead. Consult the human if the problem cannot be properly addressed.
 
 # Python Development
 Adhere to these conventions when writing python code.
+
+## General
+Run `python`-related tasks using `uv`.
 
 ## Naming
 Use these conventions when writing python code:
@@ -30,6 +37,19 @@ Use these conventions when writing python code:
 - Function and method names use `PascalCase`.
 - Variables use `snake_case`.
 - Filenames use `snake_case` (but this is not required).
+
+## Type Annotations
+Adhere to these conventions when adding type annotations to python code.
+
+- Do not use `Any` in production code; use `object` instead.
+- Never introduce `from __future__ import annotations`.
+
+## Dependencies
+Use these conventions when managing python dependencies:
+
+- Add dependencies via `uv add <package name>`; do not specify an explicit version so that the latest version of the package is applied.
+- Add development-only dependencies via `uv add --dev <package name>`.
+- Upgrade an existing dependency via `uv add --upgrade <package name>`.
 
 ## Testing
 Use these conventions when writing or exercising tests:
