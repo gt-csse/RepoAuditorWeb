@@ -23,7 +23,31 @@ class CodeOfConductRequirement(FileExistsRequirement):
             ),
             textwrap.dedent(
                 """\
-                A CODE_OF_CONDUCT file establishes expectations for how participants in the project interact with one another. It signals that the project is a welcoming and inclusive environment, and it provides a documented process for addressing abusive or unwelcome behavior.
+                The default behavior is to require that a CODE_OF_CONDUCT file exists in the repository.
+
+                ## Reasons for this Default
+
+                - A code of conduct establishes expectations for how participants interact before a
+                  conflict occurs. Enforcement decisions that cite a published standard are easier to
+                  justify and less likely to appear arbitrary than decisions made case by case.
+                - The file documents how to report abusive or unwelcome behavior, giving participants a
+                  known channel rather than requiring them to find a maintainer to contact.
+                - Its presence signals that the project is a welcoming environment, which some
+                  contributors and organizations consider before participating.
+                - Established templates, such as the Contributor Covenant, make adoption inexpensive.
+
+                ## Reasons to Override this Default
+
+                - The organization provides a default CODE_OF_CONDUCT file in its `.github` repository.
+                  GitHub displays that file for repositories that do not define their own, but this
+                  requirement only inspects the repository itself and will not detect it.
+                - The repository does not accept outside participation, such as a personal or internal
+                  repository, so there is no community for the file to govern.
+                - Participant conduct is already governed by a policy outside the repository, such as an
+                  employer's code of conduct for an internal project.
+
+                Note that a code of conduct is only as effective as its enforcement; the reporting
+                contact listed in the file should be monitored by someone with the authority to act.
                 """
             ),
         )
