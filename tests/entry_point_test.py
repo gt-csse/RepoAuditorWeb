@@ -3,6 +3,7 @@ import json
 from collections.abc import Mapping
 from unittest import mock
 
+import git
 import pytest
 import typer
 
@@ -76,8 +77,9 @@ def test_DynamicModuleOptionsAppearInHelp():
         "--CommunityStandards-pat",
         "--CommunityStandards-branch",
         "--ScientificSoftware-include",
-        "--ScientificSoftware-five",
-        "--ScientificSoftware-six",
+        "--ScientificSoftware-url",
+        "--ScientificSoftware-pat",
+        "--ScientificSoftware-branch",
     } <= _GetOptionNames(app)
 
 
@@ -129,8 +131,16 @@ def test_ModulesAreSkipped():
 
 
 # ----------------------------------------------------------------------
-def test_ModuleIncludeOptionIsResolved():
-    result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--ScientificSoftware-include"])
+# A local repository is cloned so that the included module executes without network access.
+def test_ModuleIncludeOptionIsResolved(tmp_path):
+    source_repo = git.Repo.init(tmp_path)
+    (tmp_path / "CITATION.cff").write_text("content", encoding="utf-8")
+    source_repo.index.add(["CITATION.cff"])
+    source_repo.index.commit("Initial commit", author=git.Actor("Me", "me@example.com"))
+
+    result, output = _InvokeAndCapture(
+        [*_SKIP_NETWORK, "--ScientificSoftware-include", "--ScientificSoftware-url", tmp_path.as_uri()],
+    )
 
     assert result.exit_code == 0, output
     assert output.count("SKIPPED.") == 2
@@ -376,6 +386,7 @@ class TestCommonOptions:
 
         assert arguments["GitHub"][None][parameter_name] == value
         assert arguments["CommunityStandards"][None][parameter_name] == value
+        assert arguments["ScientificSoftware"][None][parameter_name] == value
 
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize(
@@ -391,13 +402,7 @@ class TestCommonOptions:
 
         assert arguments["GitHub"][None][parameter_name] == value
         assert arguments["CommunityStandards"][None][parameter_name] == value
-
-    # ----------------------------------------------------------------------
-    # Modules that do not declare the parameter do not receive it.
-    def test_NotForwardedToModulesWithoutParameter(self):
-        arguments = self._InvokeAndCaptureArguments(["--url", "https://github.com/gt-csse/RepoAuditorWeb"])
-
-        assert "url" not in arguments["ScientificSoftware"][None]
+        assert arguments["ScientificSoftware"][None][parameter_name] == value
 
     # ----------------------------------------------------------------------
     # Module-specific values are left untouched when the common option is not provided.

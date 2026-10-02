@@ -210,6 +210,106 @@ class TestIsDirectory:
 
 
 # ----------------------------------------------------------------------
+class TestMultipleFilenames:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _CreateMultipleRequirement(
+        directories: list[str] | None = None,
+        *,
+        is_directory: bool = False,
+    ) -> FileExistsRequirement:
+        return FileExistsRequirement(
+            "MyFile",
+            ["MY_FILE", "MY_FILES"],
+            directories or [".", "docs"],
+            "My resolution.",
+            "My rationale.",
+            is_directory=is_directory,
+        )
+
+    # ----------------------------------------------------------------------
+    def test_Construct(self):
+        assert (
+            self._CreateMultipleRequirement().description
+            == "Validates that MY_FILE or MY_FILES exists in the repository."
+        )
+
+    # ----------------------------------------------------------------------
+    # An empty list would produce a requirement that can never succeed.
+    def test_ErrorNoFilenames(self):
+        with pytest.raises(ValueError) as exc_info:
+            FileExistsRequirement("MyFile", [], ["."], "My resolution.", "My rationale.")
+
+        assert str(exc_info.value) == "'MyFile' must specify at least one filename."
+
+    # ----------------------------------------------------------------------
+    def test_FoundAllNames(self, repo):
+        _CreateFile(repo, "MY_FILE.md")
+        _CreateFile(repo, "docs/MY_FILES.md")
+
+        result = _Evaluate(repo, requirement=self._CreateMultipleRequirement())
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == "MY_FILE or MY_FILES was found at `MY_FILE.md`, `docs/MY_FILES.md`."
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("location", ["MY_FILE", "docs/my_files"])
+    def test_FoundDirectory(self, repo, location):
+        _CreateFile(repo, f"{location}/template.md")
+
+        result = _Evaluate(repo, requirement=self._CreateMultipleRequirement(is_directory=True))
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == f"MY_FILE or MY_FILES was found at `{location}`."
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("location", ["MY_FILE.md", "docs/my_files.md", "MY_FILES"])
+    def test_Found(self, repo, location):
+        _CreateFile(repo, location)
+
+        result = _Evaluate(repo, requirement=self._CreateMultipleRequirement())
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == f"MY_FILE or MY_FILES was found at `{location}`."
+
+    # ----------------------------------------------------------------------
+    def test_NotFound(self, repo):
+        result = _Evaluate(repo, requirement=self._CreateMultipleRequirement())
+
+        assert result.result == EvaluateResultValue.Error
+        assert result.context == "MY_FILE or MY_FILES was not found in any of these directories: `.`, `docs`."
+
+    # ----------------------------------------------------------------------
+    def test_NotFoundSingleDirectory(self, repo):
+        result = _Evaluate(repo, requirement=self._CreateMultipleRequirement(["docs"]))
+
+        assert result.result == EvaluateResultValue.Error
+        assert result.context == "MY_FILE or MY_FILES was not found in the `docs` directory."
+
+    # ----------------------------------------------------------------------
+    def test_ProhibitedNotFound(self, repo):
+        result = _Evaluate(repo, prohibit=True, requirement=self._CreateMultipleRequirement())
+
+        assert result.result == EvaluateResultValue.Success
+        assert result.context == (
+            "MY_FILE or MY_FILES was not found in any of these directories: `.`, `docs`, and the requirement was configured to prohibit it."
+        )
+
+    # ----------------------------------------------------------------------
+    def test_ProhibitedFound(self, repo):
+        _CreateFile(repo, "MY_FILE.md")
+        _CreateFile(repo, "docs/MY_FILES.md")
+
+        result = _Evaluate(repo, prohibit=True, requirement=self._CreateMultipleRequirement())
+
+        assert result.result == EvaluateResultValue.Error
+        assert result.context == (
+            "MY_FILE or MY_FILES was found at `MY_FILE.md`, `docs/MY_FILES.md`, but the requirement was configured to prohibit it."
+        )
+        assert result.resolution == "Remove `MY_FILE.md`, `docs/MY_FILES.md` from the repository."
+
+
+# ----------------------------------------------------------------------
 class TestProhibited:
     # ----------------------------------------------------------------------
     def test_NotFound(self, repo):

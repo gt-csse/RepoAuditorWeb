@@ -32,7 +32,7 @@ from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import Scientifi
             "ScientificSoftware",
             "Validates files that are required for scientific software.",
             True,
-            ["include", "five", "six"],
+            ["include", "url", "pat", "branch"],
         ),
     ],
 )
@@ -69,7 +69,15 @@ def test_GetModule(plugin, module_type, name, description, requires_explicit_inc
                 "branch": (str | None, None),
             },
         ),
-        (ScientificSoftwareModule, {"include": (bool, False), "five": (int, 50), "six": (bool, False)}),
+        (
+            ScientificSoftwareModule,
+            {
+                "include": (bool, False),
+                "url": (str, None),
+                "pat": (str | None, None),
+                "branch": (str | None, None),
+            },
+        ),
     ],
 )
 def test_GetParameters(module_type, expected):
@@ -77,16 +85,3 @@ def test_GetParameters(module_type, expected):
 
     assert {k: (v.type, v.default) for k, v in parameters.items()} == expected
     assert all(param.info is not None for param in parameters.values())
-
-
-# ----------------------------------------------------------------------
-# Modules that have no data of their own pass their arguments straight through to their queries.
-def test_GetModuleData():
-    arguments: dict[str | None, dict[str, object]] = {None: {"include": True}}
-
-    assert ScientificSoftwareModule().GetModuleData(arguments) is arguments
-
-
-# ----------------------------------------------------------------------
-def test_GetModuleDataNotIncluded():
-    assert ScientificSoftwareModule().GetModuleData({None: {"include": False}}) is None
