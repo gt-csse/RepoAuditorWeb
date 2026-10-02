@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.repository_arguments import (
+from RepoAuditorWeb.lib.plugins.shared.repository_arguments import (
     GetRepositoryParameters,
     RepositoryArguments,
     ResolveRepositoryArguments,

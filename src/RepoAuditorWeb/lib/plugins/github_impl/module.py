@@ -11,13 +11,13 @@ from RepoAuditorWeb.lib.plugins.github_impl.classic_branch_protection_query impo
     ClassicBranchProtectionQuery,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_query import DefaultBranchQuery
-from RepoAuditorWeb.lib.plugins.github_impl.repository_arguments import (
-    GetRepositoryParameters,
-    ResolveRepositoryArguments,
-)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_query import RulesetQuery
 from RepoAuditorWeb.lib.plugins.github_impl.standard_query import StandardQuery
 from RepoAuditorWeb.lib.plugins.github_impl.team_size import TeamSize
+from RepoAuditorWeb.lib.plugins.shared.repository_arguments import (
+    GetRepositoryParameters,
+    ResolveRepositoryArguments,
+)
 
 
 # ----------------------------------------------------------------------
