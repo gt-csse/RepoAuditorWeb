@@ -9,7 +9,7 @@ import typer
 
 from typer.testing import CliRunner, Result
 
-from RepoAuditorWeb import __version__
+from RepoAuditorWeb import __version__, APP_NAME
 from RepoAuditorWeb.__main__ import app
 
 
@@ -39,7 +39,7 @@ def test_Version():
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0, result.output
-    assert result.output == f"{__version__}\n"
+    assert result.output == f"{APP_NAME} v{__version__}\n"
 
 
 # ----------------------------------------------------------------------

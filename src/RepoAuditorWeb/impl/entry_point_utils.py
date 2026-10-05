@@ -8,7 +8,7 @@ from typing import Annotated, get_args, get_origin, TYPE_CHECKING
 
 import typer
 
-from RepoAuditorWeb import __version__
+from RepoAuditorWeb import __version__, APP_NAME
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ def VersionCallback(value: bool) -> None:  # noqa: FBT001
     """Display the version number and exit."""
 
     if value:
-        sys.stdout.write(f"{__version__}\n")
+        sys.stdout.write(f"{APP_NAME} v{__version__}\n")
         raise typer.Exit()
 
 
