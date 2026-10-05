@@ -35,7 +35,7 @@ Requirements are grouped into modules:
 | `CommunityStandards` | Files in GitHub's community profile checklist, such as `README`, `CODE_OF_CONDUCT`, `CONTRIBUTING`, `LICENSE`, `SECURITY`, issue templates, and pull request templates. | 7 | No |
 | `ScientificSoftware` | Files expected of scientific software, such as `CITATION.cff`. | 1 | No |
 
-Every requirement has a default that can be customized or skipped, so the audit can be tailored to the conventions of a team or organization.
+Every requirement has a default that can be customized or skipped, so the audit can be tailored to the conventions of a team or organization. Additional modules can be defined in separate packages; see [Custom Modules](https://github.com/gt-csse/RepoAuditorWeb/blob/main/docs/custom_modules.md).
 
 ### How to use `RepoAuditorWeb`
 Run `repoauditorweb` to open the web experience, where modules and requirements are configured before the audit is executed:
@@ -122,6 +122,7 @@ Additional information can be found at these locations.
 | --- | --- | --- |
 | Code of Conduct | [CODE_OF_CONDUCT.md](https://github.com/gt-csse/RepoAuditorWeb/blob/main/CODE_OF_CONDUCT.md) | Information about the norms, rules, and responsibilities we adhere to when participating in this open source community. |
 | Contributing | [CONTRIBUTING.md](https://github.com/gt-csse/RepoAuditorWeb/blob/main/CONTRIBUTING.md) | Information about contributing to this project. |
+| Custom Modules | [docs/custom_modules.md](https://github.com/gt-csse/RepoAuditorWeb/blob/main/docs/custom_modules.md) | Information about defining custom modules in separate packages. |
 | Development | [DEVELOPMENT.md](https://github.com/gt-csse/RepoAuditorWeb/blob/main/DEVELOPMENT.md) | Information about development activities involved in making changes to this project. |
 | Governance | [GOVERNANCE.md](https://github.com/gt-csse/RepoAuditorWeb/blob/main/GOVERNANCE.md) | Information about how this project is governed. |
 | Maintainers | [MAINTAINERS.md](https://github.com/gt-csse/RepoAuditorWeb/blob/main/MAINTAINERS.md) | Information about individuals who maintain this project. |
