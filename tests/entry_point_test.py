@@ -1,4 +1,5 @@
 import json
+import textwrap
 
 from collections.abc import Mapping
 from unittest import mock
@@ -59,6 +60,11 @@ def test_Help():
         "--debug",
         "--version",
     } <= _GetOptionNames(app)
+
+
+# ----------------------------------------------------------------------
+def test_ConfigIsTheFirstOption():
+    assert typer.main.get_command(app).params[0].opts == ["--config"]
 
 
 # ----------------------------------------------------------------------
@@ -440,6 +446,34 @@ class TestCommonOptions:
 
         assert arguments["GitHub"][None][parameter_name] == "module_value"
         assert arguments["CommunityStandards"][None][parameter_name] == value
+
+    # ----------------------------------------------------------------------
+    # Config file keys are the python parameter names, which is how the dynamic module and
+    # requirement parameters are registered with typer.
+    def test_ConfigFile(self, tmp_path):
+        config_filename = tmp_path / "config.yaml"
+        config_filename.write_text(
+            textwrap.dedent(
+                """\
+                url: https://github.com/gt-csse/RepoAuditorWeb
+                GitHub_include: true
+                GitHub_branch: config_branch
+                GitHub_Description_value: empty
+                """,
+            ),
+            encoding="utf-8",
+        )
+
+        arguments = self._InvokeAndCaptureArguments(
+            ["--config", str(config_filename), "--GitHub-branch", "cli_branch"],
+        )
+
+        assert arguments["GitHub"][None]["include"] is True
+        assert arguments["GitHub"][None]["url"] == "https://github.com/gt-csse/RepoAuditorWeb"
+        assert arguments["GitHub"][None]["branch"] == "cli_branch"
+        assert arguments["GitHub"]["Description"]["value"] == "empty"
+        assert arguments["CommunityStandards"][None]["include"] is False
+        assert arguments["CommunityStandards"][None]["url"] == "https://github.com/gt-csse/RepoAuditorWeb"
 
     # ----------------------------------------------------------------------
     def test_ModuleValuesTakePrecedenceOverEnvironmentVariables(self):

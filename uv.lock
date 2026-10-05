@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.14"
 
 [[package]]
@@ -960,6 +960,7 @@ dependencies = [
     { name = "rich" },
     { name = "textual" },
     { name = "typer" },
+    { name = "typer-config", extra = ["yaml"] },
     { name = "uvicorn" },
 ]
 
@@ -986,6 +987,7 @@ requires-dist = [
     { name = "rich", specifier = ">=15.0.0" },
     { name = "textual", specifier = ">=8.2.8" },
     { name = "typer", specifier = ">=0.27.0" },
+    { name = "typer-config", extras = ["yaml"], specifier = ">=1.5.1" },
     { name = "uvicorn", specifier = ">=0.52.4" },
 ]
 
@@ -1250,6 +1252,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/21/83/816a6556bb8f4acaa10e908f609557be00f3df2cae98c4216e4b75235c45/typer_config-1.5.1.tar.gz", hash = "sha256:78be341f6894f44d6f2dc6b01f6eef83b9381d16c11341b12d6b8a245a3fb451", size = 10500, upload-time = "2026-03-01T04:44:18.676Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/e1/e51631c3454838faecf73c95dcfbc337654bdef8ac68671973e2ca823265/typer_config-1.5.1-py3-none-any.whl", hash = "sha256:a13bb7d0043231c58e0ec28195a4f54a08116a48b0d61ca49af13f83ef3a846e", size = 13491, upload-time = "2026-03-01T04:44:17.441Z" },
+]
+
+[package.optional-dependencies]
+yaml = [
+    { name = "pyyaml" },
 ]
 
 [[package]]

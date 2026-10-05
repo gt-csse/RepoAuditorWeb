@@ -268,10 +268,68 @@ class TestDynamicCommand:
 
         parameters = inspect.signature(invoker).parameters
 
-        assert list(parameters.keys()) == ["value", "Module_one"]
+        assert list(parameters.keys()) == ["config", "value", "Module_one"]
         assert all(param.kind == inspect.Parameter.KEYWORD_ONLY for param in parameters.values())
         assert parameters["value"].default == "default"
         assert parameters["Module_one"].default == 1
+
+    # ----------------------------------------------------------------------
+    def test_ConfigFile(self, tmp_path):
+        observed = {}
+
+        def Func(
+            value: Annotated[str, typer.Option("--value", help="Value.")] = "default",
+            **kwargs,
+        ) -> None:
+            observed["value"] = value
+            observed.update(kwargs)
+
+        app = self._CreateApp(
+            {
+                "Module_one": TyperParameter(int, 1, OptionInfo(help="One")),
+                "Module_two": TyperParameter(int, 2, OptionInfo(help="Two")),
+            },
+            Func,
+        )
+
+        config_filename = tmp_path / "config.yaml"
+        config_filename.write_text("value: from_config\nModule_one: 100\n", encoding="utf-8")
+
+        result = CliRunner().invoke(app, ["--config", str(config_filename)])
+
+        assert result.exit_code == 0, result.output
+        assert observed == {"value": "from_config", "Module_one": 100, "Module_two": 2}
+
+    # ----------------------------------------------------------------------
+    def test_CommandLineTakesPrecedenceOverConfigFile(self, tmp_path):
+        observed = {}
+
+        def Func(**kwargs) -> None:
+            observed.update(kwargs)
+
+        app = self._CreateApp({"Module_one": TyperParameter(int, 1, OptionInfo(help="One"))}, Func)
+
+        config_filename = tmp_path / "config.yaml"
+        config_filename.write_text("Module_one: 100\n", encoding="utf-8")
+
+        result = CliRunner().invoke(app, ["--config", str(config_filename), "--Module-one", "50"])
+
+        assert result.exit_code == 0, result.output
+        assert observed == {"Module_one": 50}
+
+    # ----------------------------------------------------------------------
+    def test_ErrorInvalidConfigValue(self, tmp_path):
+        app = self._CreateApp(
+            {"Module_one": TyperParameter(int, 1, OptionInfo(help="One"))},
+            lambda **kwargs: None,
+        )
+
+        config_filename = tmp_path / "config.yaml"
+        config_filename.write_text("Module_one: not_an_int\n", encoding="utf-8")
+
+        result = CliRunner().invoke(app, ["--config", str(config_filename)])
+
+        assert result.exit_code != 0
 
     # ----------------------------------------------------------------------
     def test_ErrorMissingParameterInfo(self):

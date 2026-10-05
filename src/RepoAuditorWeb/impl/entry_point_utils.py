@@ -8,6 +8,8 @@ from typing import Annotated, get_args, get_origin, TYPE_CHECKING
 
 import typer
 
+from typer_config import use_yaml_config
+
 from RepoAuditorWeb import __version__, APP_NAME
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 
@@ -116,7 +118,21 @@ def dynamic_command(
         )
         Invoker.__annotations__ = {**fixed_annotations, **dynamic_annotations}
 
-        return app.command(**app_command_kwargs)(Invoker)  # ty: ignore[invalid-return-type]
+        # The config decorator is applied to the synthesized signature because appending its
+        # parameter to the original function would place it after '**kwargs'.
+        configured_invoker = use_yaml_config()(Invoker)
+
+        # The config parameter is appended by the decorator, but is moved first so that it is the
+        # first option listed in help. All parameters are keyword-only, so the order is otherwise
+        # insignificant.
+        configured_signature = inspect.signature(configured_invoker)
+        *other_params, config_param = configured_signature.parameters.values()
+
+        configured_invoker.__signature__ = configured_signature.replace(  # ty: ignore[unresolved-attribute]
+            parameters=[config_param, *other_params],
+        )
+
+        return app.command(**app_command_kwargs)(configured_invoker)  # ty: ignore[invalid-return-type]
 
     # ----------------------------------------------------------------------
 
