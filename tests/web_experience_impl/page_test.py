@@ -101,6 +101,14 @@ def test_NoExecuteByDefault():
 
 
 # ----------------------------------------------------------------------
+def test_IconIsDisplayed():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert '<link rel="icon" type="image/svg+xml" href="/icon.svg">' in page
+    assert '<header><h1><img src="/icon.svg" alt="">RepoAuditor</h1></header>' in page
+
+
+# ----------------------------------------------------------------------
 # Resetting discards what a run produced; the values the user entered are left alone.
 def test_ResetClearsTheGeneratedContent():
     page = CreatePage(_GROUPS, "my_token")

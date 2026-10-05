@@ -1,5 +1,6 @@
 import threading
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import uvicorn
@@ -54,8 +55,9 @@ def ExecuteExperience(
     with dm.Nested(f"Serving content on http://127.0.0.1:{port}...") as serve_dm:
         webview.create_window("RepoAuditor", f"http://127.0.0.1:{port}/")
 
-        # Debug mode enables the web inspector within the window.
-        webview.start(debug=dm.is_debug)
+        # Debug mode enables the web inspector within the window. The icon is an ICO file because
+        # that is the only format the Windows backend loads.
+        webview.start(debug=dm.is_debug, icon=str(_ICON_PATH))
 
         serve_dm.WriteVerbose("The window was closed.\n")
 
@@ -68,3 +70,4 @@ def ExecuteExperience(
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 _SHUTDOWN_TIMEOUT_SECONDS = 5.0
+_ICON_PATH = Path(__file__).parent / "web_experience_impl" / "icon.ico"
