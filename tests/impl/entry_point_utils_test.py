@@ -9,7 +9,7 @@ import typer
 from typer.models import ArgumentInfo, OptionInfo
 from typer.testing import CliRunner
 
-from RepoAuditorWeb import __version__
+from RepoAuditorWeb import __version__, APP_NAME
 from RepoAuditorWeb.impl.entry_point_utils import (
     dynamic_command,
     GetUnusedPort,
@@ -95,7 +95,7 @@ class TestVersionCallback:
         with pytest.raises(typer.Exit):
             VersionCallback(True)  # noqa: FBT003
 
-        assert capsys.readouterr().out == f"{__version__}\n"
+        assert capsys.readouterr().out == f"{APP_NAME} v{__version__}\n"
 
 
 # ----------------------------------------------------------------------
