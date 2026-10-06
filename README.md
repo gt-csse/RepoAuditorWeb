@@ -25,10 +25,72 @@
 - [License](#license)
 
 ## Overview
-TODO: Complete this section
+`RepoAuditorWeb` audits GitHub repositories for best practices. Each requirement explains why it matters, and each failure includes step-by-step instructions for resolving it.
+
+Requirements are grouped into modules:
+
+| Module | Description | Requirements | Included by Default |
+| --- | --- | --- | --- |
+| `GitHub` | Repository settings, rulesets, and branch protection. | 43 | No |
+| `CommunityStandards` | Files in GitHub's community profile checklist, such as `README`, `CODE_OF_CONDUCT`, `CONTRIBUTING`, `LICENSE`, `SECURITY`, issue templates, and pull request templates. | 7 | No |
+| `ScientificSoftware` | Files expected of scientific software, such as `CITATION.cff`. | 1 | No |
+
+Every requirement has a default that can be customized or skipped, so the audit can be tailored to the conventions of a team or organization.
 
 ### How to use `RepoAuditorWeb`
-TODO: Complete this section
+Run `repoauditorweb` to open the web experience, where modules and requirements are configured before the audit is executed:
+
+```shell
+uvx repoauditorweb --url https://github.com/<owner>/<repo> --GitHub-include --CommunityStandards-include
+```
+
+![Customizing the audit in the web experience](https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/docs/images/web_experience.png)
+
+Click `Execute` to run the audit. The results summarize the outcome of each requirement and, for each failure, describe how to resolve it and the rationale behind the requirement's default:
+
+![Results for a repository that does not satisfy the requirements](https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/docs/images/web_experience_results.png)
+
+#### Experiences
+Select the experience with `--experience`:
+
+| Experience | Description |
+| --- | --- |
+| `web` (default) | Opens a window to configure and execute the audit. |
+| `tui` | Configures and executes the audit within the terminal. |
+| `console` | Executes the audit and writes the results to the terminal. |
+| `json` | Executes the audit and writes the results to `stdout` as JSON; status information is written to `stderr`. |
+
+`--execute` runs the audit immediately in the `web` and `tui` experiences.
+
+#### Options
+Every module and requirement contributes command line options; run `repoauditorweb --help` for the complete list. Common options include:
+
+| Option | Description |
+| --- | --- |
+| `--url` | The GitHub repository to audit; applied to every included module. |
+| `--pat` | A GitHub Personal Access Token (PAT), or the path to a file containing one. Some requirements can only be evaluated with a PAT. |
+| `--branch` | The branch to evaluate; the default branch is used if not specified. |
+| `--<Module>-include` | Include a module in the audit. |
+| `--<Module>-<Requirement>-skip` | Skip a requirement. |
+| `--evaluate-all` | Evaluate requirements that would otherwise be suppressed because a parent setting is not enabled. |
+| `--no-resolution`, `--no-rationale` | Omit resolutions or rationales from the results. |
+
+`--url`, `--pat`, and `--branch` can also be provided through the environment variables `REPO_AUDITOR_WEB_GITHUB_URL`, `REPO_AUDITOR_WEB_GITHUB_PAT`, and `REPO_AUDITOR_WEB_GITHUB_BRANCH`.
+
+#### Configuration Files
+`--config` loads option values from a YAML file, so that an audit configuration can be stored and shared. Keys are the option names without the leading `--`, with `-` replaced by `_`. Values provided on the command line take precedence over values in the file.
+
+```yaml
+url: https://github.com/<owner>/<repo>
+GitHub_include: true
+GitHub_team_size: large
+GitHub_DefaultBranch_value: [main, master]
+CommunityStandards_include: true
+```
+
+```shell
+uvx repoauditorweb --config audit.yaml
+```
 
 <!-- Content below this delimiter will be copied to the generated README.md file. DO NOT REMOVE THIS COMMENT, as it will cause regeneration to fail. -->
 
@@ -38,6 +100,8 @@ TODO: Complete this section
 | --- | --- |
 | Via [uv](https://github.com/astral-sh/uv) | `uv add RepoAuditorWeb` |
 | Via [pip](https://pip.pypa.io/en/stable/) | `pip install RepoAuditorWeb` |
+
+Installation is not necessary when using [uvx](https://docs.astral.sh/uv/guides/tools/), which downloads and runs `RepoAuditorWeb` in a temporary environment. Once installed, run `repoauditorweb` directly.
 
 ### Verifying Signed Artifacts
 Artifacts are signed and verified using [py-minisign](https://github.com/x13a/py-minisign) and the public key in the file `./minisign_key.pub`.
