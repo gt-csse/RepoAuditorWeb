@@ -9,19 +9,19 @@ from RepoAuditorWeb.lib.plugins.shared.repository_arguments import (
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-    from RepoAuditorWeb.lib.plugins.shared.cloned_repository_query import ClonedRepositoryQuery
+    from RepoAuditorWeb.lib.query import Query
 
 
 # ----------------------------------------------------------------------
-class ClonedRepositoryModule(Module):
-    """Module whose queries operate on a clone of the repository identified by the module's arguments."""
+class RepositoryModule(Module):
+    """Module that accepts the repository's url, pat, and branch, and requires an explicit include."""
 
     # ----------------------------------------------------------------------
     def __init__(
         self,
         name: str,
         description: str,
-        queries: list[ClonedRepositoryQuery],
+        queries: list[Query],
     ) -> None:
         super().__init__(
             name,

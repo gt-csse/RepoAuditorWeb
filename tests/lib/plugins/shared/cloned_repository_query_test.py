@@ -6,7 +6,11 @@ from tempfile import TemporaryDirectory
 import git
 import pytest
 
-from RepoAuditorWeb.lib.plugins.shared.cloned_repository_query import ClonedRepositoryQuery
+from RepoAuditorWeb.lib.plugins.shared.cloned_repository_query import (
+    ClonedRepositoryQuery,
+    GetRepositoryDirectory,
+    IsWithinRepository,
+)
 
 
 # ----------------------------------------------------------------------
@@ -158,3 +162,27 @@ def test_CleanupQueryDataRemovesRepoDir(clone_recorder):  # noqa: ARG001
     query.CleanupQueryData(query_data)
 
     assert not repo_dir.exists()
+
+
+# ----------------------------------------------------------------------
+def test_GetRepositoryDirectory():
+    repo_dir = TemporaryDirectory()
+
+    try:
+        assert GetRepositoryDirectory({"repo_dir": repo_dir}) == Path(repo_dir.name).resolve()
+    finally:
+        repo_dir.cleanup()
+
+
+# ----------------------------------------------------------------------
+def test_IsWithinRepository(tmp_path):
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+
+    (tmp_path / "outside.md").write_text("content", encoding="utf-8")
+    (repo_dir / "link.md").symlink_to(tmp_path / "outside.md")
+
+    assert IsWithinRepository(repo_dir, repo_dir / "file") is True
+    assert IsWithinRepository(repo_dir, repo_dir / ".." / "file") is False
+    assert IsWithinRepository(repo_dir, tmp_path / "other") is False
+    assert IsWithinRepository(repo_dir, repo_dir / "link.md") is False

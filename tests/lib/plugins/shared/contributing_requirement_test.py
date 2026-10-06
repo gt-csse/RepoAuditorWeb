@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.contributing import (
+from RepoAuditorWeb.lib.plugins.shared.contributing_requirement import (
     ContributingRequirement,
 )
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue

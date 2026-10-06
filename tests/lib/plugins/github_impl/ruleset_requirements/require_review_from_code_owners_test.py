@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
+from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_review_from_code_owners import (
     RequireReviewFromCodeOwnersRequirement,
 )

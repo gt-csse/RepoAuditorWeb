@@ -24,9 +24,13 @@ Reusable building blocks are available in `RepoAuditorWeb.lib.plugins.shared`:
 
 | Class/Function | Description |
 | --- | --- |
-| `ClonedRepositoryModule` | Module that accepts `url`, `pat`, and `branch`, and requires `--<Module>-include`. |
+| `RepositoryModule` | Module that accepts `url`, `pat`, and `branch`, and requires `--<Module>-include`. |
 | `ClonedRepositoryQuery` | Query that clones the repository and stores the directory in `query_data["repo_dir"]`. |
+| `GetRepositoryDirectory`, `IsWithinRepository` | Return the cloned repository's directory, and determine whether a path (after resolving symlinks) is within it. |
+| `RationaleRequirement` | Requirement that returns its rationale only when its default values are in use. |
 | `FileExistsRequirement` | Requirement that validates that a file (or directory) exists in a cloned repository. |
+| `ContributingRequirement` | Requirement that validates that a CONTRIBUTING file exists in a cloned repository. |
+| `GitHubSession` | `requests.Session` that sends requests relative to the repository's GitHub API url, with a default timeout and retries. |
 | `GetRepositoryParameters`, `ResolveRepositoryArguments` | Declare and resolve the `url`, `pat`, and `branch` parameters for modules that do not clone the repository. |
 
 ## Creating the Package
@@ -72,7 +76,7 @@ import pluggy
 
 from RepoAuditorWeb import APP_NAME
 from RepoAuditorWeb.lib.module import Module
-from RepoAuditorWeb.lib.plugins.shared.cloned_repository_module import ClonedRepositoryModule
+from RepoAuditorWeb.lib.plugins.shared.repository_module import RepositoryModule
 from RepoAuditorWeb.lib.plugins.shared.cloned_repository_query import ClonedRepositoryQuery
 from RepoAuditorWeb.lib.plugins.shared.file_exists_requirement import FileExistsRequirement
 
@@ -115,7 +119,7 @@ class PyProjectRequirement(FileExistsRequirement):
 def GetModule() -> Module:
     """Return the AcmePython module."""
 
-    return ClonedRepositoryModule(
+    return RepositoryModule(
         "AcmePython",
         "Validates files expected in Acme's Python repositories.",
         [

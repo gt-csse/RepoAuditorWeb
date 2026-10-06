@@ -3,7 +3,8 @@ import re
 import pytest
 import requests
 
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, GitHubSession, TeamSize
+from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, TeamSize
+from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 
 
 # ----------------------------------------------------------------------
@@ -287,3 +288,28 @@ class TestSessionRequest:
         _GetSession().get(url)
 
         assert requested == [expected]
+
+    # ----------------------------------------------------------------------
+    def test_DefaultTimeout(self, monkeypatch):
+        timeouts: list[object] = []
+
+        def Request(self, method, url, *args, **kwargs):  # noqa: ARG001
+            timeouts.append(kwargs["timeout"])
+            return requests.Response()
+
+        monkeypatch.setattr(requests.Session, "request", Request)
+
+        session = _GetSession()
+        session.get("")
+        session.get("", timeout=5)
+
+        assert timeouts == [30, 5]
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("url", ["https://api.github.com", "http://github.example.com"])
+    def test_Retries(self, url):
+        retries = _GetSession().get_adapter(url).max_retries  # ty: ignore[unresolved-attribute]
+
+        assert retries.total == 3
+        assert retries.backoff_factor == 1
+        assert retries.status_forcelist == [429, 500, 502, 503, 504]

@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
+from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.allowed_merge_methods import (
     AllowedMergeMethodsRequirement,
     Values,

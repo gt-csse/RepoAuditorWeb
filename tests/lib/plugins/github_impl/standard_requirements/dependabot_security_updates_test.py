@@ -5,7 +5,7 @@ import pytest
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.dependabot_security_updates import (
     DependabotSecurityUpdatesRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
+from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery

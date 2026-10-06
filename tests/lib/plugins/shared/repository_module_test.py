@@ -2,12 +2,12 @@ import re
 
 import pytest
 
-from RepoAuditorWeb.lib.plugins.shared.cloned_repository_module import ClonedRepositoryModule
+from RepoAuditorWeb.lib.plugins.shared.repository_module import RepositoryModule
 
 
 # ----------------------------------------------------------------------
-def _CreateModule() -> ClonedRepositoryModule:
-    return ClonedRepositoryModule("MyModule", "My description.", [])
+def _CreateModule() -> RepositoryModule:
+    return RepositoryModule("MyModule", "My description.", [])
 
 
 # ----------------------------------------------------------------------

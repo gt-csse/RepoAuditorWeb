@@ -1,7 +1,7 @@
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.code_of_conduct import (
     CodeOfConductRequirement,
 )
-from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.contributing import (
+from RepoAuditorWeb.lib.plugins.shared.contributing_requirement import (
     ContributingRequirement,
 )
 from RepoAuditorWeb.lib.plugins.community_standards_impl.requirements.issue_template import (
