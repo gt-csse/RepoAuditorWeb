@@ -44,7 +44,7 @@ class ClonedRepositoryQuery(Query):
                     "please ensure your PAT has access to the repository."
                     if pat is not None
                     else "please provide a PAT with access to the repository."
-                }
+                } A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
 
                 Error: {error}
                 """,

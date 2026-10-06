@@ -88,11 +88,21 @@ def GetRestrictedValue(
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
+# Fine-grained tokens are limited to explicitly granted permissions, so the repository role alone is
+# not sufficient for GitHub to report a restricted value.
+_FINE_GRAINED_PERMISSIONS: dict[AccessLevel, str] = {
+    AccessLevel.Push: "`Contents: Read and write`",
+    AccessLevel.Admin: "`Administration: Read`",
+}
+
+
+# ----------------------------------------------------------------------
 def _CreateNoPatResolution(access_level: AccessLevel) -> Markdown:
     return textwrap.dedent(
         f"""\
         1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
-           with {access_level} access to the repository.
+           with {access_level} access to the repository. A fine-grained token must grant the
+           {_FINE_GRAINED_PERMISSIONS[access_level]} repository permission; a classic token must have the `repo` scope.
         2) Provide it via the `--GitHub-pat` command line argument or the
            `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
 
@@ -108,7 +118,8 @@ def _CreateInsufficientPatResolution(access_level: AccessLevel) -> Markdown:
         f"""\
         1) Open the [Personal Access Tokens](https://github.com/settings/personal-access-tokens) page.
         2) Grant the token {access_level} access to the repository, or replace it with one that has it. A
-           fine-grained token must also list the repository among those it can access.
+           fine-grained token must also list the repository among those it can access and grant the
+           {_FINE_GRAINED_PERMISSIONS[access_level]} repository permission; a classic token must have the `repo` scope.
 
         See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
         for more information.

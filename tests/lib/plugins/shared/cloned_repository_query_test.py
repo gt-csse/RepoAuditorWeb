@@ -116,7 +116,7 @@ class TestGetQueryData:
             """\
             An error occurred while attempting to clone the target repository.
 
-            If you are auditing a private repository, please provide a PAT with access to the repository.
+            If you are auditing a private repository, please provide a PAT with access to the repository. A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
 
             Error: My clone error.
             """,
@@ -137,7 +137,7 @@ class TestGetQueryData:
             """\
             An error occurred while attempting to clone the target repository.
 
-            If you are auditing a private repository, please ensure your PAT has access to the repository.
+            If you are auditing a private repository, please ensure your PAT has access to the repository. A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
 
             Error: Cmd('git') failed: git clone https://***@github.com/gt-csse/RepoAuditorWeb (***)
             """,

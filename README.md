@@ -68,7 +68,7 @@ Every module and requirement contributes command line options; run `repoauditorw
 | Option | Description |
 | --- | --- |
 | `--url` | The GitHub repository to audit; applied to every included module. |
-| `--pat` | A GitHub Personal Access Token (PAT), or the path to a file containing one. Some requirements can only be evaluated with a PAT. |
+| `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing one. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
 | `--branch` | The branch to evaluate; the default branch is used if not specified. |
 | `--<Module>-include` | Include a module in the audit. |
 | `--<Module>-<Requirement>-skip` | Skip a requirement. |
@@ -76,6 +76,19 @@ Every module and requirement contributes command line options; run `repoauditorw
 | `--no-resolution`, `--no-rationale` | Omit resolutions or rationales from the results. |
 
 `--url`, `--pat`, and `--branch` can also be provided through the environment variables `REPO_AUDITOR_WEB_GITHUB_URL`, `REPO_AUDITOR_WEB_GITHUB_PAT`, and `REPO_AUDITOR_WEB_GITHUB_BRANCH`.
+
+#### PAT Permissions
+A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) is not required to audit public repositories, but GitHub only reports some settings to callers with elevated access. Requirements that cannot see a setting produce a warning without a PAT, and an error when the PAT lacks the necessary permissions.
+
+| Module | Data | Fine-grained token permission | Repository role |
+| --- | --- | --- | --- |
+| `CommunityStandards`, `ScientificSoftware` | Repository contents (private repositories only) | `Contents: Read` | Read |
+| `GitHub` | Repository, branch, and ruleset information | `Metadata: Read` | Read |
+| `GitHub` | Merge, auto-merge, branch deletion, and commit message settings | `Contents: Read and write` | Write |
+| `GitHub` | Secret protection, push protection, and Dependabot security updates | `Administration: Read` | Admin |
+| `GitHub` | Classic branch protection rules | `Administration: Read` | Admin |
+
+A fine-grained token must also list the audited repository among those it can access. A classic token requires the `repo` scope; the token's owner must still hold the repository role listed above.
 
 #### Configuration Files
 `--config` loads option values from a YAML file, so that an audit configuration can be stored and shared. Keys are the option names without the leading `--`, with `-` replaced by `_`. Values provided on the command line take precedence over values in the file.

@@ -112,7 +112,8 @@ def test_AdminAccessLevelResolutionWithoutPat():
     assert result.resolution == textwrap.dedent(
         """\
         1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
-           with admin access to the repository.
+           with admin access to the repository. A fine-grained token must grant the
+           `Administration: Read` repository permission; a classic token must have the `repo` scope.
         2) Provide it via the `--GitHub-pat` command line argument or the
            `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
 
@@ -131,7 +132,8 @@ def test_AdminAccessLevelResolutionWithPat():
         """\
         1) Open the [Personal Access Tokens](https://github.com/settings/personal-access-tokens) page.
         2) Grant the token admin access to the repository, or replace it with one that has it. A
-           fine-grained token must also list the repository among those it can access.
+           fine-grained token must also list the repository among those it can access and grant the
+           `Administration: Read` repository permission; a classic token must have the `repo` scope.
 
         See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
         for more information.
@@ -159,7 +161,8 @@ def test_NotVisibleWithoutPatResolution():
     assert result.resolution == textwrap.dedent(
         """\
         1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
-           with push access to the repository.
+           with push access to the repository. A fine-grained token must grant the
+           `Contents: Read and write` repository permission; a classic token must have the `repo` scope.
         2) Provide it via the `--GitHub-pat` command line argument or the
            `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
 
@@ -191,7 +194,8 @@ def test_NotVisibleWithPatResolution():
         """\
         1) Open the [Personal Access Tokens](https://github.com/settings/personal-access-tokens) page.
         2) Grant the token push access to the repository, or replace it with one that has it. A
-           fine-grained token must also list the repository among those it can access.
+           fine-grained token must also list the repository among those it can access and grant the
+           `Contents: Read and write` repository permission; a classic token must have the `repo` scope.
 
         See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
         for more information.
