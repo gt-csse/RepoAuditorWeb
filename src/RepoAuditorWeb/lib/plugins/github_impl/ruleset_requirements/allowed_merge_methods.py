@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from RepoAuditorWeb.lib.module import Module
-    from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
+    from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 
 
 # The rule type reported by the branch rules endpoint for GitHub's "Require a pull request before

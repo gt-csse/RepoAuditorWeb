@@ -1,11 +1,11 @@
 from RepoAuditorWeb.lib.plugins.scientific_software_impl.scientific_software_query import (
     ScientificSoftwareQuery,
 )
-from RepoAuditorWeb.lib.plugins.shared.cloned_repository_module import ClonedRepositoryModule
+from RepoAuditorWeb.lib.plugins.shared.repository_module import RepositoryModule
 
 
 # ----------------------------------------------------------------------
-class ScientificSoftwareModule(ClonedRepositoryModule):
+class ScientificSoftwareModule(RepositoryModule):
     """Module for validating the existence of repository files that are required for scientific software."""
 
     # ----------------------------------------------------------------------

@@ -1,18 +1,22 @@
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import cast, override, TYPE_CHECKING
 
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
-from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
+from RepoAuditorWeb.lib.plugins.shared.cloned_repository_query import (
+    GetRepositoryDirectory,
+    IsWithinRepository,
+)
+from RepoAuditorWeb.lib.plugins.shared.rationale_requirement import RationaleRequirement
+from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.module import Module
+    from RepoAuditorWeb.lib.requirement import EvaluateResult
 
 
 # ----------------------------------------------------------------------
-class FileExistsRequirement(Requirement):
+class FileExistsRequirement(RationaleRequirement):
     """Requirement that checks if a file exists in the repository."""
 
     # ----------------------------------------------------------------------
@@ -40,6 +44,7 @@ class FileExistsRequirement(Requirement):
         super().__init__(
             name,
             f"Validates that {display_name} exists in the repository.",
+            rationale,
             requires_explicit_include=requires_explicit_include,
         )
 
@@ -47,7 +52,6 @@ class FileExistsRequirement(Requirement):
         self._match_names = {filename.lower() for filename in filenames}
         self._directories = list(directories)
         self._resolution = resolution
-        self._rationale = rationale
         self._is_directory = is_directory
 
     # ----------------------------------------------------------------------
@@ -71,7 +75,7 @@ class FileExistsRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        repo_dir = Path(cast(TemporaryDirectory, query_data["repo_dir"]).name).resolve()
+        repo_dir = GetRepositoryDirectory(query_data)
         prohibit = cast(bool, requirement_data["prohibit"])
 
         found_locations: list[str] = []
@@ -81,7 +85,7 @@ class FileExistsRequirement(Requirement):
 
             # The repository is untrusted, so symlinks that escape it are ignored; following them
             # would reveal whether paths on the host exist.
-            if not this_dir.is_dir() or not this_dir.resolve().is_relative_to(repo_dir):
+            if not this_dir.is_dir() or not IsWithinRepository(repo_dir, this_dir):
                 continue
 
             # follows GitHub's detection: case-insensitive, and files may have any extension (e.g. `readme.md`, `README`).
@@ -93,29 +97,27 @@ class FileExistsRequirement(Requirement):
                     if self._is_directory
                     else item.is_file() and item.name.split(".", 1)[0].lower() in self._match_names
                 )
-                and item.resolve().is_relative_to(repo_dir)
+                and IsWithinRepository(repo_dir, item)
             )
 
         if prohibit and found_locations:
             found_locations_str = ", ".join(f"`{location}`" for location in found_locations)
 
-            return EvaluateResult(
+            return self._CreateResult(
+                module,
+                requirement_data,
                 EvaluateResultValue.Error,
                 f"{self._display_name} was found at {found_locations_str}, but the requirement was configured to prohibit it.",
                 f"Remove {found_locations_str} from the repository.",
-                self._CreateRationale(requirement_data),
-                self,
-                module,
             )
 
         if not prohibit and not found_locations:
-            return EvaluateResult(
+            return self._CreateResult(
+                module,
+                requirement_data,
                 EvaluateResultValue.Error,
                 f"{self._CreateNotFoundMessage()}.",
                 self._resolution,
-                self._CreateRationale(requirement_data),
-                self,
-                module,
             )
 
         if prohibit:
@@ -124,13 +126,11 @@ class FileExistsRequirement(Requirement):
             found_locations_str = ", ".join(f"`{location}`" for location in found_locations)
             context = f"{self._display_name} was found at {found_locations_str}."
 
-        return EvaluateResult(
+        return self._CreateResult(
+            module,
+            requirement_data,
             EvaluateResultValue.Success,
             context,
-            None,
-            self._CreateRationale(requirement_data),
-            self,
-            module,
         )
 
     # ----------------------------------------------------------------------
@@ -141,7 +141,3 @@ class FileExistsRequirement(Requirement):
         directories_str = ", ".join(f"`{directory}`" for directory in self._directories)
 
         return f"{self._display_name} was not found in any of these directories: {directories_str}"
-
-    # ----------------------------------------------------------------------
-    def _CreateRationale(self, requirement_data: dict[str, object]) -> Markdown | None:
-        return self._rationale if self.UsesDefaultValues(requirement_data) else None

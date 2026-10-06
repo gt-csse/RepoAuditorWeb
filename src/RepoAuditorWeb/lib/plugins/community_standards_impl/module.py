@@ -1,11 +1,11 @@
 from RepoAuditorWeb.lib.plugins.community_standards_impl.community_standards_query import (
     CommunityStandardsQuery,
 )
-from RepoAuditorWeb.lib.plugins.shared.cloned_repository_module import ClonedRepositoryModule
+from RepoAuditorWeb.lib.plugins.shared.repository_module import RepositoryModule
 
 
 # ----------------------------------------------------------------------
-class CommunityStandardsModule(ClonedRepositoryModule):
+class CommunityStandardsModule(RepositoryModule):
     """Module for validating the existence of repository files that are considered community standards."""
 
     # ----------------------------------------------------------------------

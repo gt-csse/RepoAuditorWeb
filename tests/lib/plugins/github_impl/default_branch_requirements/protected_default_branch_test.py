@@ -5,7 +5,7 @@ import pytest
 from RepoAuditorWeb.lib.plugins.github_impl.default_branch_requirements.protected_default_branch import (
     ProtectedDefaultBranchRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
+from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
 from conftest import MyModule, MyQuery

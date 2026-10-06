@@ -1,5 +1,6 @@
 import textwrap
 
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast, override
 from urllib.parse import urlparse
@@ -59,3 +60,21 @@ class ClonedRepositoryQuery(Query):
     @override
     def CleanupQueryData(self, query_data: dict[str, object]) -> None:
         cast(TemporaryDirectory, query_data["repo_dir"]).cleanup()
+
+
+# ----------------------------------------------------------------------
+def GetRepositoryDirectory(query_data: dict[str, object]) -> Path:
+    """Return the resolved directory of the repository cloned by ClonedRepositoryQuery."""
+
+    return Path(cast(TemporaryDirectory, query_data["repo_dir"]).name).resolve()
+
+
+# ----------------------------------------------------------------------
+def IsWithinRepository(repo_dir: Path, path: Path) -> bool:
+    """Return True if the path resolves within the repository.
+
+    The repository is untrusted, so symlinks that escape it must be ignored; following them would
+    reveal the contents of files on the host.
+    """
+
+    return path.resolve().is_relative_to(repo_dir.resolve())

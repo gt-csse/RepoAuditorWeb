@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from enum import StrEnum
 
     from RepoAuditorWeb.lib.module import Module
-    from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubSession
+    from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 
 
 # ----------------------------------------------------------------------
