@@ -1,6 +1,7 @@
 import io
 
 from collections.abc import Mapping
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -57,6 +58,16 @@ def test_WindowIsOpened():
 
     assert webview_mock.create_window.call_args.args == ("RepoAuditor", "http://127.0.0.1:8080/")
     assert webview_mock.start.call_count == 1
+
+
+# ----------------------------------------------------------------------
+def test_WindowIcon():
+    webview_mock, _, _ = _Invoke([], {})
+
+    icon = Path(webview_mock.start.call_args.kwargs["icon"])
+
+    assert icon.name == "icon.ico"
+    assert icon.is_file()
 
 
 # ----------------------------------------------------------------------

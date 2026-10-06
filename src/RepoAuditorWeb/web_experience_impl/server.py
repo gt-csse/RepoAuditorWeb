@@ -4,11 +4,12 @@ import dataclasses
 import json
 import threading
 
+from pathlib import Path
 from typing import Annotated, TYPE_CHECKING
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 from fastapi import Body, FastAPI, Header, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 from RepoAuditorWeb.lib import form
 from RepoAuditorWeb.lib.execute import Execute
@@ -66,6 +67,11 @@ def CreateApp(
             token,
             execute=execute_on_load,
         )
+
+    # ----------------------------------------------------------------------
+    @app.get("/icon.svg")
+    def GetIcon() -> FileResponse:
+        return FileResponse(_ICON_PATH, media_type="image/svg+xml")
 
     # ----------------------------------------------------------------------
     @app.get("/api/fields")
@@ -135,6 +141,10 @@ def CreateApp(
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+_ICON_PATH = Path(__file__).parent / "icon.svg"
+
+
 # ----------------------------------------------------------------------
 def _Run(  # noqa: PLR0913
     sink: StreamSink,

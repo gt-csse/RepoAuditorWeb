@@ -31,12 +31,13 @@ def CreatePage(groups: list[FormGroup], token: str, *, execute: bool = False) ->
         <head>
         <meta charset="utf-8">
         <title>RepoAuditor</title>
+        <link rel="icon" type="image/svg+xml" href="/icon.svg">
         <style>
         {style}
         </style>
         </head>
         <body>
-        <header><h1>RepoAuditor</h1></header>
+        <header><h1><img src="/icon.svg" alt="">RepoAuditor</h1></header>
         <main>
         <section id="arguments">
         <h2>Arguments</h2>
@@ -122,7 +123,16 @@ _STYLE = textwrap.dedent(
       z-index: 1;
     }
 
-    header h1 { margin: 0; font-size: 16px; letter-spacing: 0.02em; }
+    header h1 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+
+    header h1 img { width: 24px; height: 24px; }
 
     main { padding: 20px; max-width: 1100px; margin: 0 auto; }
 

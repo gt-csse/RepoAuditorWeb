@@ -3,6 +3,7 @@ import json
 import re
 import threading
 
+from pathlib import Path
 from typing import cast, override
 
 import pytest
@@ -121,6 +122,14 @@ def test_ExecuteAppliesToInitialDisplayOnly():
 # ----------------------------------------------------------------------
 def test_TokenIsSuppliedToThePage():
     assert _GetIndex(_CreateApp(execute=False))["token"] == _TOKEN
+
+
+# ----------------------------------------------------------------------
+def test_Icon():
+    response = _GetEndpoint(_CreateApp(execute=False), "/icon.svg")()
+
+    assert response.media_type == "image/svg+xml"
+    assert Path(response.path).read_text().startswith('<svg xmlns="http://www.w3.org/2000/svg"')
 
 
 # ----------------------------------------------------------------------
