@@ -34,6 +34,7 @@ Requirements are grouped into modules:
 | `GitHub` | Repository settings, rulesets, and branch protection. | 43 | No |
 | `CommunityStandards` | Files in GitHub's community profile checklist, such as `README`, `CODE_OF_CONDUCT`, `CONTRIBUTING`, `LICENSE`, `SECURITY`, issue templates, and pull request templates. | 7 | No |
 | `ScientificSoftware` | Files expected of scientific software, such as `CITATION.cff`. | 1 | No |
+| `JOSS` | Items in the [JOSS review checklist](https://joss.readthedocs.io/en/latest/review_checklist.html) that can be evaluated automatically, such as an OSI-approved license, public development history, contributors, documentation, tests, and the `paper.md` sections, metadata, length, and references. | 16 | No |
 
 Every requirement has a default that can be customized or skipped, so the audit can be tailored to the conventions of a team or organization. Additional modules can be defined in separate packages; see [Custom Modules](https://github.com/gt-csse/RepoAuditorWeb/blob/main/docs/custom_modules.md).
 
@@ -82,11 +83,12 @@ A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication
 
 | Module | Data | Fine-grained token permission | Repository role |
 | --- | --- | --- | --- |
-| `CommunityStandards`, `ScientificSoftware` | Repository contents (private repositories only) | `Contents: Read` | Read |
 | `GitHub` | Repository, branch, and ruleset information | `Metadata: Read` | Read |
 | `GitHub` | Merge, auto-merge, branch deletion, and commit message settings | `Contents: Read and write` | Write |
 | `GitHub` | Secret protection, push protection, and Dependabot security updates | `Administration: Read` | Admin |
 | `GitHub` | Classic branch protection rules | `Administration: Read` | Admin |
+| `CommunityStandards`, `JOSS`, `ScientificSoftware` | Repository contents (private repositories only) | `Contents: Read` | Read |
+| `JOSS` | Repository, commit, and contributor information | `Metadata: Read` | Read |
 
 A fine-grained token must also list the audited repository among those it can access. A classic token requires the `repo` scope; the token's owner must still hold the repository role listed above.
 

@@ -7,6 +7,7 @@ def test_AllModulesLoaded():
     assert [module.name for module in MODULES] == [
         "GitHub",
         "CommunityStandards",
+        "JOSS",
         "ScientificSoftware",
     ]
 
