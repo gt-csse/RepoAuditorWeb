@@ -1,8 +1,14 @@
 import pytest
 
-from RepoAuditorWeb.lib.plugins import community_standards_plugin, github_plugin, scientific_software_plugin
+from RepoAuditorWeb.lib.plugins import (
+    community_standards_plugin,
+    github_plugin,
+    joss_plugin,
+    scientific_software_plugin,
+)
 from RepoAuditorWeb.lib.plugins.community_standards_impl.module import CommunityStandardsModule
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, TeamSize
+from RepoAuditorWeb.lib.plugins.joss_impl.module import JOSSModule
 from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import ScientificSoftwareModule
 
 
@@ -31,6 +37,14 @@ from RepoAuditorWeb.lib.plugins.scientific_software_impl.module import Scientifi
             ScientificSoftwareModule,
             "ScientificSoftware",
             "Validates files that are required for scientific software.",
+            True,
+            ["include", "url", "pat", "branch"],
+        ),
+        (
+            joss_plugin,
+            JOSSModule,
+            "JOSS",
+            "Validates the Journal of Open Source Software (JOSS) review checklist items that can be evaluated automatically.",
             True,
             ["include", "url", "pat", "branch"],
         ),
@@ -71,6 +85,15 @@ def test_GetModule(plugin, module_type, name, description, requires_explicit_inc
         ),
         (
             ScientificSoftwareModule,
+            {
+                "include": (bool, False),
+                "url": (str, None),
+                "pat": (str | None, None),
+                "branch": (str | None, None),
+            },
+        ),
+        (
+            JOSSModule,
             {
                 "include": (bool, False),
                 "url": (str, None),

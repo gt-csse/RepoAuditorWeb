@@ -86,6 +86,10 @@ def test_DynamicModuleOptionsAppearInHelp():
         "--ScientificSoftware-url",
         "--ScientificSoftware-pat",
         "--ScientificSoftware-branch",
+        "--JOSS-include",
+        "--JOSS-url",
+        "--JOSS-pat",
+        "--JOSS-branch",
     } <= _GetOptionNames(app)
 
 
@@ -121,9 +125,10 @@ def test_ModulesAreExecuted():
     assert result.exit_code == 0, output
 
     for expected in [
-        "Executing module 'GitHub' (1 of 3)...",
-        "Executing module 'CommunityStandards' (2 of 3)...",
-        "Executing module 'ScientificSoftware' (3 of 3)...",
+        "Executing module 'GitHub' (1 of 4)...",
+        "Executing module 'CommunityStandards' (2 of 4)...",
+        "Executing module 'JOSS' (3 of 4)...",
+        "Executing module 'ScientificSoftware' (4 of 4)...",
     ]:
         assert expected in output
 
@@ -133,7 +138,7 @@ def test_ModulesAreExecuted():
 def test_ModulesAreSkipped():
     _, output = _InvokeAndCapture(_SKIP_NETWORK)
 
-    assert output.count("SKIPPED.") == 3
+    assert output.count("SKIPPED.") == 4
 
 
 # ----------------------------------------------------------------------
@@ -149,7 +154,7 @@ def test_ModuleIncludeOptionIsResolved(tmp_path):
     )
 
     assert result.exit_code == 0, output
-    assert output.count("SKIPPED.") == 2
+    assert output.count("SKIPPED.") == 3
 
 
 # ----------------------------------------------------------------------
@@ -259,7 +264,7 @@ class TestExperience:
         result = CliRunner().invoke(app, ["--experience", "json"])
 
         assert result.exit_code == 0, result.output
-        assert "Executing module 'GitHub' (1 of 3)..." in result.stderr
+        assert "Executing module 'GitHub' (1 of 4)..." in result.stderr
         assert "Executing module" not in result.stdout
 
     # ----------------------------------------------------------------------
