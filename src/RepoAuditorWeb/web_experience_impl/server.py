@@ -114,22 +114,27 @@ def CreateApp(
         if not lock.acquire(blocking=False):
             raise HTTPException(status_code=409, detail="An execution is already in progress.")
 
-        sink = StreamSink()
-        state["sink"] = sink
+        # _Run releases the lock once started; until then, a failure here would hold it indefinitely.
+        try:
+            sink = StreamSink()
+            state["sink"] = sink
 
-        thread = threading.Thread(
-            target=_Run,
-            args=(sink, lock, arguments_lock, modules, dynamic_parameters, arguments, submitted),
-            kwargs={
-                "evaluate_all": evaluate_all,
-                "display_resolution": display_resolution,
-                "display_rationale": display_rationale,
-                "verbose": verbose,
-                "debug": debug,
-            },
-            daemon=True,
-        )
-        thread.start()
+            thread = threading.Thread(
+                target=_Run,
+                args=(sink, lock, arguments_lock, modules, dynamic_parameters, arguments, submitted),
+                kwargs={
+                    "evaluate_all": evaluate_all,
+                    "display_resolution": display_resolution,
+                    "display_rationale": display_rationale,
+                    "verbose": verbose,
+                    "debug": debug,
+                },
+                daemon=True,
+            )
+            thread.start()
+        except BaseException:
+            lock.release()
+            raise
 
         return {"status": "started"}
 

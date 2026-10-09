@@ -94,6 +94,43 @@ class TestGetQueryData:
         assert clone_recorder.calls[0][0] == "https://my_pat@github.com/gt-csse/RepoAuditorWeb"
 
     # ----------------------------------------------------------------------
+    # A 'file://' url has no host, so embedding the PAT would produce an invalid url.
+    def test_PatWithFileUrl(self, clone_recorder):
+        module_data = _CreateModuleData(pat="my_pat")
+        module_data["url"] = "file:///repos/my_repo"
+
+        query = _CreateQuery()
+        query_data = query.GetQueryData(module_data)
+
+        assert query_data is not None
+        query.CleanupQueryData(query_data)
+
+        assert clone_recorder.calls[0][0] == "file:///repos/my_repo"
+
+    # ----------------------------------------------------------------------
+    # The PAT is never sent over an unencrypted connection.
+    def test_PatWithHttpUrl(self, clone_recorder):
+        module_data = _CreateModuleData(pat="my_pat")
+        module_data["url"] = "http://github.com/gt-csse/RepoAuditorWeb"
+
+        query = _CreateQuery()
+        query_data = query.GetQueryData(module_data)
+
+        assert query_data is not None
+        query.CleanupQueryData(query_data)
+
+        assert clone_recorder.calls[0][0] == "https://my_pat@github.com/gt-csse/RepoAuditorWeb"
+
+    # ----------------------------------------------------------------------
+    def test_ErrorCloneRemovesRepoDir(self, clone_recorder):
+        clone_recorder.exception = ValueError("My clone error.")
+
+        with pytest.raises(RuntimeError):
+            _CreateQuery().GetQueryData(_CreateModuleData())
+
+        assert not Path(clone_recorder.calls[0][1]).exists()
+
+    # ----------------------------------------------------------------------
     # A PAT containing URL delimiters must not change the host that is contacted.
     def test_PatIsEncoded(self, clone_recorder):
         query = _CreateQuery()

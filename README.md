@@ -63,6 +63,29 @@ Select the experience with `--experience`:
 
 `--execute` runs the audit immediately in the `web` and `tui` experiences.
 
+#### JSON Output
+The `json` experience writes a single document; `schema_version` is incremented whenever a change would break an existing consumer.
+
+```json
+{
+  "schema_version": 1,
+  "summary": {"skipped": 0, "does_not_apply": 0, "success": 0, "warning": 0, "error": 0, "total": 0},
+  "results": [
+    {
+      "module": "<module name>",
+      "requirement": "<requirement name>",
+      "description": "<requirement description>",
+      "result": "skipped | does_not_apply | success | warning | error",
+      "context": "<Markdown or null>",
+      "resolution": "<Markdown or null>",
+      "rationale": "<Markdown or null>"
+    }
+  ]
+}
+```
+
+Every result is included, not only failures. `resolution` and `rationale` are `null` when omitted via `--no-resolution` or `--no-rationale`.
+
 #### Options
 Every module and requirement contributes command line options; run `repoauditorweb --help` for the complete list. Common options include:
 

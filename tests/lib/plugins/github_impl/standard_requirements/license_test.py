@@ -206,6 +206,7 @@ def test_ResolutionUsesEnterpriseUrl():
         {},
         {"license": {}},
         {"license": {"name": None}},
+        {"license": None},
     ],
 )
 def test_NoLicense(response):
@@ -213,14 +214,6 @@ def test_NoLicense(response):
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == "No license value was set."
-
-
-# ----------------------------------------------------------------------
-# GitHub reports an absent license as a null value rather than omitting the key, which is not a
-# dictionary and therefore cannot be traversed.
-def test_ErrorNullLicense():
-    with pytest.raises(AttributeError):
-        _Evaluate({"license": None})
 
 
 # ----------------------------------------------------------------------

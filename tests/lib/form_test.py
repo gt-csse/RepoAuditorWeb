@@ -580,7 +580,7 @@ class TestParseValues:
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize(
         ("submitted", "expected"),
-        [("yes", True), ("no", False), ("default", None), ("", None)],
+        [("yes", True), ("no", False), ("default", None), ("", None), (True, True), (False, False)],
     )
     def test_OptionalBoolean(self, submitted, expected):
         assert _ParseValue(TyperParameter(bool | None, None), {"MyModule_one": submitted}) is expected
@@ -646,6 +646,18 @@ class TestParseValues:
     # ----------------------------------------------------------------------
     def test_Choice(self):
         assert _ParseValue(TyperParameter(MyChoice, MyChoice.One), {"MyModule_one": "two"}) == MyChoice.Two
+
+    # ----------------------------------------------------------------------
+    # A choice control left blank submits the empty value.
+    @pytest.mark.parametrize("submitted", ["", None])
+    def test_EmptyChoiceRestoresTheDefault(self, submitted):
+        assert (
+            _ParseValue(TyperParameter(MyChoice, MyChoice.Two), {"MyModule_one": submitted}) == MyChoice.Two
+        )
+
+    # ----------------------------------------------------------------------
+    def test_EmptyOptionalChoice(self):
+        assert _ParseValue(TyperParameter(MyChoice | None, MyChoice.Two), {"MyModule_one": ""}) is None
 
     # ----------------------------------------------------------------------
     def test_Integer(self):

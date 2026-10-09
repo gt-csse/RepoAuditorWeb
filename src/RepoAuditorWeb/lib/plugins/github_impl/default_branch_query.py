@@ -25,26 +25,27 @@ class DefaultBranchQuery(Query):
     # ----------------------------------------------------------------------
     @override
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
-        # Get the default branch name
-        response = cast(requests.Session, module_data["session"]).get("")
+        # The session is shared by the module's queries and remains usable once closed; closing it
+        # releases its pooled connections, as Module provides no cleanup hook.
+        with cast(requests.Session, module_data["session"]) as session:
+            # Get the default branch name
+            response = session.get("")
 
-        response.raise_for_status()
-        response = response.json()
+            response.raise_for_status()
+            response = response.json()
 
-        module_data["default_branch"] = response["default_branch"]
+            module_data["default_branch"] = response["default_branch"]
 
-        # Get the information associated with the default branch. The branch is a path segment;
-        # characters that git permits (such as '#') would otherwise end the path.
-        response = cast(requests.Session, module_data["session"]).get(
-            f"branches/{quote(module_data['default_branch'])}"
-        )
+            # Get the information associated with the default branch. The branch is a path segment;
+            # characters that git permits (such as '#') would otherwise end the path.
+            response = session.get(f"branches/{quote(module_data['default_branch'])}")
 
-        response.raise_for_status()
-        response = response.json()
+            response.raise_for_status()
+            response = response.json()
 
-        module_data["response"] = response
+            module_data["response"] = response
 
-        return module_data
+            return module_data
 
     # ----------------------------------------------------------------------
     @override

@@ -14,6 +14,7 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
+from RepoAuditorWeb.web_experience_impl import server
 from RepoAuditorWeb.web_experience_impl.server import CreateApp
 
 from conftest import EvaluateValues, MyModule, MyQuery, MyRequirement
@@ -552,6 +553,26 @@ class TestExecution:
 
         # Consume the stream so that the run releases the lock before the test ends.
         _Consume(_GetEndpoint(app, "/api/stream")(_TOKEN))
+
+    # ----------------------------------------------------------------------
+    # A run that fails to start must not hold the lock, or every later request would be rejected.
+    def test_LockIsReleasedWhenStartFails(self, monkeypatch):
+        module = _CreateModule()
+        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+
+        # ----------------------------------------------------------------------
+        def RaiseError():
+            raise RuntimeError("My error.")
+
+        # ----------------------------------------------------------------------
+
+        with monkeypatch.context() as patch:
+            patch.setattr(server, "StreamSink", RaiseError)
+
+            with pytest.raises(RuntimeError, match="My error."):
+                _GetEndpoint(app, "/api/execute")({}, _TOKEN)
+
+        assert _Execute(app, {})[-1] == {"type": "done"}
 
     # ----------------------------------------------------------------------
     # The lock is released once a run completes, so the next one is admitted.

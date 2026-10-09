@@ -7,6 +7,8 @@ from RepoAuditorWeb.lib.plugins.github_impl.default_branch_query import DefaultB
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_query import RulesetQuery
 from RepoAuditorWeb.lib.plugins.github_impl.standard_query import StandardQuery
 
+from conftest import FakeGitHubSession
+
 
 # ----------------------------------------------------------------------
 # GitHub queries only hold API responses, so there is nothing to release and the data must be left intact.
@@ -22,3 +24,24 @@ def test_CleanupQueryDataPreservesData(query_type):
 
     assert query_data == {"response": {"description": "My description."}, "branch": "main"}
     assert query_data["response"] is response
+
+
+# ----------------------------------------------------------------------
+# The module provides no cleanup hook, so each query releases the session's pooled connections,
+# including when it returns no query data.
+@pytest.mark.parametrize(
+    "query_type",
+    [ClassicBranchProtectionQuery, DefaultBranchQuery, RulesetQuery, StandardQuery],
+)
+def test_SessionIsClosed(query_type):
+    session = FakeGitHubSession(
+        {
+            "": (200, {"default_branch": "main"}),
+            "branches/main": (200, {"protected": False}),
+            "rules/branches/main": (200, []),
+        },
+    )
+
+    query_type().GetQueryData({"session": session, "branch": None})
+
+    assert session.closed is True

@@ -156,6 +156,15 @@ class FakeGitHubSession:
     def __init__(self, responses: dict[str, tuple[int, object]]) -> None:
         self.responses = responses
         self.requested_urls: list[str] = []
+        self.closed = False
+
+    # ----------------------------------------------------------------------
+    def __enter__(self) -> "FakeGitHubSession":
+        return self
+
+    # ----------------------------------------------------------------------
+    def __exit__(self, *args) -> None:
+        self.closed = True
 
     # ----------------------------------------------------------------------
     def get(self, url: str) -> requests.Response:

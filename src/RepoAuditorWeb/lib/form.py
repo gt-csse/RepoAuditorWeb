@@ -617,9 +617,6 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
 
         return [item_type(item) for item in items]
 
-    if field_type == FieldType.Choice:
-        return resolved_type(value)
-
     # An empty control means the value was not provided. Modules distinguish a missing value from
     # the empty string (raising when a required value is absent), so the parameter's own default is
     # restored rather than coercing the empty string to the parameter's type.
@@ -629,6 +626,9 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
 
         if parameter.default is not inspect.Parameter.empty:
             return parameter.default
+
+    if field_type == FieldType.Choice:
+        return resolved_type(value)
 
     # The form submits every value as a string, so the string is what is converted; a value that is
     # not a number raises, which is reported to the page.

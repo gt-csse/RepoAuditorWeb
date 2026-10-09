@@ -23,14 +23,16 @@ class ClonedRepositoryQuery(Query):
         pat = module_data["pat"]
         redacted_values: list[str] = []
 
-        if pat is not None:
+        passed_url = urlparse(url)
+
+        # A 'file://' URL has no host to authenticate against, so the PAT is not embedded.
+        if pat is not None and passed_url.scheme in ("https", "http"):
             assert isinstance(pat, str), (pat, type(pat))
 
             # Characters such as '@', '/', or ':' would otherwise change the host that is contacted.
             encoded_pat = quote(pat, safe="")
             redacted_values = [encoded_pat, pat]
 
-            passed_url = urlparse(url)
             url = f"https://{encoded_pat}@{passed_url.netloc}{passed_url.path}"
 
         # Import git.Repo here so that it is only imported if a module that clones the repository is requested
@@ -39,6 +41,9 @@ class ClonedRepositoryQuery(Query):
         try:
             Repo.clone_from(url, module_data["repo_dir"].name, branch=module_data["branch"], depth=1)
         except Exception as ex:
+            # CleanupQueryData is only invoked for returned query data, so the partial clone is removed here.
+            module_data["repo_dir"].cleanup()
+
             # git output includes the clone url, which embeds the PAT.
             error = str(ex)
             for redacted_value in redacted_values:

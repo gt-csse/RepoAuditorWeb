@@ -104,13 +104,16 @@ class StandardQuery(Query):
     # ----------------------------------------------------------------------
     @override
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
-        response = cast(requests.Session, module_data["session"]).get("")
+        # The session is shared by the module's queries and remains usable once closed; closing it
+        # releases its pooled connections, as Module provides no cleanup hook.
+        with cast(requests.Session, module_data["session"]) as session:
+            response = session.get("")
 
-        response.raise_for_status()
-        response = response.json()
+            response.raise_for_status()
+            response = response.json()
 
-        module_data["response"] = response
-        return module_data
+            module_data["response"] = response
+            return module_data
 
     # ----------------------------------------------------------------------
     @override

@@ -82,6 +82,34 @@ def test_ErrorServerDoesNotStart():
 
 
 # ----------------------------------------------------------------------
+# The window is only opened once the server reports that it is listening.
+def test_WindowWaitsForTheServer():
+    with (
+        mock.patch("RepoAuditorWeb.web_experience.webview") as webview_mock,
+        mock.patch("RepoAuditorWeb.web_experience.uvicorn") as uvicorn_mock,
+        mock.patch("RepoAuditorWeb.web_experience.threading"),
+        mock.patch("RepoAuditorWeb.web_experience.time") as time_mock,
+        DoneManager.Create(io.StringIO(), "Testing...") as dm,
+    ):
+        server = uvicorn_mock.Server.return_value
+        server.started = False
+
+        # ----------------------------------------------------------------------
+        def Sleep(_):
+            assert webview_mock.create_window.call_count == 0
+            server.started = True
+
+        # ----------------------------------------------------------------------
+
+        time_mock.sleep.side_effect = Sleep
+
+        ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {})
+
+    assert time_mock.sleep.call_count == 1
+    assert webview_mock.create_window.call_count == 1
+
+
+# ----------------------------------------------------------------------
 def test_WindowIcon():
     webview_mock, _, _ = _Invoke([], {})
 
