@@ -2,13 +2,15 @@
 
 import dataclasses
 import json
+import secrets
 import threading
 
 from pathlib import Path
 from typing import Annotated, TYPE_CHECKING
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
-from fastapi import Body, FastAPI, Header, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException, Query
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 from RepoAuditorWeb.lib import form
@@ -42,28 +44,45 @@ def CreateApp(
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
+    # A page on another site could otherwise reach the server through a hostname that it rebinds
+    # to the loopback address, which the browser would treat as same-origin with that page.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=[HOST])
+
     # Only one run may be in flight at a time; the page disables its control while a run is active,
     # but the server enforces it so that a second request cannot interleave output into the stream.
     lock = threading.Lock()
     state: dict[str, object] = {"sink": None, "execute": execute}
 
+    # A run replaces the retained values while pages are served on other threads; without this, a
+    # page could render the defaults or a mix of the previous and submitted values.
+    arguments_lock = threading.Lock()
+
+    # ----------------------------------------------------------------------
+    def CreateGroups() -> list[form.FormGroup]:
+        with arguments_lock:
+            return form.CreateGroups(dynamic_parameters, arguments)
+
     # ----------------------------------------------------------------------
     def VerifyToken(token_header: str | None) -> None:
         # The server is reachable by any process on the machine, so a token that only this process
         # and the window it opened know about gates the endpoints that execute work.
-        if token_header != token:
+        if token_header is None or not secrets.compare_digest(token_header, token):
             raise HTTPException(status_code=401, detail="Invalid token.")
 
     # ----------------------------------------------------------------------
     @app.get("/", response_class=HTMLResponse)
-    def Index() -> str:
+    def Index(token_query: Annotated[str | None, Query(alias="token")] = None) -> str:
+        # The page embeds the token and the values entered (including the PAT), so it is gated as
+        # well; the window is opened with the token in its URL.
+        VerifyToken(token_query)
+
         # Automatic execution applies to the initial display only; a reload once the experience is
-        # underway restores what the user entered without running again on their behalf.
-        execute_on_load = bool(state["execute"])
-        state["execute"] = False
+        # underway restores what the user entered without running again on their behalf. Removing
+        # the flag in a single operation ensures that concurrent loads cannot both observe it.
+        execute_on_load = bool(state.pop("execute", False))
 
         return CreatePage(
-            form.CreateGroups(dynamic_parameters, arguments),
+            CreateGroups(),
             token,
             execute=execute_on_load,
         )
@@ -79,9 +98,7 @@ def CreateApp(
         VerifyToken(x_auditor_token)
 
         return {
-            "groups": [
-                dataclasses.asdict(group) for group in form.CreateGroups(dynamic_parameters, arguments)
-            ],
+            "groups": [dataclasses.asdict(group) for group in CreateGroups()],
         }
 
     # ----------------------------------------------------------------------
@@ -102,7 +119,7 @@ def CreateApp(
 
         thread = threading.Thread(
             target=_Run,
-            args=(sink, lock, modules, dynamic_parameters, arguments, submitted),
+            args=(sink, lock, arguments_lock, modules, dynamic_parameters, arguments, submitted),
             kwargs={
                 "evaluate_all": evaluate_all,
                 "display_resolution": display_resolution,
@@ -142,6 +159,8 @@ def CreateApp(
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
+HOST = "127.0.0.1"
+
 _ICON_PATH = Path(__file__).parent / "icon.svg"
 
 
@@ -149,6 +168,7 @@ _ICON_PATH = Path(__file__).parent / "icon.svg"
 def _Run(  # noqa: PLR0913
     sink: StreamSink,
     lock: threading.Lock,
+    arguments_lock: threading.Lock,
     modules: list[Module],
     dynamic_parameters: DynamicParameters,
     arguments: dict[str, dict[str | None, dict[str, object]]],
@@ -164,8 +184,13 @@ def _Run(  # noqa: PLR0913
         # A value that cannot be coerced is reported through the stream rather than as a failed
         # request, so the conversion happens here. The result is retained so that a reload of the
         # page restores what the user entered rather than the values the experience started with.
-        arguments.clear()
-        arguments.update(form.ParseValues(dynamic_parameters, submitted))
+        # The values are parsed before the retained ones are replaced so that a failure leaves them
+        # intact.
+        parsed = form.ParseValues(dynamic_parameters, submitted)
+
+        with arguments_lock:
+            arguments.clear()
+            arguments.update(parsed)
 
         with DoneManager.Create(
             sink,

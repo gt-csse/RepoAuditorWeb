@@ -659,6 +659,31 @@ class TestParseValues:
     def test_Text(self):
         assert _ParseValue(TyperParameter(str, ""), {"MyModule_one": 10}) == "10"
 
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("submitted", ["0", "5", "10"])
+    def test_IntegerWithinBounds(self, submitted):
+        parameter = TyperParameter(int, 0, OptionInfo(min=0, max=10))
+
+        assert _ParseValue(parameter, {"MyModule_one": submitted}) == int(submitted)
+
+    # ----------------------------------------------------------------------
+    def test_ErrorBelowMinimum(self):
+        parameter = TyperParameter(int, 0, OptionInfo(min=0, max=10))
+
+        with pytest.raises(ValueError) as exc_info:
+            _ParseValue(parameter, {"MyModule_one": "-1"})
+
+        assert str(exc_info.value) == "'MyModule_one' must be greater than or equal to 0; '-1' was provided."
+
+    # ----------------------------------------------------------------------
+    def test_ErrorAboveMaximum(self):
+        parameter = TyperParameter(float, 0.0, OptionInfo(max=1.5))
+
+        with pytest.raises(ValueError) as exc_info:
+            _ParseValue(parameter, {"MyModule_one": "2"})
+
+        assert str(exc_info.value) == "'MyModule_one' must be less than or equal to 1.5; '2.0' was provided."
+
 
 # ----------------------------------------------------------------------
 # An empty control means the value was not provided, which modules distinguish from the empty

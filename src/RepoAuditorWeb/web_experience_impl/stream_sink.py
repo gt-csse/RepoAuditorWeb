@@ -1,6 +1,6 @@
 """Contains the StreamSink object."""
 
-import queue
+import threading
 
 from typing import override, TYPE_CHECKING
 
@@ -15,14 +15,18 @@ class StreamSink(TextWriter):
     """Stream that queues everything written to it so that another thread can consume it.
 
     DoneManager writes synchronously from the thread performing the execution, but the content must
-    be delivered to a client on the thread servicing its request. A queue decouples the two without
-    the consumer polling for changes.
+    be delivered to a client on the thread servicing its request. A condition decouples the two
+    without the consumer polling for changes.
+
+    Events are retained rather than consumed so that every subscriber, including one that reconnects
+    or arrives after the run completed, receives all of them and observes the end of the stream.
     """
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
-        # Items are (event type, data); None terminates the enumeration.
-        self._queue: queue.Queue[tuple[str, dict[str, object]] | None] = queue.Queue()
+        self._events: list[tuple[str, dict[str, object]]] = []
+        self._is_closed = False
+        self._condition = threading.Condition()
 
     # ----------------------------------------------------------------------
     @override
@@ -57,21 +61,36 @@ class StreamSink(TextWriter):
     def Send(self, event_type: str, data: dict[str, object]) -> None:
         """Queue an event that did not originate from a write."""
 
-        self._queue.put((event_type, data))
+        with self._condition:
+            self._events.append((event_type, data))
+            self._condition.notify_all()
 
     # ----------------------------------------------------------------------
     def Close(self) -> None:
         """Indicate that no further content will be written."""
 
-        self._queue.put(None)
+        with self._condition:
+            self._is_closed = True
+            self._condition.notify_all()
 
     # ----------------------------------------------------------------------
     def Enumerate(self) -> Iterator[tuple[str, dict[str, object]]]:
-        """Yield queued events until the sink is closed, blocking while it is empty."""
+        """Yield every event from the first until the sink is closed, blocking while none are new."""
+
+        index = 0
 
         while True:
-            item = self._queue.get()
-            if item is None:
+            with self._condition:
+                while index == len(self._events) and not self._is_closed:
+                    self._condition.wait()
+
+                events = self._events[index:]
+                is_closed = self._is_closed
+
+            # Events are yielded outside of the lock so that a slow consumer does not block writes.
+            yield from events
+
+            if is_closed:
                 break
 
-            yield item
+            index += len(events)

@@ -95,16 +95,40 @@ class TestEnumerate:
         assert _Drain(StreamSink()) == []
 
     # ----------------------------------------------------------------------
-    # Nothing is queued after the sink is closed, so a second enumeration yields nothing rather than
-    # replaying what the first one consumed.
-    def test_EnumerationConsumes(self):
+    # A subscriber that reconnects or arrives after the run completed receives every event and
+    # observes the end of the stream rather than waiting indefinitely.
+    def test_EnumerationReplaysOnceClosed(self):
         sink = StreamSink()
         sink.write("Hello")
 
         assert _Drain(sink) == [("output", {"content": "Hello"})]
+        assert list(sink.Enumerate()) == [("output", {"content": "Hello"})]
 
+    # ----------------------------------------------------------------------
+    # Concurrent subscribers each receive every event rather than splitting them.
+    def test_ConcurrentSubscribers(self):
+        sink = StreamSink()
+        received: list[list[tuple[str, dict[str, object]]]] = [[], []]
+
+        threads = [
+            threading.Thread(target=lambda items=items: items.extend(sink.Enumerate()), daemon=True)
+            for items in received
+        ]
+
+        for thread in threads:
+            thread.start()
+
+        sink.write("One")
+        sink.write("Two")
         sink.Close()
-        assert list(sink.Enumerate()) == []
+
+        for thread in threads:
+            thread.join(timeout=5)
+            assert not thread.is_alive()
+
+        expected = [("output", {"content": "One"}), ("output", {"content": "Two"})]
+
+        assert received == [expected, expected]
 
     # ----------------------------------------------------------------------
     # The queue exists so that the consumer receives content as the producer writes it rather than

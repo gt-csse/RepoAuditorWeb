@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import re
 import textwrap
@@ -93,6 +94,19 @@ def test_GroupsAreEmbedded():
             "toggle_includes": False,
         },
     ]
+
+
+# ----------------------------------------------------------------------
+# Values come from the command line, configuration files, and the form, so one that closes the
+# element must not escape it.
+def test_ValueCannotEndTheConfigElement():
+    value = "</script><script>alert(1)</script>"
+    groups = [FormGroup("MyModule", [FormField("MyModule_value", "value", FieldType.Text, value)])]
+
+    page = CreatePage(groups, "my_token")
+
+    assert "<script>alert(1)" not in page
+    assert _GetConfig(page)["groups"] == [dataclasses.asdict(group) for group in groups]
 
 
 # ----------------------------------------------------------------------

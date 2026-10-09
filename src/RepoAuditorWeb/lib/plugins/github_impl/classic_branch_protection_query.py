@@ -1,4 +1,5 @@
 from typing import cast, override
+from urllib.parse import quote
 
 import requests
 
@@ -35,8 +36,14 @@ class ClassicBranchProtectionQuery(Query):
 
             branch = response["default_branch"]
 
+        assert isinstance(branch, str), (branch, type(branch))
+
+        # The branch is a path segment; characters that git permits (such as '#') would otherwise
+        # end the path.
+        encoded_branch = quote(branch)
+
         # Get the classic branch protection data for the branch
-        response = cast(requests.Session, module_data["session"]).get(f"branches/{branch}")
+        response = cast(requests.Session, module_data["session"]).get(f"branches/{encoded_branch}")
 
         response.raise_for_status()
         response = response.json()
@@ -47,11 +54,21 @@ class ClassicBranchProtectionQuery(Query):
         # Note that once here, we know that the branch is protected, but we don't know the
         # protection scheme used (rule sets or classic). Attempt to get the classic information
         # and then see if rule sets are in use if the classic information is not found.
-        response = cast(requests.Session, module_data["session"]).get(f"/branches/{branch}/protection")
+        response = cast(requests.Session, module_data["session"]).get(f"branches/{encoded_branch}/protection")
+
+        # GitHub reports classic protection only to callers with administrative access, so whether a
+        # classic rule is in use is unknown; the requirement reports that rather than an error.
+        if response.status_code in (requests.codes.UNAUTHORIZED, requests.codes.FORBIDDEN):
+            module_data["branch"] = branch
+            module_data["response"] = None
+
+            return module_data
 
         if response.status_code == requests.codes.NOT_FOUND:
             # Does this branch use rule sets?
-            ruleset_response = cast(requests.Session, module_data["session"]).get(f"rules/branches/{branch}")
+            ruleset_response = cast(requests.Session, module_data["session"]).get(
+                f"rules/branches/{encoded_branch}"
+            )
 
             ruleset_response.raise_for_status()
             ruleset_response = ruleset_response.json()
@@ -66,7 +83,7 @@ class ClassicBranchProtectionQuery(Query):
         response = response.json()
 
         module_data["branch"] = branch
-        module_data["branch_protection_data"] = response
+        module_data["response"] = response
 
         return module_data
 

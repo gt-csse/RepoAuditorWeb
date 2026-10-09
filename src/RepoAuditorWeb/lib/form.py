@@ -189,6 +189,7 @@ def ParseValues(
             value: object = mode_values[name]
         elif name in values:
             value = _CoerceValue(parameter, values[name])
+            _VerifyRange(name, parameter, value)
         else:
             value = parameter.default
 
@@ -638,6 +639,24 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
         return float(str(value))
 
     return str(value)
+
+
+# ----------------------------------------------------------------------
+def _VerifyRange(name: str, parameter: TyperParameter, value: object) -> None:
+    # Typer enforces the bounds on the command line, but submitted values never pass through it.
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return
+
+    minimum = getattr(parameter.info, "min", None)
+    maximum = getattr(parameter.info, "max", None)
+
+    if minimum is not None and value < minimum:
+        msg = f"'{name}' must be greater than or equal to {minimum}; '{value}' was provided."
+        raise ValueError(msg)
+
+    if maximum is not None and value > maximum:
+        msg = f"'{name}' must be less than or equal to {maximum}; '{value}' was provided."
+        raise ValueError(msg)
 
 
 # ----------------------------------------------------------------------

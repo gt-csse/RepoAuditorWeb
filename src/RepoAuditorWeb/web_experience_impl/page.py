@@ -22,7 +22,8 @@ def CreatePage(groups: list[FormGroup], token: str, *, execute: bool = False) ->
             "execute": execute,
             "groups": [dataclasses.asdict(group) for group in groups],
         },
-    )
+        # A value containing '</script>' would otherwise end the element and run as markup.
+    ).replace("<", "\\u003c")
 
     return textwrap.dedent(
         """\

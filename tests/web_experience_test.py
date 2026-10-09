@@ -56,8 +56,29 @@ def _Invoke(
 def test_WindowIsOpened():
     webview_mock, _, _ = _Invoke([], {})
 
-    assert webview_mock.create_window.call_args.args == ("RepoAuditor", "http://127.0.0.1:8080/")
+    # The page is gated by the token, so the window supplies it.
+    assert webview_mock.create_window.call_args.args == (
+        "RepoAuditor",
+        "http://127.0.0.1:8080/?token=my_token",
+    )
     assert webview_mock.start.call_count == 1
+
+
+# ----------------------------------------------------------------------
+# The window is not opened against a server that never started listening.
+def test_ErrorServerDoesNotStart():
+    with (
+        mock.patch("RepoAuditorWeb.web_experience.webview") as webview_mock,
+        mock.patch("RepoAuditorWeb.web_experience.uvicorn") as uvicorn_mock,
+        DoneManager.Create(io.StringIO(), "Testing...") as dm,
+    ):
+        uvicorn_mock.Server.return_value.started = False
+
+        with pytest.raises(RuntimeError) as exc_info:
+            ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {})
+
+    assert str(exc_info.value) == "The server could not be started on port 8080."
+    assert webview_mock.create_window.call_count == 0
 
 
 # ----------------------------------------------------------------------

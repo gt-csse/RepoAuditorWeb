@@ -37,7 +37,7 @@ def _GetEndpoint(app, path: str):
 
 # ----------------------------------------------------------------------
 def _GetIndex(app) -> dict[str, object]:
-    match = _CONFIG_REGEX.search(_GetEndpoint(app, "/")())
+    match = _CONFIG_REGEX.search(_GetEndpoint(app, "/")(_TOKEN))
     assert match is not None
 
     return json.loads(match.group("config"))
@@ -145,7 +145,7 @@ def test_ExecuteBodyMatchesWhatThePageSubmits():
     names = [field.alias for field in route.dependant.body_params]
 
     assert names == ["arguments"]
-    assert "JSON.stringify({ arguments: CollectArguments() })" in _GetEndpoint(app, "/")()
+    assert "JSON.stringify({ arguments: CollectArguments() })" in _GetEndpoint(app, "/")(_TOKEN)
 
 
 # ----------------------------------------------------------------------
@@ -203,7 +203,8 @@ class TestFields:
 class TestToken:
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize("token", ["other_token", None])
-    @pytest.mark.parametrize("path", ["/api/fields", "/api/stream"])
+    # The page embeds the token and the values entered, so it is gated as well.
+    @pytest.mark.parametrize("path", ["/", "/api/fields", "/api/stream"])
     def test_ErrorInvalidToken(self, path, token):
         app = _CreateApp(execute=False)
 
@@ -225,9 +226,63 @@ class TestToken:
         assert exc_info.value.detail == "Invalid token."
 
     # ----------------------------------------------------------------------
-    # The page itself carries no token because it is what receives one.
-    def test_IndexRequiresNoToken(self):
-        assert _GetIndex(_CreateApp(execute=False)) is not None
+    # A token presented by the page does not satisfy a check against a different one.
+    def test_ErrorTokenIsAPrefix(self):
+        with pytest.raises(HTTPException) as exc_info:
+            _GetEndpoint(_CreateApp(execute=False), "/")(_TOKEN[:-1])
+
+        assert exc_info.value.status_code == 401
+
+
+# ----------------------------------------------------------------------
+# A page on another site could reach the server through a hostname that it rebinds to the loopback
+# address, so requests that name any other host are rejected before reaching a route.
+class TestHost:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _GetStatus(host: str) -> int:
+        app = _CreateApp(execute=False)
+        messages: list[dict[str, object]] = []
+
+        # ----------------------------------------------------------------------
+        async def Receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        # ----------------------------------------------------------------------
+        async def Send(message: dict[str, object]) -> None:
+            messages.append(message)
+
+        # ----------------------------------------------------------------------
+
+        scope = {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "http",
+            "path": "/icon.svg",
+            "raw_path": b"/icon.svg",
+            "root_path": "",
+            "query_string": b"",
+            "headers": [(b"host", host.encode())],
+            "client": ("127.0.0.1", 1234),
+            "server": ("127.0.0.1", 8080),
+        }
+
+        asyncio.run(app(scope, Receive, Send))  # ty: ignore[call-non-callable]
+
+        return cast(
+            int, next(message["status"] for message in messages if message["type"] == "http.response.start")
+        )
+
+    # ----------------------------------------------------------------------
+    def test_Loopback(self):
+        assert self._GetStatus("127.0.0.1:8080") == 200
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("host", ["attacker.example:8080", "localhost:8080"])
+    def test_ErrorOtherHost(self, host):
+        assert self._GetStatus(host) == 400
 
 
 # ----------------------------------------------------------------------
@@ -380,6 +435,79 @@ class TestExecution:
         fields = _GetEndpoint(app, "/api/fields")(_TOKEN)["groups"][0]["fields"]
 
         assert next(field for field in fields if field["name"] == "MyModule_one")["value"] == "provided"
+
+    # ----------------------------------------------------------------------
+    # A page served while a run replaces the retained values renders the submitted values rather
+    # than the defaults left by the partial replacement.
+    def test_PageWaitsForRetainedValuesToBeReplaced(self):
+        updating = threading.Event()
+        release = threading.Event()
+
+        # ----------------------------------------------------------------------
+        class BlockingDict(dict):
+            @override
+            def update(self, *args, **kwargs) -> None:
+                updating.set()
+                assert release.wait(timeout=5)
+
+                super().update(*args, **kwargs)
+
+        # ----------------------------------------------------------------------
+
+        module = _CreateModule()
+        values = BlockingDict()
+        app = CreateApp([module], DynamicParameters([module]), values, _TOKEN)
+
+        assert _GetEndpoint(app, "/api/execute")({"MyModule_one": "provided"}, _TOKEN) == {
+            "status": "started",
+        }
+        assert updating.wait(timeout=5)
+
+        fields: list[dict[str, object]] = []
+        reader = threading.Thread(
+            target=lambda: fields.extend(_GetEndpoint(app, "/api/fields")(_TOKEN)["groups"][0]["fields"]),
+        )
+        reader.start()
+
+        try:
+            # Gives an unsynchronized read the opportunity to observe the cleared values.
+            reader.join(timeout=0.5)
+        finally:
+            release.set()
+
+        reader.join(timeout=5)
+        _Consume(_GetEndpoint(app, "/api/stream")(_TOKEN))
+
+        assert next(field for field in fields if field["name"] == "MyModule_one")["value"] == "provided"
+
+    # ----------------------------------------------------------------------
+    # A submission that cannot be parsed leaves the values of the previous one in place.
+    def test_SubmittedValuesAreRetainedAfterAnError(self):
+        requirement = MyRequirement("MyRequirement", "My requirement description.")
+        module = MyModule(
+            "MyModule",
+            "My description.",
+            [MyQuery("MyQuery", [requirement], query_data={})],
+            parameters={"one": TyperParameter(int, 0, OptionInfo(help="One"))},
+        )
+
+        values: dict[str, dict[str | None, dict[str, object]]] = {"MyModule": {None: {"one": 1}}}
+        app = CreateApp([module], DynamicParameters([module]), values, _TOKEN)
+
+        _Execute(app, {"MyModule_one": "not_a_number"})
+
+        assert values == {"MyModule": {None: {"one": 1}}}
+
+    # ----------------------------------------------------------------------
+    # A reconnecting page receives the whole run rather than the remainder of a split stream.
+    def test_StreamIsReplayedToEachSubscriber(self):
+        module = _CreateModule()
+        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+
+        first = _Execute(app, {})
+        second = _Consume(_GetEndpoint(app, "/api/stream")(_TOKEN))
+
+        assert second == first
 
     # ----------------------------------------------------------------------
     # A second request must not interleave its output into the stream of the first.

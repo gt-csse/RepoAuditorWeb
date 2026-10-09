@@ -45,7 +45,9 @@ def Execute(
                     suffix="\n",
                     suppress_exceptions=True,
                 ) as extract_dm:
-                    module_data = module.GetModuleData(arguments.get(module.name, {}))
+                    # Modules may modify the arguments they receive, which would otherwise corrupt the
+                    # values that the interactive experiences retain and display between runs.
+                    module_data = module.GetModuleData(copy.deepcopy(arguments.get(module.name, {})))
                     if module_data is None:
                         extract_dm.WriteLine("SKIPPED.")
                         continue

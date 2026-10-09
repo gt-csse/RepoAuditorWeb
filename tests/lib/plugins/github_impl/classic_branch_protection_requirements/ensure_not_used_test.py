@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from RepoAuditorWeb.lib.plugins.github_impl.classic_branch_protection_requirements.ensure_not_used import (
     EnsureNotUsedRequirement,
 )
@@ -78,8 +80,23 @@ def _Evaluate(
         _CreateModule(requirement),
         {
             "branch": branch,
-            "branch_protection_data": {},
+            "response": {"url": "https://api.github.com/protection"},
             "session": GitHubSession(url, "my-pat"),
+        },
+        {"skip": False, "permit": permit},
+    )
+
+
+# ----------------------------------------------------------------------
+def _EvaluateNotVisible(*, pat: str | None, permit: bool = False) -> EvaluateResult:
+    requirement = EnsureNotUsedRequirement()
+
+    return requirement.Evaluate(
+        _CreateModule(requirement),
+        {
+            "branch": "main",
+            "response": None,
+            "session": GitHubSession("https://github.com/gt-csse/RepoAuditorWeb", pat),
         },
         {"skip": False, "permit": permit},
     )
@@ -116,6 +133,39 @@ def test_ClassicProtectionWhenProhibited():
     assert result.context == (
         "The repository's value is 'True', but the requirement was configured to require 'False'."
     )
+
+
+# ----------------------------------------------------------------------
+# GitHub reports classic protection only to administrators, so without visibility the requirement
+# reports what is missing rather than an observation it could not make.
+def test_NotVisibleWithoutPat():
+    result = _EvaluateNotVisible(pat=None)
+
+    assert result.result == EvaluateResultValue.Warning
+    assert result.context == (
+        "The repository's classic branch protection rules are not visible because a Personal Access Token was not provided."
+    )
+    assert result.rationale is None
+
+
+# ----------------------------------------------------------------------
+def test_NotVisibleWithPat():
+    result = _EvaluateNotVisible(pat="my-pat")
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The repository's classic branch protection rules are not visible because the Personal Access Token provided does not grant admin access to the repository."
+    )
+
+
+# ----------------------------------------------------------------------
+# A token that cannot see the rule does not turn an unknown value into a passing result.
+@pytest.mark.parametrize(
+    ("pat", "expected_result"),
+    [(None, EvaluateResultValue.Warning), ("my-pat", EvaluateResultValue.Error)],
+)
+def test_NotVisibleWhenPermitted(pat, expected_result):
+    assert _EvaluateNotVisible(pat=pat, permit=True).result == expected_result
 
 
 # ----------------------------------------------------------------------

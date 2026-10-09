@@ -378,7 +378,32 @@ class TestDataFlow:
 
         _Execute([module], arguments)
 
-        assert module.module_data_args is arguments["MyModule"]
+        assert module.module_data_args == arguments["MyModule"]
+
+    # ----------------------------------------------------------------------
+    # The interactive experiences retain the arguments between runs, so modifications that a module
+    # makes to what it receives must not reach them.
+    def test_ModuleModificationsDoNotAffectArguments(self):
+        # ----------------------------------------------------------------------
+        class ModifyingModule(MyModule):
+            @override
+            def _GetModuleDataImpl(
+                self,
+                arguments: dict[str | None, dict[str, object]],
+            ) -> dict[str | None, dict[str, object]]:
+                arguments[None]["value"] = "modified"
+                arguments[None] = {"replaced": True}
+
+                return arguments
+
+        # ----------------------------------------------------------------------
+
+        module = ModifyingModule("MyModule", "My description.", [MyQuery("MyQuery", [], query_data={})])
+        module_arguments: dict = {None: {"skip": False, "value": 10}}
+
+        _Execute([module], {"MyModule": module_arguments})
+
+        assert module_arguments == {None: {"skip": False, "value": 10}}
 
     # ----------------------------------------------------------------------
     # Queries receive the module-level data, which is filed under a None requirement name.
@@ -426,7 +451,7 @@ class TestDataFlow:
         assert requirement.evaluate_args is not None
         assert requirement.evaluate_args[0] is module
         assert requirement.evaluate_args[1] is query_data
-        assert requirement.evaluate_args[2] is requirement_arguments
+        assert requirement.evaluate_args[2] == requirement_arguments
 
     # ----------------------------------------------------------------------
     # Modules with no corresponding arguments fall back to an empty dictionary, which the module

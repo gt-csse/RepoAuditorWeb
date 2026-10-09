@@ -256,7 +256,13 @@ class TestSession:
             "https://github.com/gt-csse/RepoAuditorWeb/extra",
             "https://github.com",
             # A url without a host has the right number of path parts but no server to query.
-            "/gt-csse/RepoAuditorWeb",
+            "file:///gt-csse/RepoAuditorWeb",
+            # Names that would change the API resource requested.
+            "https://github.com/../user",
+            "https://github.com/gt-csse/..",
+            "https://github.com/gt-csse/.",
+            "https://github.com/gt-csse/%2e%2e",
+            "https://github.com//RepoAuditorWeb",
         ],
     )
     def test_ErrorInvalidUrl(self, url):
