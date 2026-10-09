@@ -350,3 +350,20 @@ def test_Skip():
     result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "prohibit": False})
 
     assert result.result == EvaluateResultValue.Skipped
+
+
+# ----------------------------------------------------------------------
+# The endpoint reports one rule per ruleset that applies to the branch, and a ruleset that enables
+# the setting enforces it whatever the others say.
+def test_MultiplePullRequestRules():
+    result = _Evaluate(
+        [
+            _CreatePullRequestRule(dismiss_stale_reviews_on_push=False),
+            _CreatePullRequestRule(dismiss_stale_reviews_on_push=True),
+        ],
+    )
+
+    assert result.result == EvaluateResultValue.Success
+    assert (
+        result.context == "The repository's value is 'True', which the requirement was configured to require."
+    )

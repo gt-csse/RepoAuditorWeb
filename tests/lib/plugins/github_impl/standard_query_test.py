@@ -19,14 +19,6 @@ class _FakeSession:
         self.requested_url: str | None = None
 
     # ----------------------------------------------------------------------
-    def __enter__(self) -> "_FakeSession":
-        return self
-
-    # ----------------------------------------------------------------------
-    def __exit__(self, *args) -> None:
-        pass
-
-    # ----------------------------------------------------------------------
     def get(self, url: str) -> requests.Response:
         self.requested_url = url
 

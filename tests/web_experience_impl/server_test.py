@@ -16,6 +16,7 @@ from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParame
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 from RepoAuditorWeb.web_experience_impl import server
 from RepoAuditorWeb.web_experience_impl.server import CreateApp
+from RepoAuditorWeb.web_experience_impl.stream_sink import StreamSink
 
 from conftest import EvaluateValues, MyModule, MyQuery, MyRequirement
 
@@ -582,3 +583,38 @@ class TestExecution:
 
         assert _Execute(app, {})[-1] == {"type": "done"}
         assert _Execute(app, {})[-1] == {"type": "done"}
+
+    # ----------------------------------------------------------------------
+    # Closing the sink is what tells a subscriber that the run is done, so a run requested at that
+    # moment is admitted rather than rejected as overlapping the one that just ended.
+    def test_RunIsAdmittedWhenSinkCloses(self, monkeypatch):
+        module = _CreateModule()
+        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+
+        probed = threading.Event()
+        statuses: list[object] = []
+
+        # ----------------------------------------------------------------------
+        class ProbingSink(StreamSink):
+            @override
+            def Close(self) -> None:
+                # The probe's own run closes a sink too, so only the first close probes.
+                if not probed.is_set():
+                    probed.set()
+
+                    try:
+                        statuses.append(_GetEndpoint(app, "/api/execute")({}, _TOKEN))
+                    except HTTPException as ex:
+                        statuses.append(ex.status_code)
+
+                super().Close()
+
+        # ----------------------------------------------------------------------
+
+        monkeypatch.setattr(server, "StreamSink", ProbingSink)
+
+        assert _Execute(app, {})[-1] == {"type": "done"}
+        assert statuses == [{"status": "started"}]
+
+        # Consume the probe's stream so that its run releases the lock before the test ends.
+        assert _Consume(_GetEndpoint(app, "/api/stream")(_TOKEN))[-1] == {"type": "done"}

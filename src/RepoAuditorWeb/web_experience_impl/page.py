@@ -583,6 +583,10 @@ _SCRIPT = textwrap.dedent(
     // them, so the wiring is collected while the tree is built and run once it is complete.
     const pendingDisabling = [];
 
+    // A run ending re-enables every control, so the state is refreshed again rather than rewired,
+    // which would add another set of listeners each time.
+    const refreshDisabling = [];
+
     function CreateControl(field) {
       if (field.type === "boolean") {
         const input = document.createElement("input");
@@ -729,6 +733,7 @@ _SCRIPT = textwrap.dedent(
       details.addEventListener("refresh-disabling", Refresh);
 
       Refresh();
+      return Refresh;
     }
 
     // What a query names is the data its requirements are evaluated against, which is not something
@@ -819,6 +824,7 @@ _SCRIPT = textwrap.dedent(
       form.textContent = "";
       readers.clear();
       pendingDisabling.length = 0;
+      refreshDisabling.length = 0;
 
       for (const group of config.groups) {
         // A module is displayed expanded; the requirements it holds are collapsed until one is the
@@ -843,7 +849,7 @@ _SCRIPT = textwrap.dedent(
 
       // A module is wired before the sections it holds, so that disabling a module is what the
       // sections then inherit.
-      for (const Wire of pendingDisabling) Wire();
+      for (const Wire of pendingDisabling) refreshDisabling.push(Wire());
 
       RefreshLabelWidth();
     }
@@ -876,7 +882,7 @@ _SCRIPT = textwrap.dedent(
 
       // Enabling every control is what a run ending would otherwise do, which would revive the
       // controls of a module or requirement that does not run, so the disabling is applied again.
-      if (!running) for (const Wire of pendingDisabling) Wire();
+      if (!running) for (const Refresh of refreshDisabling) Refresh();
 
       if (running) resetButton.disabled = true;
       else RefreshResetButton();

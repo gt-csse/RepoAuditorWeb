@@ -53,12 +53,12 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The setting governs the approvals collected on a pull request, so it has nothing to
         # dismiss on a branch that does not require one. Reporting a failure here would restate the
         # absence of the pull request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so there are no approvals to dismiss.",
@@ -68,8 +68,10 @@ class DismissStalePullRequestApprovalsRequirement(Requirement):
                 module,
             )
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-        dismiss_value = bool(parameters.get("dismiss_stale_reviews_on_push"))
+        # A ruleset that enables the setting enforces it whatever the others say.
+        dismiss_value = any(
+            bool(parameters.get("dismiss_stale_reviews_on_push")) for parameters in rule_parameters
+        )
 
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 

@@ -4,7 +4,7 @@ import enum
 import inspect
 
 from dataclasses import dataclass, field
-from types import UnionType
+from types import GenericAlias, UnionType
 from typing import get_args, get_origin, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -512,6 +512,7 @@ def _CreateField(
     choices: list[str] = []
 
     if field_type == FieldType.Choice:
+        assert isinstance(resolved_type, type), resolved_type
         assert issubclass(resolved_type, enum.Enum), resolved_type
 
         choices = [member.value for member in resolved_type]
@@ -545,7 +546,7 @@ def _CreateField(
 
 
 # ----------------------------------------------------------------------
-def _ResolveType(parameter_type: type | UnionType) -> type:
+def _ResolveType(parameter_type: type | UnionType | GenericAlias) -> type | GenericAlias:
     """Return the meaningful type of an optional parameter (e.g. 'str' for 'str | None')."""
 
     if isinstance(parameter_type, UnionType):
@@ -558,7 +559,7 @@ def _ResolveType(parameter_type: type | UnionType) -> type:
 
 
 # ----------------------------------------------------------------------
-def _ResolveFieldType(resolved_type: type, *, allows_none: bool = False) -> FieldType:
+def _ResolveFieldType(resolved_type: type | GenericAlias, *, allows_none: bool = False) -> FieldType:
     if get_origin(resolved_type) in (list, tuple):
         return FieldType.List
 
@@ -628,6 +629,7 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
             return parameter.default
 
     if field_type == FieldType.Choice:
+        assert isinstance(resolved_type, type), resolved_type
         return resolved_type(value)
 
     # The form submits every value as a string, so the string is what is converted; a value that is
@@ -660,5 +662,5 @@ def _VerifyRange(name: str, parameter: TyperParameter, value: object) -> None:
 
 
 # ----------------------------------------------------------------------
-def _AllowsNone(parameter_type: type | UnionType) -> bool:
+def _AllowsNone(parameter_type: type | UnionType | GenericAlias) -> bool:
     return isinstance(parameter_type, UnionType) and type(None) in get_args(parameter_type)

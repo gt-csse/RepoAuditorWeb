@@ -117,3 +117,15 @@ class TestGetModuleData:
             _CreateModule().GetModuleData(
                 _CreateArguments(url="https://github.com/gt-csse/RepoAuditorWeb", pat="  "),
             )
+
+
+# ----------------------------------------------------------------------
+# The module data only holds resolved argument values, so there is nothing to release and the data must be left intact.
+def test_CleanupModuleDataPreservesData():
+    module_data: dict[str | None, dict[str, object]] = {
+        None: {"url": "https://github.com/gt-csse/RepoAuditorWeb"}
+    }
+
+    _CreateModule().CleanupModuleData(module_data)
+
+    assert module_data == {None: {"url": "https://github.com/gt-csse/RepoAuditorWeb"}}

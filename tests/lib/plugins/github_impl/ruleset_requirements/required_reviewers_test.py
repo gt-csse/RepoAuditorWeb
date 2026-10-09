@@ -430,3 +430,18 @@ def test_Skip():
     result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "value": None})
 
     assert result.result == EvaluateResultValue.Skipped
+
+
+# ----------------------------------------------------------------------
+# The endpoint reports one rule per ruleset that applies to the branch, and every ruleset must be
+# satisfied, so the teams each one names are all required.
+def test_MultiplePullRequestRules():
+    result = _Evaluate(
+        [_CreatePullRequestRule([_CreateReviewer(1)]), _CreatePullRequestRule([_CreateReviewer(2)])],
+        value=2,
+    )
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context == (
+        "The ruleset requires reviews from 2 team(s), and the requirement was configured to require at least 2."
+    )

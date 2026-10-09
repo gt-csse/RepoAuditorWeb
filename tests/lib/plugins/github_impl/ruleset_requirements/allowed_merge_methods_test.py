@@ -350,11 +350,11 @@ def test_MissingParameter(parameters):
 
 
 # ----------------------------------------------------------------------
-# The endpoint reports one rule per ruleset that applies to the branch, so the first pull request
-# rule is the one that is evaluated.
+# The endpoint reports one rule per ruleset that applies to the branch, and a method is only
+# available when every ruleset allows it.
 def test_MultiplePullRequestRules():
     result = _Evaluate(
-        [_CreatePullRequestRule(["merge"]), _CreatePullRequestRule(["squash"])],
+        [_CreatePullRequestRule(["merge", "squash"]), _CreatePullRequestRule(["merge", "rebase"])],
     )
 
     assert result.result == EvaluateResultValue.Success

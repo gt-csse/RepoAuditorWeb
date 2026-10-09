@@ -67,12 +67,12 @@ class RequireReviewFromCodeOwnersRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The setting governs who must approve a pull request, so it governs nothing on a branch
         # that does not require one. Reporting a failure here would restate the absence of the pull
         # request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so no code owner review is requested.",
@@ -90,8 +90,10 @@ class RequireReviewFromCodeOwnersRequirement(Requirement):
 
         acceptable_value = TEAM_SIZE_OVERRIDES.get(team_size, DEFAULT_VALUE) if require is None else require
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-        code_owners_value = bool(parameters.get("require_code_owner_review"))
+        # A ruleset that enables the setting enforces it whatever the others say.
+        code_owners_value = any(
+            bool(parameters.get("require_code_owner_review")) for parameters in rule_parameters
+        )
 
         if code_owners_value != acceptable_value:
             repository_url = cast("GitHubSession", query_data["session"]).github_url

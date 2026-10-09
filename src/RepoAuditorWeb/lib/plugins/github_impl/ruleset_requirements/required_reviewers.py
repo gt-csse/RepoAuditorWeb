@@ -69,12 +69,12 @@ class RequiredReviewersRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The teams are a setting of the pull request rule, so they govern nothing on a branch that
         # does not require one. Reporting a failure here would restate the absence of the pull
         # request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so no reviews are requested.",
@@ -90,11 +90,14 @@ class RequiredReviewersRequirement(Requirement):
         if acceptable_value is None:
             acceptable_value = DEFAULT_VALUES[team_size]
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-
         # GitHub omits the setting rather than reporting an empty roster when no teams are named, so
-        # an absent value and an empty list describe the same ruleset.
-        reviewers = cast(list[dict[str, object]], parameters.get("required_reviewers") or [])
+        # an absent value and an empty list describe the same ruleset. Every ruleset must be
+        # satisfied, so the teams each one names are all required.
+        reviewers = [
+            reviewer
+            for parameters in rule_parameters
+            for reviewer in cast(list[dict[str, object]], parameters.get("required_reviewers") or [])
+        ]
 
         repository_url = cast("GitHubSession", query_data["session"]).github_url
         branch_name = cast(str, query_data["branch"])

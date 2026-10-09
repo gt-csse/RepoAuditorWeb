@@ -131,6 +131,9 @@ class MyModule(Module):
         # Captures the arguments most recently passed to _GetModuleDataImpl.
         self.module_data_args: dict[str | None, dict[str, object]] | None = None
 
+        # Captures the module data most recently passed to CleanupModuleData.
+        self.cleanup_module_data: dict[str | None, dict[str, object]] | None = None
+
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return self.parameters
@@ -147,6 +150,10 @@ class MyModule(Module):
 
         return arguments if self.module_data is None else self.module_data
 
+    @override
+    def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+        self.cleanup_module_data = module_data
+
 
 # ----------------------------------------------------------------------
 class FakeGitHubSession:
@@ -159,11 +166,7 @@ class FakeGitHubSession:
         self.closed = False
 
     # ----------------------------------------------------------------------
-    def __enter__(self) -> "FakeGitHubSession":
-        return self
-
-    # ----------------------------------------------------------------------
-    def __exit__(self, *args) -> None:
+    def close(self) -> None:
         self.closed = True
 
     # ----------------------------------------------------------------------

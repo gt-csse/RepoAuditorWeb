@@ -344,3 +344,13 @@ def test_Skip():
     result = requirement.Evaluate(_CreateModule(requirement), {}, {"skip": True, "value": None})
 
     assert result.result == EvaluateResultValue.Skipped
+
+
+# ----------------------------------------------------------------------
+# The endpoint reports one rule per ruleset that applies to the branch, and every ruleset must be
+# satisfied, so the largest count is the one enforced.
+def test_MultiplePullRequestRules():
+    result = _Evaluate([_CreatePullRequestRule(1), _CreatePullRequestRule(2)], value=2)
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context == "The repository's value is '2', which the requirement was configured to require."

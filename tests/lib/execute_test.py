@@ -454,8 +454,8 @@ class TestDataFlow:
         assert requirement.evaluate_args[2] == requirement_arguments
 
     # ----------------------------------------------------------------------
-    # Modules with no corresponding arguments fall back to an empty dictionary, which the module
-    # then rejects because the gating argument is absent.
+    # Every module is expected to receive arguments, so a module without them is reported as an
+    # error.
     def test_MissingModuleArgumentsProduceNoResults(self):
         module = _CreateModule([MyQuery("MyQuery", [], query_data={})])
 
@@ -643,3 +643,70 @@ class TestCleanup:
 
         assert queries[0].cleanup_query_data is query_data1
         assert queries[1].cleanup_query_data is query_data2
+
+
+# ----------------------------------------------------------------------
+class TestModuleCleanup:
+    # ----------------------------------------------------------------------
+    def test_ReceivesModuleData(self):
+        module_data: dict[str | None, dict[str, object]] = {None: {"session": "value"}}
+        module = MyModule("MyModule", "My description.", [], module_data=module_data)
+
+        _Execute([module], {"MyModule": {None: {"skip": False}}})
+
+        assert module.cleanup_module_data is module_data
+
+    # ----------------------------------------------------------------------
+    def test_InvokedAfterAllQueries(self):
+        # ----------------------------------------------------------------------
+        class OrderingModule(MyModule):
+            @override
+            def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+                self.cleaned_queries = [
+                    query.cleanup_query_data is not None  # ty: ignore[unresolved-attribute]
+                    for query in self.queries
+                ]
+
+        # ----------------------------------------------------------------------
+
+        module = OrderingModule(
+            "MyModule",
+            "My description.",
+            [
+                MyQuery("Query1", [_CreateRequirement("One")], query_data={}),
+                MyQuery("Query2", [_CreateRequirement("Two")], query_data={}),
+            ],
+        )
+
+        _Execute(
+            [module],
+            {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+        )
+
+        assert module.cleaned_queries == [True, True]
+
+    # ----------------------------------------------------------------------
+    def test_InvokedWhenQueryRaises(self):
+        module = _CreateModule(
+            [MyQuery("MyQuery", [_CreateRequirement()], raise_exception=ValueError("My query error."))]
+        )
+
+        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}})
+
+        assert module.cleanup_module_data == {None: {"skip": False}, "MyRequirement": {"skip": False}}
+
+    # ----------------------------------------------------------------------
+    def test_NotInvokedForSkippedModule(self):
+        module = _CreateModule([MyQuery("MyQuery", [_CreateRequirement()], query_data={})])
+
+        _Execute([module], {"MyModule": {None: {"skip": True}, "MyRequirement": {"skip": False}}})
+
+        assert module.cleanup_module_data is None
+
+    # ----------------------------------------------------------------------
+    def test_NotInvokedWhenModuleRaises(self):
+        module = _CreateModule([], raise_exception=ValueError("My module error."))
+
+        _Execute([module], {"MyModule": {None: {"skip": False}}})
+
+        assert module.cleanup_module_data is None

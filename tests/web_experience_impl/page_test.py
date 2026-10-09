@@ -346,17 +346,20 @@ def test_SkippedModuleDisablesItsRequirements():
 def test_DisablingIsWiredOnceTheFormIsBuilt():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert "for (const Wire of pendingDisabling) Wire();" in page
+    assert "for (const Wire of pendingDisabling) refreshDisabling.push(Wire());" in page
     assert "pendingDisabling.length = 0;" in page
+    assert "refreshDisabling.length = 0;" in page
 
 
 # ----------------------------------------------------------------------
 # A run disables every control and enabling them all is what ending it would otherwise do, which
-# would revive the controls of a module or requirement that does not run.
+# would revive the controls of a module or requirement that does not run. The state is refreshed
+# rather than rewired so that listeners do not accumulate across runs.
 def test_EndingARunDoesNotReviveDisabledControls():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert "if (!running) for (const Wire of pendingDisabling) Wire();" in page
+    assert "if (!running) for (const Refresh of refreshDisabling) Refresh();" in page
+    assert "for (const Wire of pendingDisabling) Wire();" not in page
 
 
 # ----------------------------------------------------------------------

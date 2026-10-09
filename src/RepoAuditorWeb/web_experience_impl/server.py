@@ -218,8 +218,10 @@ def _Run(  # noqa: PLR0913
     except Exception as ex:
         sink.Send("error", {"message": str(ex)})
     finally:
-        sink.Close()
+        # Closing the sink tells subscribers the run is done, which invites the next one, so the
+        # lock must already be free when that happens.
         lock.release()
+        sink.Close()
 
 
 # ----------------------------------------------------------------------

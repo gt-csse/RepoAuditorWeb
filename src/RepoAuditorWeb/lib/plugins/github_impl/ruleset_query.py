@@ -100,36 +100,35 @@ class RulesetQuery(Query):
     # ----------------------------------------------------------------------
     @override
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
-        # The session is shared by the module's queries and remains usable once closed; closing it
-        # releases its pooled connections, as Module provides no cleanup hook.
-        with cast(requests.Session, module_data["session"]) as session:
-            # Get the branch
-            branch = module_data["branch"]
-            if branch is None:
-                # Get the default branch name
-                response = session.get("")
+        session = cast(requests.Session, module_data["session"])
 
-                response.raise_for_status()
-                response = response.json()
-
-                branch = response["default_branch"]
-
-            assert isinstance(branch, str), (branch, type(branch))
-
-            # Get the ruleset data for the branch. The branch is a path segment; characters that git
-            # permits (such as '#') would otherwise end the path.
-            response = session.get(f"rules/branches/{quote(branch)}")
+        # Get the branch
+        branch = module_data["branch"]
+        if branch is None:
+            # Get the default branch name
+            response = session.get("")
 
             response.raise_for_status()
             response = response.json()
 
-            if not response:
-                return None
+            branch = response["default_branch"]
 
-            module_data["branch"] = branch
-            module_data["response"] = response
+        assert isinstance(branch, str), (branch, type(branch))
 
-            return module_data
+        # Get the ruleset data for the branch. The branch is a path segment; characters that git
+        # permits (such as '#') would otherwise end the path.
+        response = session.get(f"rules/branches/{quote(branch)}")
+
+        response.raise_for_status()
+        response = response.json()
+
+        if not response:
+            return None
+
+        module_data["branch"] = branch
+        module_data["response"] = response
+
+        return module_data
 
     # ----------------------------------------------------------------------
     @override

@@ -6,6 +6,8 @@ import requests
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, TeamSize
 from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 
+from conftest import FakeGitHubSession
+
 
 # ----------------------------------------------------------------------
 def _GetSession(
@@ -169,6 +171,15 @@ class TestGetModuleData:
             ValueError, match=re.escape("'pat' must not be empty or contain only whitespace.")
         ):
             _GetSession(pat="  ")
+
+
+# ----------------------------------------------------------------------
+def test_CleanupModuleDataClosesSession():
+    session = FakeGitHubSession({})
+
+    GitHubModule().CleanupModuleData({None: {"session": session}})
+
+    assert session.closed is True
 
 
 # ----------------------------------------------------------------------

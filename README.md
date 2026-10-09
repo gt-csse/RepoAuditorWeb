@@ -91,9 +91,9 @@ Every module and requirement contributes command line options; run `repoauditorw
 
 | Option | Description |
 | --- | --- |
-| `--url` | The GitHub repository to audit; applied to every included module. |
-| `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing one. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
-| `--branch` | The branch to evaluate; the default branch is used if not specified. |
+| `--url` | The GitHub repository to audit; applied to every included module. The URL must begin with `https://`, `http://`, or `file://` (a local clone). The `GitHub` module requires the form `<server>/<owner>/<repository>`, where the owner and repository names contain only letters, digits, `-`, `_`, and `.`. |
+| `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing only that token. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
+| `--branch` | The branch to evaluate; the default branch is used if not specified. The name must be a valid git branch name; for example, it cannot contain `..`, `@{`, whitespace, or any of `~^:?*[\`. |
 | `--<Module>-include` | Include a module in the audit. |
 | `--<Module>-<Requirement>-skip` | Skip a requirement. |
 | `--evaluate-all` | Evaluate requirements that would otherwise be suppressed because a parent setting is not enabled. |

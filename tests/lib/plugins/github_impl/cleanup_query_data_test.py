@@ -27,13 +27,12 @@ def test_CleanupQueryDataPreservesData(query_type):
 
 
 # ----------------------------------------------------------------------
-# The module provides no cleanup hook, so each query releases the session's pooled connections,
-# including when it returns no query data.
+# The session is owned by the module and shared by its queries, so the module releases it.
 @pytest.mark.parametrize(
     "query_type",
     [ClassicBranchProtectionQuery, DefaultBranchQuery, RulesetQuery, StandardQuery],
 )
-def test_SessionIsClosed(query_type):
+def test_SessionIsNotClosed(query_type):
     session = FakeGitHubSession(
         {
             "": (200, {"default_branch": "main"}),
@@ -44,4 +43,4 @@ def test_SessionIsClosed(query_type):
 
     query_type().GetQueryData({"session": session, "branch": None})
 
-    assert session.closed is True
+    assert session.closed is False

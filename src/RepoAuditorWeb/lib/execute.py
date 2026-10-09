@@ -47,7 +47,7 @@ def Execute(
                 ) as extract_dm:
                     # Modules may modify the arguments they receive, which would otherwise corrupt the
                     # values that the interactive experiences retain and display between runs.
-                    module_data = module.GetModuleData(copy.deepcopy(arguments.get(module.name, {})))
+                    module_data = module.GetModuleData(copy.deepcopy(arguments[module.name]))
                     if module_data is None:
                         extract_dm.WriteLine("SKIPPED.")
                         continue
@@ -55,61 +55,64 @@ def Execute(
                 if extract_dm.result < 0:
                     continue
 
-                for query_index, query in enumerate(module.queries):
-                    with module_dm.Nested(
-                        f"Executing query '{query.name}' ({query_index + 1} of {len(module.queries)})...",
-                        suffix="\n",
-                        suppress_exceptions=True,
-                    ) as query_dm:
-                        with query_dm.Nested(
-                            "Extracting data...",
+                with ExitStack(
+                    lambda module=module, module_data=module_data: module.CleanupModuleData(module_data)
+                ):
+                    for query_index, query in enumerate(module.queries):
+                        with module_dm.Nested(
+                            f"Executing query '{query.name}' ({query_index + 1} of {len(module.queries)})...",
                             suffix="\n",
-                        ) as extract_dm:
-                            this_query_data = query.GetQueryData(copy.copy(module_data.get(None, {})))
-                            if this_query_data is None:
-                                extract_dm.WriteLine("SKIPPED.")
-                                continue
+                            suppress_exceptions=True,
+                        ) as query_dm:
+                            with query_dm.Nested(
+                                "Extracting data...",
+                                suffix="\n",
+                            ) as extract_dm:
+                                this_query_data = query.GetQueryData(copy.copy(module_data.get(None, {})))
+                                if this_query_data is None:
+                                    extract_dm.WriteLine("SKIPPED.")
+                                    continue
 
-                        with ExitStack(
-                            lambda query=query, this_query_data=this_query_data: query.CleanupQueryData(
-                                this_query_data
-                            )
-                        ):
-                            for requirement_index, requirement in enumerate(query.requirements):
-                                query_status: str | None = None
+                            with ExitStack(
+                                lambda query=query, this_query_data=this_query_data: query.CleanupQueryData(
+                                    this_query_data
+                                )
+                            ):
+                                for requirement_index, requirement in enumerate(query.requirements):
+                                    query_status: str | None = None
 
-                                with query_dm.Nested(
-                                    f"Evaluating requirement '{requirement.name}' ({requirement_index + 1} of {len(query.requirements)})...",
-                                    lambda: query_status,  # noqa: B023
-                                    suppress_exceptions=True,
-                                ) as requirement_dm:
-                                    requirement_data = module_data.get(requirement.name, {})
+                                    with query_dm.Nested(
+                                        f"Evaluating requirement '{requirement.name}' ({requirement_index + 1} of {len(query.requirements)})...",
+                                        lambda: query_status,  # noqa: B023
+                                        suppress_exceptions=True,
+                                    ) as requirement_dm:
+                                        requirement_data = module_data[requirement.name]
 
-                                    eval_result = requirement.Evaluate(
-                                        module,
-                                        this_query_data,
-                                        requirement_data,
-                                        evaluate_all=evaluate_all,
-                                    )
-                                    eval_results.append(eval_result)
+                                        eval_result = requirement.Evaluate(
+                                            module,
+                                            this_query_data,
+                                            requirement_data,
+                                            evaluate_all=evaluate_all,
+                                        )
+                                        eval_results.append(eval_result)
 
-                                    if eval_result.result == EvaluateResultValue.Skipped:
-                                        query_status = "SKIPPED"
-                                    elif eval_result.result == EvaluateResultValue.DoesNotApply:
-                                        query_status = "DOES NOT APPLY"
-                                    elif eval_result.result == EvaluateResultValue.Success:
-                                        pass
-                                    elif eval_result.result == EvaluateResultValue.Warning:
-                                        requirement_dm.result = 1
+                                        if eval_result.result == EvaluateResultValue.Skipped:
+                                            query_status = "SKIPPED"
+                                        elif eval_result.result == EvaluateResultValue.DoesNotApply:
+                                            query_status = "DOES NOT APPLY"
+                                        elif eval_result.result == EvaluateResultValue.Success:
+                                            pass
+                                        elif eval_result.result == EvaluateResultValue.Warning:
+                                            requirement_dm.result = 1
 
-                                        if isinstance(eval_result.context, str):
-                                            requirement_dm.WriteWarning(eval_result.context)
-                                    elif eval_result.result == EvaluateResultValue.Error:
-                                        requirement_dm.result = -1
+                                            if isinstance(eval_result.context, str):
+                                                requirement_dm.WriteWarning(eval_result.context)
+                                        elif eval_result.result == EvaluateResultValue.Error:
+                                            requirement_dm.result = -1
 
-                                        if isinstance(eval_result.context, str):
-                                            requirement_dm.WriteError(eval_result.context)
-                                    else:
-                                        assert False, eval_result.result  # noqa: B011, PT015  # pragma: no cover
+                                            if isinstance(eval_result.context, str):
+                                                requirement_dm.WriteError(eval_result.context)
+                                        else:
+                                            assert False, eval_result.result  # noqa: B011, PT015  # pragma: no cover
 
     return eval_results

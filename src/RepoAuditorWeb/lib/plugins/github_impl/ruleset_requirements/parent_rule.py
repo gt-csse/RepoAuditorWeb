@@ -13,14 +13,18 @@ PULL_REQUEST_RULE_TYPE = "pull_request"
 
 
 # ----------------------------------------------------------------------
-def GetRule(
+def GetRuleParameters(
     query_data: dict[str, object],
     rule_type: str,
     *,
     evaluate_all: bool,
     default_parameters: dict[str, object] | None = None,
-) -> dict[str, object] | None:
-    """Return the rule of 'rule_type' that applies to the branch, or None if the requirement does not apply.
+) -> list[dict[str, object]] | None:
+    """Return the parameters of each rule of 'rule_type' that applies to the branch, or None if the requirement does not apply.
+
+    The endpoint reports one rule per ruleset that applies to the branch and GitHub enforces the most
+    restrictive of them, so the caller combines the parameters according to what is restrictive for
+    the setting it validates.
 
     The endpoint reports only the rules that apply, so an absent rule leaves the nested setting
     governing nothing and the requirement reports that it does not apply. When the user asks for
@@ -36,12 +40,19 @@ def GetRule(
 
     rules = cast(list[dict[str, object]], query_data["response"])
 
-    rule = next((rule for rule in rules if rule.get("type") == rule_type), None)
+    parameters = [
+        cast(dict[str, object], rule.get("parameters") or {})
+        for rule in rules
+        if rule.get("type") == rule_type
+    ]
 
-    if rule is None and evaluate_all:
-        return {"type": rule_type, "parameters": default_parameters or {}}
+    if parameters:
+        return parameters
 
-    return rule
+    if evaluate_all:
+        return [default_parameters or {}]
+
+    return None
 
 
 # ----------------------------------------------------------------------

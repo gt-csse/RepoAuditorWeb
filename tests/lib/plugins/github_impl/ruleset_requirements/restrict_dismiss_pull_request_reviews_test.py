@@ -404,3 +404,32 @@ def test_Skip():
     )
 
     assert result.result == EvaluateResultValue.Skipped
+
+
+# ----------------------------------------------------------------------
+# The endpoint reports one rule per ruleset that applies to the branch, and a ruleset that restricts
+# dismissal does so whatever the others say.
+def test_MultiplePullRequestRulesRestrictWhenAnyDoes():
+    result = _Evaluate([_CreatePullRequestRule(), _CreatePullRequestRule({"enabled": True})])
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context == (
+        "The ruleset allows 0 actor(s) to dismiss reviews, and the requirement was configured to require at most 0."
+    )
+
+
+# ----------------------------------------------------------------------
+# Every restriction must be satisfied, so an actor may dismiss only when each roster names it.
+def test_MultiplePullRequestRulesAllowOnlySharedActors():
+    result = _Evaluate(
+        [
+            _CreatePullRequestRule({"enabled": True, "allowed_actors": [_CreateActor(1), _CreateActor(2)]}),
+            _CreatePullRequestRule({"enabled": True, "allowed_actors": [_CreateActor(2)]}),
+        ],
+        value=1,
+    )
+
+    assert result.result == EvaluateResultValue.Success
+    assert result.context == (
+        "The ruleset allows 1 actor(s) to dismiss reviews, and the requirement was configured to require at most 1."
+    )

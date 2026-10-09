@@ -1,4 +1,6 @@
-from typing import override
+from typing import cast, override
+
+import requests
 
 from typer.models import OptionInfo
 
@@ -64,3 +66,9 @@ class GitHubModule(Module):
         }
 
         return arguments
+
+    # ----------------------------------------------------------------------
+    @override
+    def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+        # The module's queries share the session, so its pooled connections are released once they all have run.
+        cast(requests.Session, module_data[None]["session"]).close()

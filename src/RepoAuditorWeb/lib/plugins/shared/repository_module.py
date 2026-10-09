@@ -43,3 +43,8 @@ class RepositoryModule(Module):
         arguments[None] = asdict(ResolveRepositoryArguments(arguments.get(None, {})))
 
         return arguments
+
+    # ----------------------------------------------------------------------
+    @override
+    def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+        pass  # No cleanup necessary

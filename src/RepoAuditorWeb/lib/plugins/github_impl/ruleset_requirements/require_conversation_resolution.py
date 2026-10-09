@@ -55,12 +55,12 @@ class RequireConversationResolutionRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # Review comment threads exist only on a pull request, so the setting governs nothing on a
         # branch that does not require one. Reporting a failure here would restate the absence of
         # the pull request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so there are no conversations to resolve.",
@@ -70,8 +70,10 @@ class RequireConversationResolutionRequirement(Requirement):
                 module,
             )
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-        resolution_value = bool(parameters.get("required_review_thread_resolution"))
+        # A ruleset that enables the setting enforces it whatever the others say.
+        resolution_value = any(
+            bool(parameters.get("required_review_thread_resolution")) for parameters in rule_parameters
+        )
 
         acceptable_value = not cast(bool, requirement_data["prohibit"])
 
