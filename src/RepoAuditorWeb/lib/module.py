@@ -64,7 +64,9 @@ class Module(ABC):
         derived_parameters = self._GetParametersImpl()
 
         for param_name in derived_parameters:
-            if param_name in base_parameters:
+            # Both names are reserved regardless of which one is in use, since the form treats either
+            # as the toggle that decides whether the module runs.
+            if param_name in ("include", "skip"):
                 msg = f"Parameter '{param_name}' is reserved by Module and may not be used."
                 raise ValueError(msg)
 
@@ -104,6 +106,11 @@ class Module(ABC):
         return self._GetModuleDataImpl(arguments)
 
     # ----------------------------------------------------------------------
+    @abstractmethod
+    def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+        """Release resources held by the module data after all of the module's queries have run."""
+
+    # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     @abstractmethod
@@ -119,5 +126,5 @@ class Module(ABC):
         """Return a dictionary of initial data that will be used by queries in the module based on arguments passed on the command line.
 
         Derived classes may return the provided arguments unmodified, add values, or return a completely different
-        dictionary of data. The module will be skipped if None is returned.
+        dictionary of data. Whether the module is skipped has already been decided by GetModuleData.
         """

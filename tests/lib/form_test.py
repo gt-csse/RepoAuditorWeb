@@ -580,7 +580,7 @@ class TestParseValues:
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize(
         ("submitted", "expected"),
-        [("yes", True), ("no", False), ("default", None), ("", None)],
+        [("yes", True), ("no", False), ("default", None), ("", None), (True, True), (False, False)],
     )
     def test_OptionalBoolean(self, submitted, expected):
         assert _ParseValue(TyperParameter(bool | None, None), {"MyModule_one": submitted}) is expected
@@ -648,6 +648,18 @@ class TestParseValues:
         assert _ParseValue(TyperParameter(MyChoice, MyChoice.One), {"MyModule_one": "two"}) == MyChoice.Two
 
     # ----------------------------------------------------------------------
+    # A choice control left blank submits the empty value.
+    @pytest.mark.parametrize("submitted", ["", None])
+    def test_EmptyChoiceRestoresTheDefault(self, submitted):
+        assert (
+            _ParseValue(TyperParameter(MyChoice, MyChoice.Two), {"MyModule_one": submitted}) == MyChoice.Two
+        )
+
+    # ----------------------------------------------------------------------
+    def test_EmptyOptionalChoice(self):
+        assert _ParseValue(TyperParameter(MyChoice | None, MyChoice.Two), {"MyModule_one": ""}) is None
+
+    # ----------------------------------------------------------------------
     def test_Integer(self):
         assert _ParseValue(TyperParameter(int, 0), {"MyModule_one": "10"}) == 10
 
@@ -658,6 +670,31 @@ class TestParseValues:
     # ----------------------------------------------------------------------
     def test_Text(self):
         assert _ParseValue(TyperParameter(str, ""), {"MyModule_one": 10}) == "10"
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("submitted", ["0", "5", "10"])
+    def test_IntegerWithinBounds(self, submitted):
+        parameter = TyperParameter(int, 0, OptionInfo(min=0, max=10))
+
+        assert _ParseValue(parameter, {"MyModule_one": submitted}) == int(submitted)
+
+    # ----------------------------------------------------------------------
+    def test_ErrorBelowMinimum(self):
+        parameter = TyperParameter(int, 0, OptionInfo(min=0, max=10))
+
+        with pytest.raises(ValueError) as exc_info:
+            _ParseValue(parameter, {"MyModule_one": "-1"})
+
+        assert str(exc_info.value) == "'MyModule_one' must be greater than or equal to 0; '-1' was provided."
+
+    # ----------------------------------------------------------------------
+    def test_ErrorAboveMaximum(self):
+        parameter = TyperParameter(float, 0.0, OptionInfo(max=1.5))
+
+        with pytest.raises(ValueError) as exc_info:
+            _ParseValue(parameter, {"MyModule_one": "2"})
+
+        assert str(exc_info.value) == "'MyModule_one' must be less than or equal to 1.5; '2.0' was provided."
 
 
 # ----------------------------------------------------------------------

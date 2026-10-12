@@ -63,14 +63,37 @@ Select the experience with `--experience`:
 
 `--execute` runs the audit immediately in the `web` and `tui` experiences.
 
+#### JSON Output
+The `json` experience writes a single document; `schema_version` is incremented whenever a change would break an existing consumer.
+
+```json
+{
+  "schema_version": 1,
+  "summary": {"skipped": 0, "does_not_apply": 0, "success": 0, "warning": 0, "error": 0, "total": 0},
+  "results": [
+    {
+      "module": "<module name>",
+      "requirement": "<requirement name>",
+      "description": "<requirement description>",
+      "result": "skipped | does_not_apply | success | warning | error",
+      "context": "<Markdown or null>",
+      "resolution": "<Markdown or null>",
+      "rationale": "<Markdown or null>"
+    }
+  ]
+}
+```
+
+Every result is included, not only failures. `resolution` and `rationale` are `null` when omitted via `--no-resolution` or `--no-rationale`.
+
 #### Options
 Every module and requirement contributes command line options; run `repoauditorweb --help` for the complete list. Common options include:
 
 | Option | Description |
 | --- | --- |
-| `--url` | The GitHub repository to audit; applied to every included module. |
-| `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing one. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
-| `--branch` | The branch to evaluate; the default branch is used if not specified. |
+| `--url` | The GitHub repository to audit; applied to every included module. The URL must begin with `https://`, `http://`, or `file://` (a local clone). The `GitHub` module requires the form `<server>/<owner>/<repository>`, where the owner and repository names contain only letters, digits, `-`, `_`, and `.`. |
+| `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing only that token. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
+| `--branch` | The branch to evaluate; the default branch is used if not specified. The name must be a valid git branch name; for example, it cannot contain `..`, `@{`, whitespace, or any of `~^:?*[\`. |
 | `--<Module>-include` | Include a module in the audit. |
 | `--<Module>-<Requirement>-skip` | Skip a requirement. |
 | `--evaluate-all` | Evaluate requirements that would otherwise be suppressed because a parent setting is not enabled. |

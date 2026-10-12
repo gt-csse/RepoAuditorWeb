@@ -39,6 +39,10 @@ class FileExistsRequirement(RationaleRequirement):
             msg = f"'{name}' must specify at least one filename."
             raise ValueError(msg)
 
+        if not directories:
+            msg = f"'{name}' must specify at least one directory."
+            raise ValueError(msg)
+
         display_name = " or ".join(filenames)
 
         super().__init__(

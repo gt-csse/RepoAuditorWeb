@@ -44,7 +44,8 @@ class LicenseRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        license_value = cast(dict, query_data["response"]).get("license", {}).get("name")
+        # GitHub reports an absent license as null rather than omitting the key.
+        license_value = (cast(dict, query_data["response"]).get("license") or {}).get("name")
         acceptable_values = cast(list[str], requirement_data["value"])
 
         acceptable_values_str = ", ".join(f"'{v}'" for v in acceptable_values)

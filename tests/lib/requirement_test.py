@@ -85,7 +85,7 @@ def test_GetParametersIncludeIsExclusiveWithSkip():
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("reserved_name", "requires_explicit_include"),
-    [("skip", False), ("include", True)],
+    [("skip", False), ("include", True), ("include", False), ("skip", True)],
 )
 def test_ErrorReservedParameterName(reserved_name, requires_explicit_include):
     requirement = _CreateRequirement(
@@ -98,25 +98,6 @@ def test_ErrorReservedParameterName(reserved_name, requires_explicit_include):
         match=f"Parameter '{reserved_name}' is reserved by Requirement and may not be used.",
     ):
         requirement.GetParameters()
-
-
-# ----------------------------------------------------------------------
-@pytest.mark.parametrize(
-    ("unreserved_name", "requires_explicit_include", "expected_keys"),
-    [
-        ("include", False, ["skip", "include"]),
-        ("skip", True, ["include", "skip"]),
-    ],
-)
-def test_ParameterNamesAreOnlyReservedWhenTheyAreUsed(
-    unreserved_name, requires_explicit_include, expected_keys
-):
-    parameters = _CreateRequirement(
-        parameters={unreserved_name: TyperParameter(int, 10, OptionInfo(help="Value"))},
-        requires_explicit_include=requires_explicit_include,
-    ).GetParameters()
-
-    assert list(parameters.keys()) == expected_keys
 
 
 # ----------------------------------------------------------------------

@@ -347,6 +347,17 @@ def test_ToolsAcrossMultipleRules():
 
 
 # ----------------------------------------------------------------------
+# A tool named by several rulesets is still a single tool, so it is counted once.
+def test_SameToolAcrossMultipleRules():
+    result = _Evaluate([_CODE_SCANNING_RULE, _CODE_SCANNING_RULE], value=2)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires 1 code scanning tool(s), but the requirement was configured to require at least 2."
+    )
+
+
+# ----------------------------------------------------------------------
 # The requirement counts the tools the rule names rather than inspecting their thresholds, so a
 # tool that blocks nothing still satisfies the count.
 def test_ToolWithoutThresholds():

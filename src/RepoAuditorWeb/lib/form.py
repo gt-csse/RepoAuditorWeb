@@ -4,7 +4,7 @@ import enum
 import inspect
 
 from dataclasses import dataclass, field
-from types import UnionType
+from types import GenericAlias, UnionType
 from typing import get_args, get_origin, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -189,6 +189,7 @@ def ParseValues(
             value: object = mode_values[name]
         elif name in values:
             value = _CoerceValue(parameter, values[name])
+            _VerifyRange(name, parameter, value)
         else:
             value = parameter.default
 
@@ -511,6 +512,7 @@ def _CreateField(
     choices: list[str] = []
 
     if field_type == FieldType.Choice:
+        assert isinstance(resolved_type, type), resolved_type
         assert issubclass(resolved_type, enum.Enum), resolved_type
 
         choices = [member.value for member in resolved_type]
@@ -544,7 +546,7 @@ def _CreateField(
 
 
 # ----------------------------------------------------------------------
-def _ResolveType(parameter_type: type | UnionType) -> type:
+def _ResolveType(parameter_type: type | UnionType | GenericAlias) -> type | GenericAlias:
     """Return the meaningful type of an optional parameter (e.g. 'str' for 'str | None')."""
 
     if isinstance(parameter_type, UnionType):
@@ -557,7 +559,7 @@ def _ResolveType(parameter_type: type | UnionType) -> type:
 
 
 # ----------------------------------------------------------------------
-def _ResolveFieldType(resolved_type: type, *, allows_none: bool = False) -> FieldType:
+def _ResolveFieldType(resolved_type: type | GenericAlias, *, allows_none: bool = False) -> FieldType:
     if get_origin(resolved_type) in (list, tuple):
         return FieldType.List
 
@@ -616,9 +618,6 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
 
         return [item_type(item) for item in items]
 
-    if field_type == FieldType.Choice:
-        return resolved_type(value)
-
     # An empty control means the value was not provided. Modules distinguish a missing value from
     # the empty string (raising when a required value is absent), so the parameter's own default is
     # restored rather than coercing the empty string to the parameter's type.
@@ -628,6 +627,10 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
 
         if parameter.default is not inspect.Parameter.empty:
             return parameter.default
+
+    if field_type == FieldType.Choice:
+        assert isinstance(resolved_type, type), resolved_type
+        return resolved_type(value)
 
     # The form submits every value as a string, so the string is what is converted; a value that is
     # not a number raises, which is reported to the page.
@@ -641,5 +644,23 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
 
 
 # ----------------------------------------------------------------------
-def _AllowsNone(parameter_type: type | UnionType) -> bool:
+def _VerifyRange(name: str, parameter: TyperParameter, value: object) -> None:
+    # Typer enforces the bounds on the command line, but submitted values never pass through it.
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return
+
+    minimum = getattr(parameter.info, "min", None)
+    maximum = getattr(parameter.info, "max", None)
+
+    if minimum is not None and value < minimum:
+        msg = f"'{name}' must be greater than or equal to {minimum}; '{value}' was provided."
+        raise ValueError(msg)
+
+    if maximum is not None and value > maximum:
+        msg = f"'{name}' must be less than or equal to {maximum}; '{value}' was provided."
+        raise ValueError(msg)
+
+
+# ----------------------------------------------------------------------
+def _AllowsNone(parameter_type: type | UnionType | GenericAlias) -> bool:
     return isinstance(parameter_type, UnionType) and type(None) in get_args(parameter_type)

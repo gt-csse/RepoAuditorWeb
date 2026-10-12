@@ -83,7 +83,7 @@ class AllowedMergeMethodsRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(
+        rule_parameters = parent_rule.GetRuleParameters(
             query_data,
             RULE_TYPE,
             evaluate_all=evaluate_all,
@@ -93,7 +93,7 @@ class AllowedMergeMethodsRequirement(Requirement):
         # The methods are a setting of the pull request rule, so they govern nothing on a branch
         # that does not require one. Reporting a failure here would restate the absence of the pull
         # request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so no merge method is imposed on the branch.",
@@ -107,12 +107,19 @@ class AllowedMergeMethodsRequirement(Requirement):
         # the methods are listed in carries no meaning, so both are normalized away.
         acceptable_values = _Normalize(cast(list[Values], requirement_data["value"]))
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-
         # GitHub reports every method the rule allows, so a rule that omits the setting altogether
-        # is not restricting the branch to any particular method.
+        # is not restricting the branch to any particular method. A method is only available when
+        # every ruleset that does restrict them allows it.
+        method_lists = [
+            cast(list[str], parameters["allowed_merge_methods"])
+            for parameters in rule_parameters
+            if parameters.get("allowed_merge_methods")
+        ]
+
         merge_methods_value = _Normalize(
-            Values(method) for method in cast(list[str], parameters.get("allowed_merge_methods") or [])
+            Values(method)
+            for method in (method_lists[0] if method_lists else [])
+            if all(method in methods for methods in method_lists[1:])
         )
 
         if merge_methods_value != acceptable_values:

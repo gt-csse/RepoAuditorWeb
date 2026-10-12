@@ -70,12 +70,12 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The restriction governs the reviews collected on a pull request, so it has nothing to
         # protect on a branch that does not require one. Reporting a failure here would restate the
         # absence of the pull request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so there are no reviews to dismiss.",
@@ -88,16 +88,32 @@ class RestrictDismissPullRequestReviewsRequirement(Requirement):
         acceptable_value = not cast(bool, requirement_data["prohibit"])
         acceptable_actors = cast(int, requirement_data["value"])
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-
         # GitHub omits the setting rather than reporting a disabled restriction when it is not in
-        # use, so an absent value and a disabled one describe the same ruleset.
-        dismissal_restriction = cast(dict[str, object], parameters.get("dismissal_restriction") or {})
+        # use, so an absent value and a disabled one describe the same ruleset. A ruleset that does
+        # not restrict dismissal places no limit beyond what the others impose.
+        restrictions = [
+            restriction
+            for restriction in (
+                cast(dict[str, object], parameters.get("dismissal_restriction") or {})
+                for parameters in rule_parameters
+            )
+            if restriction.get("enabled")
+        ]
 
-        restriction_value = bool(dismissal_restriction.get("enabled"))
+        restriction_value = bool(restrictions)
 
-        # The roster is omitted rather than reported as empty when no actors are named.
-        allowed_actors = cast(list[dict[str, object]], dismissal_restriction.get("allowed_actors") or [])
+        # The roster is omitted rather than reported as empty when no actors are named. Every
+        # restriction must be satisfied, so an actor may dismiss only when each roster names it.
+        rosters = [
+            cast(list[dict[str, object]], restriction.get("allowed_actors") or [])
+            for restriction in restrictions
+        ]
+
+        allowed_actors = [
+            actor
+            for actor in (rosters[0] if rosters else [])
+            if all(actor in roster for roster in rosters[1:])
+        ]
 
         repository_url = cast("GitHubSession", query_data["session"]).github_url
         branch_name = cast(str, query_data["branch"])

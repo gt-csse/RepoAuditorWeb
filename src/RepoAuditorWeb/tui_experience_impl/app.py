@@ -217,9 +217,12 @@ class AuditorApp(App):
         try:
             # A value that cannot be coerced is reported in the output rather than raised out of the
             # application, so the conversion happens here. The result is retained so that the values
-            # a run used are what the next one starts from.
+            # a run used are what the next one starts from. The values are parsed before the retained
+            # ones are replaced so that a failure leaves them intact.
+            parsed = form.ParseValues(self.dynamic_parameters, values)
+
             self.arguments.clear()
-            self.arguments.update(form.ParseValues(self.dynamic_parameters, values))
+            self.arguments.update(parsed)
 
             with DoneManager.Create(
                 sink,

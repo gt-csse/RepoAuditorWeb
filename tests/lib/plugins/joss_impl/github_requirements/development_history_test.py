@@ -30,6 +30,15 @@ def test_Recent():
 
 
 # ----------------------------------------------------------------------
+# A negative number of months would always succeed.
+def test_MonthsIsNotNegative():
+    info = DevelopmentHistoryRequirement().GetParameters()["months"].info
+
+    assert info is not None
+    assert info.min == 0
+
+
+# ----------------------------------------------------------------------
 def test_OverriddenMonths():
     today = datetime.now(UTC)
 

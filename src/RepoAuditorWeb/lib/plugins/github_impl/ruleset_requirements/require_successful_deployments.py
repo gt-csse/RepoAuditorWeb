@@ -72,16 +72,19 @@ class RequireSuccessfulDeploymentsRequirement(Requirement):
         acceptable_value = cast(int, requirement_data["value"])
 
         # The endpoint reports one rule per ruleset that applies to the branch, so environments
-        # named by any matching rule count toward the total.
+        # named by any matching rule count toward the total, with one named by several rulesets
+        # counted once.
         deployment_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
 
-        environments: list[str] = []
+        environments: set[str] = set()
 
         for rule in deployment_rules:
             parameters = cast(dict[str, object], rule.get("parameters") or {})
-            environments += cast(
-                list[str],
-                parameters.get("required_deployment_environments") or [],
+            environments.update(
+                cast(
+                    list[str],
+                    parameters.get("required_deployment_environments") or [],
+                ),
             )
 
         # A rule that must name no environments is a rule that must not be present, since one that

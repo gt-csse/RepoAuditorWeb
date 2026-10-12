@@ -5,6 +5,10 @@ from typing import cast, override, TYPE_CHECKING
 from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.restricted_value import (
+    AccessLevel,
+    GetRestrictedValue,
+)
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Markdown, Requirement
 
 if TYPE_CHECKING:
@@ -46,8 +50,20 @@ class EnsureNotUsedRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        # This query collects data only when a classic branch protection rule governs the branch,
-        # so reaching this point is itself the observation being evaluated.
+        # The query produces no response when the token cannot see classic protection.
+        protection = GetRestrictedValue(
+            module,
+            self,
+            query_data,
+            (),
+            "classic branch protection rules",
+            AccessLevel.Admin,
+        )
+        if isinstance(protection, EvaluateResult):
+            return protection
+
+        # This query otherwise collects data only when a classic branch protection rule governs the
+        # branch, so reaching this point is itself the observation being evaluated.
         classic_branch_protection_value = True
         acceptable_value = cast(bool, requirement_data["permit"])
 

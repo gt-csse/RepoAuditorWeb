@@ -278,6 +278,11 @@ class TopicsModule(Module):
 
     # ----------------------------------------------------------------------
     @override
+    def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+        pass
+
+    # ----------------------------------------------------------------------
+    @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         # Declaring 'url', 'pat', and 'branch' allows --url, --pat, and --branch to apply to this module.
         return GetRepositoryParameters()
@@ -307,6 +312,7 @@ Data flows through the classes as follows:
 2. `Query.GetQueryData` receives a copy of the module's `None` entry and returns the data passed to each requirement. Returning `None` skips the query.
 3. `Requirement.Evaluate` receives the query data and the requirement's own arguments, including `skip` (or `include`).
 4. `Query.CleanupQueryData` releases resources, such as temporary directories, after the query's requirements have been evaluated.
+5. `Module.CleanupModuleData` releases resources shared by the module's queries, such as an HTTP session, after all of the module's queries have run. It is abstract, so every module must implement it, even if only with `pass`.
 
 Guidelines for requirements:
 

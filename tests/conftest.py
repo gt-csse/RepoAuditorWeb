@@ -1,7 +1,9 @@
-"""Test doubles for the abstract Module, Query, and Requirement classes."""
+"""Test doubles for the abstract Module, Query, and Requirement classes, and the GitHub session."""
 
 from dataclasses import dataclass
 from typing import override
+
+import requests
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.module import Module
@@ -129,6 +131,9 @@ class MyModule(Module):
         # Captures the arguments most recently passed to _GetModuleDataImpl.
         self.module_data_args: dict[str | None, dict[str, object]] | None = None
 
+        # Captures the module data most recently passed to CleanupModuleData.
+        self.cleanup_module_data: dict[str | None, dict[str, object]] | None = None
+
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return self.parameters
@@ -144,3 +149,35 @@ class MyModule(Module):
         self.module_data_args = arguments
 
         return arguments if self.module_data is None else self.module_data
+
+    @override
+    def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
+        self.cleanup_module_data = module_data
+
+
+# ----------------------------------------------------------------------
+class FakeGitHubSession:
+    """Stands in for the GitHub session by returning a canned response for each relative url."""
+
+    # ----------------------------------------------------------------------
+    def __init__(self, responses: dict[str, tuple[int, object]]) -> None:
+        self.responses = responses
+        self.requested_urls: list[str] = []
+        self.closed = False
+
+    # ----------------------------------------------------------------------
+    def close(self) -> None:
+        self.closed = True
+
+    # ----------------------------------------------------------------------
+    def get(self, url: str) -> requests.Response:
+        self.requested_urls.append(url)
+
+        status_code, payload = self.responses[url]
+
+        response = requests.Response()
+        response.status_code = status_code
+        response.url = f"https://api.github.com/repos/username/repo/{url}"
+        response.json = lambda: payload  # ty: ignore[invalid-assignment]
+
+        return response

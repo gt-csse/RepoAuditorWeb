@@ -24,6 +24,24 @@ def test_Construct():
     assert parameters["minimum"].default == 750  # noqa: PLR2004
     assert parameters["maximum"].default == 1750  # noqa: PLR2004
 
+    for name in ["minimum", "maximum"]:
+        info = parameters[name].info
+
+        assert info is not None
+        assert info.min == 0
+
+
+# ----------------------------------------------------------------------
+def test_ErrorInvertedRange():
+    with pytest.raises(ValueError) as exc_info:
+        PaperLengthRequirement().Evaluate(
+            JOSSModule(),
+            {"paper": Paper("paper/paper.md", "word", {}, None)},
+            {"skip": False, "minimum": 20, "maximum": 10},
+        )
+
+    assert str(exc_info.value) == "'minimum' (20) must not be greater than 'maximum' (10)."
+
 
 # ----------------------------------------------------------------------
 @pytest.mark.parametrize(

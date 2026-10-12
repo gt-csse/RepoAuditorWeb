@@ -243,6 +243,13 @@ class TestMultipleFilenames:
         assert str(exc_info.value) == "'MyFile' must specify at least one filename."
 
     # ----------------------------------------------------------------------
+    def test_ErrorNoDirectories(self):
+        with pytest.raises(ValueError) as exc_info:
+            FileExistsRequirement("MyFile", "MY_FILE", [], "My resolution.", "My rationale.")
+
+        assert str(exc_info.value) == "'MyFile' must specify at least one directory."
+
+    # ----------------------------------------------------------------------
     def test_FoundAllNames(self, repo):
         _CreateFile(repo, "MY_FILE.md")
         _CreateFile(repo, "docs/MY_FILES.md")

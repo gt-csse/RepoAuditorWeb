@@ -51,12 +51,12 @@ class RequireApprovalOfMostRecentPushRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The setting governs who must approve the latest commits on a pull request, so it governs
         # nothing on a branch that does not require one. Reporting a failure here would restate the
         # absence of the pull request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so there is no push to approve.",
@@ -66,8 +66,10 @@ class RequireApprovalOfMostRecentPushRequirement(Requirement):
                 module,
             )
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-        last_push_value = bool(parameters.get("require_last_push_approval"))
+        # A ruleset that enables the setting enforces it whatever the others say.
+        last_push_value = any(
+            bool(parameters.get("require_last_push_approval")) for parameters in rule_parameters
+        )
 
         acceptable_value = cast(bool, requirement_data["require"])
 
