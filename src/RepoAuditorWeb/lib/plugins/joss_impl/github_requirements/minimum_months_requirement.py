@@ -37,7 +37,7 @@ class MinimumMonthsRequirement(RationaleRequirement):
             "months": TyperParameter(
                 int,
                 6,
-                OptionInfo(help="Minimum number of months."),
+                OptionInfo(help="Minimum number of months.", min=0),
             ),
         }
 

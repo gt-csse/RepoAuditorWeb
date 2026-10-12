@@ -26,3 +26,12 @@ def test_Evaluate(contributors, minimum, expected_result, expected_context):
     assert result.context == expected_context
     assert (result.resolution is None) is (expected_result == EvaluateResultValue.Success)
     assert (result.rationale is None) is (minimum != 2)  # noqa: PLR2004
+
+
+# ----------------------------------------------------------------------
+# A negative minimum would always succeed.
+def test_MinimumIsNotNegative():
+    info = ContributorsRequirement().GetParameters()["minimum"].info
+
+    assert info is not None
+    assert info.min == 0

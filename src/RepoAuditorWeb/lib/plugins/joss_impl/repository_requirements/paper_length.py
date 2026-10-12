@@ -48,8 +48,8 @@ class PaperLengthRequirement(PaperContentRequirement):
     @override
     def _GetParametersImpl(self) -> dict[str, TyperParameter]:
         return {
-            "minimum": TyperParameter(int, 750, OptionInfo(help="Minimum number of words.")),
-            "maximum": TyperParameter(int, 1750, OptionInfo(help="Maximum number of words.")),
+            "minimum": TyperParameter(int, 750, OptionInfo(help="Minimum number of words.", min=0)),
+            "maximum": TyperParameter(int, 1750, OptionInfo(help="Maximum number of words.", min=0)),
         }
 
     # ----------------------------------------------------------------------
@@ -63,6 +63,12 @@ class PaperLengthRequirement(PaperContentRequirement):
     ) -> EvaluateResult:
         minimum = cast(int, requirement_data["minimum"])
         maximum = cast(int, requirement_data["maximum"])
+
+        # An inverted range would fail every paper, which reads as a problem with the paper rather
+        # than with the configuration.
+        if minimum > maximum:
+            msg = f"'minimum' ({minimum}) must not be greater than 'maximum' ({maximum})."
+            raise ValueError(msg)
 
         word_count = len(paper.text.split())
         context = f"`{paper.path}` contains {word_count} words"

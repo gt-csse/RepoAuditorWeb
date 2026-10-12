@@ -6,6 +6,8 @@ import requests
 from RepoAuditorWeb.lib.plugins.github_impl.module import GitHubModule, TeamSize
 from RepoAuditorWeb.lib.plugins.shared.github_session import GitHubSession
 
+from conftest import FakeGitHubSession
+
 
 # ----------------------------------------------------------------------
 def _GetSession(
@@ -172,6 +174,15 @@ class TestGetModuleData:
 
 
 # ----------------------------------------------------------------------
+def test_CleanupModuleDataClosesSession():
+    session = FakeGitHubSession({})
+
+    GitHubModule().CleanupModuleData({None: {"session": session}})
+
+    assert session.closed is True
+
+
+# ----------------------------------------------------------------------
 class TestSession:
     # ----------------------------------------------------------------------
     def test_Attributes(self):
@@ -249,6 +260,13 @@ class TestSession:
         assert session.api_url == "http://github.mycompany.com/api/v3/repos/gt-csse/RepoAuditorWeb"
 
     # ----------------------------------------------------------------------
+    # The PAT is never sent over an unencrypted connection.
+    def test_EnterpriseUrlWithPatUsesHttps(self):
+        session = _GetSession("http://github.mycompany.com/gt-csse/RepoAuditorWeb", pat="my_pat")
+
+        assert session.api_url == "https://github.mycompany.com/api/v3/repos/gt-csse/RepoAuditorWeb"
+
+    # ----------------------------------------------------------------------
     @pytest.mark.parametrize(
         "url",
         [
@@ -256,7 +274,13 @@ class TestSession:
             "https://github.com/gt-csse/RepoAuditorWeb/extra",
             "https://github.com",
             # A url without a host has the right number of path parts but no server to query.
-            "/gt-csse/RepoAuditorWeb",
+            "file:///gt-csse/RepoAuditorWeb",
+            # Names that would change the API resource requested.
+            "https://github.com/../user",
+            "https://github.com/gt-csse/..",
+            "https://github.com/gt-csse/.",
+            "https://github.com/gt-csse/%2e%2e",
+            "https://github.com//RepoAuditorWeb",
         ],
     )
     def test_ErrorInvalidUrl(self, url):

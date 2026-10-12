@@ -346,6 +346,17 @@ def test_ChecksAcrossMultipleRules():
 
 
 # ----------------------------------------------------------------------
+# A check named by several rulesets is still a single check, so it is counted once.
+def test_SameCheckAcrossMultipleRules():
+    result = _Evaluate([_REQUIRED_STATUS_CHECKS_RULE, _REQUIRED_STATUS_CHECKS_RULE], value=2)
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires 1 status check(s), but the requirement was configured to require at least 2."
+    )
+
+
+# ----------------------------------------------------------------------
 # The resolution names the requested count rather than a fixed one, so it tells the user how many
 # checks to add.
 def test_ErrorResolutionUsesValue():

@@ -1,4 +1,5 @@
 from typing import cast, override
+from urllib.parse import quote
 
 import requests
 
@@ -24,18 +25,19 @@ class DefaultBranchQuery(Query):
     # ----------------------------------------------------------------------
     @override
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
+        session = cast(requests.Session, module_data["session"])
+
         # Get the default branch name
-        response = cast(requests.Session, module_data["session"]).get("")
+        response = session.get("")
 
         response.raise_for_status()
         response = response.json()
 
         module_data["default_branch"] = response["default_branch"]
 
-        # Get the information associated with the default branch
-        response = cast(requests.Session, module_data["session"]).get(
-            f"branches/{module_data['default_branch']}"
-        )
+        # Get the information associated with the default branch. The branch is a path segment;
+        # characters that git permits (such as '#') would otherwise end the path.
+        response = session.get(f"branches/{quote(module_data['default_branch'])}")
 
         response.raise_for_status()
         response = response.json()

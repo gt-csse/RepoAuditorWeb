@@ -67,12 +67,12 @@ class RequireApprovalsRequirement(Requirement):
         *,
         evaluate_all: bool,
     ) -> EvaluateResult:
-        pull_request_rule = parent_rule.GetRule(query_data, RULE_TYPE, evaluate_all=evaluate_all)
+        rule_parameters = parent_rule.GetRuleParameters(query_data, RULE_TYPE, evaluate_all=evaluate_all)
 
         # The count is a setting of the pull request rule, so it governs nothing on a branch that
         # does not require one. Reporting a failure here would restate the absence of the pull
         # request rule, which RequirePullRequests already covers.
-        if pull_request_rule is None:
+        if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
                 "The ruleset does not require a pull request before merging, so no approvals are collected.",
@@ -88,8 +88,11 @@ class RequireApprovalsRequirement(Requirement):
         if acceptable_value is None:
             acceptable_value = DEFAULT_VALUES[team_size]
 
-        parameters = cast(dict[str, object], pull_request_rule.get("parameters") or {})
-        approvals_value = cast(int, parameters.get("required_approving_review_count") or 0)
+        # Every ruleset must be satisfied, so the largest count is the one enforced.
+        approvals_value = max(
+            cast(int, parameters.get("required_approving_review_count") or 0)
+            for parameters in rule_parameters
+        )
 
         if approvals_value != acceptable_value:
             repository_url = cast("GitHubSession", query_data["session"]).github_url

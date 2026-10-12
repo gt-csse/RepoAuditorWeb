@@ -20,81 +20,93 @@ def test_PullRequestRuleType():
 
 
 # ----------------------------------------------------------------------
-class TestGetRule:
+class TestGetRuleParameters:
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize("evaluate_all", [True, False])
     def test_RulePresent(self, evaluate_all):
-        rule = parent_rule.GetRule(
+        assert parent_rule.GetRuleParameters(
             {"response": [_OTHER_RULE, _PULL_REQUEST_RULE]},
             "pull_request",
             evaluate_all=evaluate_all,
-        )
+        ) == [{"required_approving_review_count": 2}]
 
-        assert rule is _PULL_REQUEST_RULE
+    # ----------------------------------------------------------------------
+    # The endpoint reports one rule per ruleset that applies to the branch, so each is returned for
+    # the caller to combine.
+    def test_EveryMatchingRuleIsReturned(self):
+        assert parent_rule.GetRuleParameters(
+            {
+                "response": [
+                    _PULL_REQUEST_RULE,
+                    _OTHER_RULE,
+                    {"type": "pull_request", "parameters": {"required_approving_review_count": 3}},
+                ],
+            },
+            "pull_request",
+            evaluate_all=False,
+        ) == [{"required_approving_review_count": 2}, {"required_approving_review_count": 3}]
+
+    # ----------------------------------------------------------------------
+    def test_RuleWithoutParameters(self):
+        assert parent_rule.GetRuleParameters(
+            {"response": [{"type": "pull_request"}]},
+            "pull_request",
+            evaluate_all=False,
+        ) == [{}]
 
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
     def test_RuleAbsent(self, response):
-        assert parent_rule.GetRule({"response": response}, "pull_request", evaluate_all=False) is None
+        assert (
+            parent_rule.GetRuleParameters({"response": response}, "pull_request", evaluate_all=False) is None
+        )
 
     # ----------------------------------------------------------------------
     # An absent rule is reported as one carrying no parameters, which is the state GitHub reports
     # once the rule is enabled without any of its settings being selected.
     @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
     def test_RuleAbsentWhenEvaluatingAll(self, response):
-        assert parent_rule.GetRule({"response": response}, "pull_request", evaluate_all=True) == {
-            "type": "pull_request",
-            "parameters": {},
-        }
+        assert parent_rule.GetRuleParameters({"response": response}, "pull_request", evaluate_all=True) == [
+            {}
+        ]
 
     # ----------------------------------------------------------------------
     def test_RuleTypeIsHonored(self):
-        response = [_PULL_REQUEST_RULE]
-
         assert (
-            parent_rule.GetRule({"response": response}, "required_status_checks", evaluate_all=False) is None
+            parent_rule.GetRuleParameters(
+                {"response": [_PULL_REQUEST_RULE]},
+                "required_status_checks",
+                evaluate_all=False,
+            )
+            is None
         )
-
-    # ----------------------------------------------------------------------
-    def test_SynthesizedRuleUsesRequestedType(self):
-        assert parent_rule.GetRule(
-            {"response": []},
-            "required_status_checks",
-            evaluate_all=True,
-        ) == {"type": "required_status_checks", "parameters": {}}
 
     # ----------------------------------------------------------------------
     # A setting that GitHub selects when the rule is enabled must be evaluated against that
     # selection rather than against its absence.
     def test_SynthesizedRuleCarriesDefaultParameters(self):
-        assert parent_rule.GetRule(
+        assert parent_rule.GetRuleParameters(
             {"response": []},
             "pull_request",
             evaluate_all=True,
             default_parameters={"allowed_merge_methods": ["merge", "squash", "rebase"]},
-        ) == {
-            "type": "pull_request",
-            "parameters": {"allowed_merge_methods": ["merge", "squash", "rebase"]},
-        }
+        ) == [{"allowed_merge_methods": ["merge", "squash", "rebase"]}]
 
     # ----------------------------------------------------------------------
     # The defaults describe a rule that had to be synthesized, so a rule the endpoint reported is
     # returned as-is.
     def test_DefaultParametersIgnoredWhenRulePresent(self):
-        assert (
-            parent_rule.GetRule(
-                {"response": [_PULL_REQUEST_RULE]},
-                "pull_request",
-                evaluate_all=True,
-                default_parameters={"allowed_merge_methods": ["merge"]},
-            )
-            is _PULL_REQUEST_RULE
-        )
+        assert parent_rule.GetRuleParameters(
+            {"response": [_PULL_REQUEST_RULE]},
+            "pull_request",
+            evaluate_all=True,
+            default_parameters={"allowed_merge_methods": ["merge"]},
+        ) == [{"required_approving_review_count": 2}]
 
     # ----------------------------------------------------------------------
     def test_DefaultParametersIgnoredWhenNotEvaluatingAll(self):
         assert (
-            parent_rule.GetRule(
+            parent_rule.GetRuleParameters(
                 {"response": []},
                 "pull_request",
                 evaluate_all=False,

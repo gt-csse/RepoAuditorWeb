@@ -158,10 +158,8 @@ class TestCreateValues:
         requirement = MyRequirement(
             "ModeRequirement",
             "My requirement description.",
-            parameters={
-                "include": TyperParameter(bool, False),
-                "require": TyperParameter(bool, False),
-            },
+            parameters={"require": TyperParameter(bool, False)},
+            requires_explicit_include=True,
         )
 
         app = _CreateApp(
@@ -510,6 +508,20 @@ class TestReset:
             assert app.query_one(f"#{CreateControlId('MyModule_url')}", Input).value == (
                 "https://edited.example.com"
             )
+
+    # ----------------------------------------------------------------------
+    # A submission that cannot be parsed leaves the values of the previous one in place.
+    async def test_ValuesAreRetainedAfterAnError(self):
+        arguments: dict[str, dict[str | None, dict[str, object]]] = {"MyModule": {None: {"one": 1}}}
+        app = _CreateApp([_CreateModule(parameters={"one": TyperParameter(int, 0)})], arguments)
+
+        async with app.run_test() as pilot:
+            app.query_one(f"#{CreateControlId('MyModule_one')}", Input).value = "not_a_number"
+
+            app.ExecuteRequirements()
+            await _WaitForExecution(app, pilot)
+
+            assert app.arguments == {"MyModule": {None: {"one": 1}}}
 
     # ----------------------------------------------------------------------
     async def test_StatusIsCleared(self):

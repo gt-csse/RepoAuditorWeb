@@ -1,4 +1,5 @@
 from typing import cast, override
+from urllib.parse import quote
 
 import requests
 
@@ -99,19 +100,24 @@ class RulesetQuery(Query):
     # ----------------------------------------------------------------------
     @override
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
+        session = cast(requests.Session, module_data["session"])
+
         # Get the branch
         branch = module_data["branch"]
         if branch is None:
             # Get the default branch name
-            response = cast(requests.Session, module_data["session"]).get("")
+            response = session.get("")
 
             response.raise_for_status()
             response = response.json()
 
             branch = response["default_branch"]
 
-        # Get the ruleset data for the branch
-        response = cast(requests.Session, module_data["session"]).get(f"rules/branches/{branch}")
+        assert isinstance(branch, str), (branch, type(branch))
+
+        # Get the ruleset data for the branch. The branch is a path segment; characters that git
+        # permits (such as '#') would otherwise end the path.
+        response = session.get(f"rules/branches/{quote(branch)}")
 
         response.raise_for_status()
         response = response.json()

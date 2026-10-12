@@ -1,12 +1,14 @@
 import threading
+import time
 
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
 
 import uvicorn
 import webview
 
-from RepoAuditorWeb.web_experience_impl.server import CreateApp
+from RepoAuditorWeb.web_experience_impl.server import CreateApp, HOST
 
 if TYPE_CHECKING:
     from dbrownell_Common.Streams.DoneManager import DoneManager
@@ -45,15 +47,24 @@ def ExecuteExperience(
     )
 
     server = uvicorn.Server(
-        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"),
+        uvicorn.Config(app, host=HOST, port=port, log_level="warning"),
     )
 
     # The window must run on the main thread, so the server is what moves to a background thread.
     server_thread = threading.Thread(target=server.run, daemon=True)
     server_thread.start()
 
-    with dm.Nested(f"Serving content on http://127.0.0.1:{port}...") as serve_dm:
-        webview.create_window("RepoAuditor", f"http://127.0.0.1:{port}/")
+    # The window would otherwise load the page before the server is listening and display an error.
+    # uvicorn ends the thread when it cannot bind the port.
+    while not server.started:
+        if not server_thread.is_alive():
+            msg = f"The server could not be started on port {port}."
+            raise RuntimeError(msg)
+
+        time.sleep(_STARTUP_POLL_SECONDS)
+
+    with dm.Nested(f"Serving content on http://{HOST}:{port}...") as serve_dm:
+        webview.create_window("RepoAuditor", f"http://{HOST}:{port}/?{urlencode({'token': token})}")
 
         # Debug mode enables the web inspector within the window. The icon is an ICO file because
         # that is the only format the Windows backend loads.
@@ -70,4 +81,5 @@ def ExecuteExperience(
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 _SHUTDOWN_TIMEOUT_SECONDS = 5.0
+_STARTUP_POLL_SECONDS = 0.05
 _ICON_PATH = Path(__file__).parent / "web_experience_impl" / "icon.ico"

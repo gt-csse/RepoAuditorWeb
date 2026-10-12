@@ -66,16 +66,20 @@ class RequireCodeScanningResultsRequirement(Requirement):
         acceptable_value = cast(int, requirement_data["value"])
 
         # The endpoint reports one rule per ruleset that applies to the branch, so tools named by
-        # any matching rule count toward the total.
+        # any matching rule count toward the total. Tools are keyed by name so that one named by
+        # several rulesets is counted once.
         code_scanning_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
 
-        tools: list[dict[str, object]] = []
+        tools: set[object] = set()
 
         for rule in code_scanning_rules:
             parameters = cast(dict[str, object], rule.get("parameters") or {})
-            tools += cast(
-                list[dict[str, object]],
-                parameters.get("code_scanning_tools") or [],
+            tools.update(
+                tool.get("tool")
+                for tool in cast(
+                    list[dict[str, object]],
+                    parameters.get("code_scanning_tools") or [],
+                )
             )
 
         # A rule that must name no tools is a rule that must not be present, since one that names

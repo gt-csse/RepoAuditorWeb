@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from types import UnionType
+    from types import GenericAlias, UnionType
 
     from typer.models import OptionInfo
 
@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 class TyperParameter:
     """Representation of a parameter used in a function for Typer commands."""
 
-    # A parameter may be declared as optional (e.g. 'str | None'), which is a union rather than a
-    # type.
-    type: type | UnionType
+    # A parameter may be declared as optional (e.g. 'str | None') or as a list (e.g. 'list[str]'),
+    # which are a union and a generic alias rather than a type.
+    type: type | UnionType | GenericAlias
     default: object = inspect.Parameter.empty
     info: OptionInfo | None = None
 

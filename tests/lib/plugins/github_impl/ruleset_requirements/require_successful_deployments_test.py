@@ -317,6 +317,20 @@ def test_EnvironmentsAcrossMultipleRules():
 
 
 # ----------------------------------------------------------------------
+# An environment named by several rulesets is still a single environment, so it is counted once.
+def test_SameEnvironmentAcrossMultipleRules():
+    result = _Evaluate(
+        [_REQUIRED_DEPLOYMENTS_RULE, _REQUIRED_DEPLOYMENTS_RULE],
+        value=2,
+    )
+
+    assert result.result == EvaluateResultValue.Error
+    assert result.context == (
+        "The ruleset requires successful deployments to 1 environment(s), but the requirement was configured to require at least 2."
+    )
+
+
+# ----------------------------------------------------------------------
 # The resolution names the requested count rather than a fixed one, so it tells the user how many
 # environments to select.
 def test_ErrorResolutionUsesValue():

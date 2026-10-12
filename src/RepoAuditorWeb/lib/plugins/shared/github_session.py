@@ -1,3 +1,5 @@
+import re
+
 from urllib.parse import urlparse
 
 import requests
@@ -46,8 +48,9 @@ class GitHubSession(requests.Session):
         url_parts = urlparse(github_url)
         path_parts = url_parts.path.split("/")
 
-        # The URL should be in the form <github_server>/<username>/<repository>
-        if len(path_parts) != 3:  # noqa: PLR2004
+        # The URL should be in the form <github_server>/<username>/<repository>. The names are placed
+        # in API paths, where segments such as '..' would change the resource requested.
+        if len(path_parts) != 3 or not all(_NAME_REGEX.match(part) for part in path_parts[1:]):  # noqa: PLR2004
             msg = f"'{github_url}' is not a valid GitHub repository URL."
             raise ValueError(msg)
 
@@ -61,7 +64,10 @@ class GitHubSession(requests.Session):
                 msg = f"'{github_url}' is not a valid GitHub repository URL."
                 raise ValueError(msg)
 
-            api_url = f"{url_parts.scheme or 'https'}://{url_parts.netloc}/api/v3/repos/{username}/{repo}"
+            # As with the clone, the PAT is never sent over an unencrypted connection.
+            scheme = "https" if github_pat else url_parts.scheme
+
+            api_url = f"{scheme}://{url_parts.netloc}/api/v3/repos/{username}/{repo}"
             is_enterprise = True
 
         self.github_url = github_url
@@ -93,3 +99,10 @@ class GitHubSession(requests.Session):
             *args,
             **kwargs,
         )
+
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# The characters GitHub permits in user, organization, and repository names, excluding '.' and '..'.
+_NAME_REGEX = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_.-]+$")

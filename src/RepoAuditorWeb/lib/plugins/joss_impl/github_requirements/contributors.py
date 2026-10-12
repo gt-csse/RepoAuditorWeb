@@ -50,7 +50,7 @@ class ContributorsRequirement(RationaleRequirement):
             "minimum": TyperParameter(
                 int,
                 2,
-                OptionInfo(help="Minimum number of contributors."),
+                OptionInfo(help="Minimum number of contributors.", min=0),
             ),
         }
 

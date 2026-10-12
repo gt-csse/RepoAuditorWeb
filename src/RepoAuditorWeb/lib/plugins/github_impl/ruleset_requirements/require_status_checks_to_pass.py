@@ -66,16 +66,20 @@ class RequireStatusChecksToPassRequirement(Requirement):
         acceptable_value = cast(int, requirement_data["value"])
 
         # The endpoint reports one rule per ruleset that applies to the branch, so checks named by
-        # any matching rule count toward the total.
+        # any matching rule count toward the total. Checks are keyed by name so that one named by
+        # several rulesets is counted once.
         status_check_rules = [rule for rule in rules if rule.get("type") == RULE_TYPE]
 
-        checks: list[dict[str, object]] = []
+        checks: set[object] = set()
 
         for rule in status_check_rules:
             parameters = cast(dict[str, object], rule.get("parameters") or {})
-            checks += cast(
-                list[dict[str, object]],
-                parameters.get("required_status_checks") or [],
+            checks.update(
+                check.get("context")
+                for check in cast(
+                    list[dict[str, object]],
+                    parameters.get("required_status_checks") or [],
+                )
             )
 
         # A rule that must name no checks is a rule that must not be present, since one that names

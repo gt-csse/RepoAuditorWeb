@@ -82,7 +82,9 @@ class Requirement(ABC):
         derived_parameters = self._GetParametersImpl()
 
         for param_name in derived_parameters:
-            if param_name in base_parameters:
+            # Both names are reserved regardless of which one is in use, since the form treats either
+            # as the toggle that decides whether the requirement runs.
+            if param_name in ("include", "skip"):
                 msg = f"Parameter '{param_name}' is reserved by Requirement and may not be used."
                 raise ValueError(msg)
 
