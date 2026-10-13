@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
-from RepoAuditorWeb.json_experience import ExecuteExperience
+from RepoAuditorWeb.json_experience import CreateRepositoryEntry, ExecuteExperience, WriteDocument
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 
@@ -29,14 +29,15 @@ def _CreateRequirement(
 
 
 # ----------------------------------------------------------------------
-def _ExecuteRaw(
+def _ExecuteWithOutput(
     requirements: list[MyRequirement],
     *,
+    common_arguments: dict[str, object] | None = None,
     verbose: bool = False,
     evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
-) -> str:
+) -> tuple[dict[str, object], str]:
     module = MyModule("MyModule", "My description.", [MyQuery("MyQuery", requirements, query_data={})])
 
     arguments: dict[str, dict[str | None, dict[str, object]]] = {
@@ -46,34 +47,43 @@ def _ExecuteRaw(
         },
     }
 
-    # The document is written to stdout while DoneManager writes elsewhere, so the two are captured
-    # separately here just as they are separated on the command line.
+    # DoneManager writes elsewhere, so anything written to stdout came from the experience itself.
     progress = io.StringIO()
-    document = io.StringIO()
+    output = io.StringIO()
 
     with (
         DoneManager.Create(progress, "Testing...", flags=DoneManagerFlags.Create(verbose=verbose)) as dm,
-        redirect_stdout(document),
+        redirect_stdout(output),
     ):
-        ExecuteExperience(
+        entry = ExecuteExperience(
             dm,
             1234,
             "my_token",
             [module],
             DynamicParameters([module]),
             arguments,
-            {},
+            {} if common_arguments is None else common_arguments,
             evaluate_all=evaluate_all,
             display_resolution=display_resolution,
             display_rationale=display_rationale,
         )
 
-    return document.getvalue()
+    return entry, output.getvalue()
 
 
 # ----------------------------------------------------------------------
 def _Execute(requirements: list[MyRequirement], **kwargs) -> dict:
-    return json.loads(_ExecuteRaw(requirements, **kwargs))
+    return _ExecuteWithOutput(requirements, **kwargs)[0]
+
+
+# ----------------------------------------------------------------------
+def _WriteDocument(repositories: list[dict[str, object]], error: str | None = None) -> str:
+    output = io.StringIO()
+
+    with redirect_stdout(output):
+        WriteDocument(repositories, error)
+
+    return output.getvalue()
 
 
 # ----------------------------------------------------------------------
@@ -267,7 +277,7 @@ class TestVerbose:
                 _CreateRequirement("Error", EvaluateResultValue.Error, context="My context."),
             ]
 
-        assert _ExecuteRaw(CreateRequirements(), verbose=True) == _ExecuteRaw(CreateRequirements())
+        assert _Execute(CreateRequirements(), verbose=True) == _Execute(CreateRequirements())
 
 
 # ----------------------------------------------------------------------
@@ -290,15 +300,50 @@ class TestEvaluateAll:
 
 
 # ----------------------------------------------------------------------
-class TestSchemaVersion:
+class TestArguments:
     # ----------------------------------------------------------------------
-    # A consumer reads the version to decide whether it understands the document.
-    def test_Reported(self):
-        assert _Execute([])["schema_version"] == 1
+    # Module and requirement arguments are separated rather than keyed by null, which JSON objects do
+    # not support.
+    def test_Arguments(self):
+        assert _Execute([_CreateRequirement("MyRequirement")])["arguments"] == {
+            "MyModule": {
+                "module": {"skip": False},
+                "requirements": {"MyRequirement": {"skip": False}},
+            },
+        }
 
     # ----------------------------------------------------------------------
-    def test_ReportedWithResults(self):
-        assert _Execute([_CreateRequirement()])["schema_version"] == 1
+    def test_CommonArguments(self):
+        common_arguments = {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": None, "branch": "main"}
+
+        assert _Execute([], common_arguments=common_arguments)["common_arguments"] == common_arguments
+
+    # ----------------------------------------------------------------------
+    # The document may be shared, so the PAT is never included.
+    def test_PatIsRedacted(self):
+        assert _Execute([], common_arguments={"url": None, "pat": "my_pat"})["common_arguments"] == {
+            "url": None,
+            "pat": "***",
+        }
+
+
+# ----------------------------------------------------------------------
+class TestCreateRepositoryEntry:
+    # ----------------------------------------------------------------------
+    # A repository whose audit could not run is still reported, so that it does not silently
+    # disappear from the document.
+    def test_Error(self):
+        assert CreateRepositoryEntry(
+            {"MyModule": {None: {"skip": False}}},
+            {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "my_pat"},
+            error="My error.",
+        ) == {
+            "arguments": {"MyModule": {"module": {"skip": False}, "requirements": {}}},
+            "common_arguments": {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "***"},
+            "error": "My error.",
+            "summary": None,
+            "results": None,
+        }
 
 
 # ----------------------------------------------------------------------
@@ -306,29 +351,49 @@ class TestDocument:
     # ----------------------------------------------------------------------
     # The document is indented so that it remains readable when it is displayed rather than piped.
     def test_Content(self):
-        assert _ExecuteRaw(
-            [_CreateRequirement("MyRequirement", EvaluateResultValue.Error, context="My context.")],
-        ) == textwrap.dedent(
-            """\
-            {
-              "schema_version": 1,
-              "summary": {
-                "skipped": 0,
-                "does_not_apply": 0,
-                "success": 0,
-                "warning": 0,
-                "error": 1,
-                "total": 1
-              },
-              "results": [
+        entry = _Execute(
+            [_CreateRequirement("MyRequirement", EvaluateResultValue.Error, context="My context.")]
+        )
+
+        assert _WriteDocument([entry]) == textwrap.dedent(
+            """            {
+              "schema_version": 2,
+              "error": null,
+              "repositories": [
                 {
-                  "module": "MyModule",
-                  "requirement": "MyRequirement",
-                  "description": "My requirement description.",
-                  "result": "error",
-                  "context": "My context.",
-                  "resolution": null,
-                  "rationale": null
+                  "arguments": {
+                    "MyModule": {
+                      "module": {
+                        "skip": false
+                      },
+                      "requirements": {
+                        "MyRequirement": {
+                          "skip": false
+                        }
+                      }
+                    }
+                  },
+                  "common_arguments": {},
+                  "error": null,
+                  "summary": {
+                    "skipped": 0,
+                    "does_not_apply": 0,
+                    "success": 0,
+                    "warning": 0,
+                    "error": 1,
+                    "total": 1
+                  },
+                  "results": [
+                    {
+                      "module": "MyModule",
+                      "requirement": "MyRequirement",
+                      "description": "My requirement description.",
+                      "result": "error",
+                      "context": "My context.",
+                      "resolution": null,
+                      "rationale": null
+                    }
+                  ]
                 }
               ]
             }
@@ -336,9 +401,16 @@ class TestDocument:
         )
 
     # ----------------------------------------------------------------------
-    # The document is written to stdout alone; nothing that DoneManager produces reaches it.
-    def test_ProgressIsExcluded(self):
-        document = _ExecuteRaw([_CreateRequirement()])
+    # A run that fails before any repository is audited still produces a valid document.
+    def test_Error(self):
+        assert json.loads(_WriteDocument([], "My error.")) == {
+            "schema_version": 2,
+            "error": "My error.",
+            "repositories": [],
+        }
 
-        assert "Executing module" not in document
-        assert "DONE!" not in document
+    # ----------------------------------------------------------------------
+    # The entry point writes the document once for every repository, so the experience writes
+    # nothing itself.
+    def test_ExperienceWritesNothing(self):
+        assert _ExecuteWithOutput([_CreateRequirement()])[1] == ""

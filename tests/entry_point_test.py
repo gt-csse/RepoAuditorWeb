@@ -54,6 +54,8 @@ def test_Help():
         "--token",
         "--experience",
         "--execute",
+        "--include-archived",
+        "--include-forked",
         "--no-resolution",
         "--no-rationale",
         "--verbose",
@@ -232,18 +234,26 @@ class TestExperience:
         result = CliRunner().invoke(app, ["--experience", "json"])
 
         assert result.exit_code == 0, result.output
-        assert json.loads(result.stdout) == {
-            "schema_version": 1,
-            "summary": {
-                "skipped": 0,
-                "does_not_apply": 0,
-                "success": 0,
-                "warning": 0,
-                "error": 0,
-                "total": 0,
-            },
-            "results": [],
+
+        document = json.loads(result.stdout)
+
+        assert document["schema_version"] == 2
+        assert document["error"] is None
+        assert len(document["repositories"]) == 1
+
+        repository = document["repositories"][0]
+
+        assert repository["common_arguments"] == {"url": None, "pat": None, "branch": None}
+        assert repository["error"] is None
+        assert repository["summary"] == {
+            "skipped": 0,
+            "does_not_apply": 0,
+            "success": 0,
+            "warning": 0,
+            "error": 0,
+            "total": 0,
         }
+        assert repository["results"] == []
 
     # ----------------------------------------------------------------------
     # Everything that DoneManager produces is written to stderr so that the document written to
@@ -455,3 +465,212 @@ class TestCommonOptions:
         assert arguments["GitHub"][None]["include"] is True
         assert arguments["GitHub"]["Description"]["value"] == "empty"
         assert arguments["CommunityStandards"][None]["include"] is False
+
+
+# ----------------------------------------------------------------------
+def _CreateRepositories(tmp_path, names: list[str]) -> str:
+    for name in names:
+        (tmp_path / name / ".git").mkdir(parents=True)
+
+    return f"{tmp_path.as_uri()}/*"
+
+
+# ----------------------------------------------------------------------
+class TestRepositories:
+    # ----------------------------------------------------------------------
+    # A single repository is audited under the same heading as each of several repositories.
+    def test_HeadingForSingleRepository(self):
+        result, output = _InvokeAndCapture(_SKIP_NETWORK)
+
+        assert result.exit_code == 0, output
+        assert "Auditing (1 of 1)..." in output
+
+    # ----------------------------------------------------------------------
+    def test_HeadingForUrl(self):
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience"):
+            result, output = _InvokeAndCapture(
+                [*_SKIP_NETWORK, "--url", "https://github.com/gt-csse/RepoAuditorWeb"],
+            )
+
+        assert result.exit_code == 0, output
+        assert "Auditing 'https://github.com/gt-csse/RepoAuditorWeb' (1 of 1)..." in output
+
+    # ----------------------------------------------------------------------
+    def test_Wildcard(self, tmp_path):
+        url = _CreateRepositories(tmp_path, ["Second", "First"])
+
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock:
+            result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--url", url, "--branch", "main"])
+
+        assert result.exit_code == 0, output
+
+        expected_urls = [(tmp_path / name).resolve().as_uri() for name in ["First", "Second"]]
+
+        assert [call.kwargs["common_arguments"] for call in experience_mock.call_args_list] == [
+            {"url": expected_url, "pat": None, "branch": "main"} for expected_url in expected_urls
+        ]
+
+        for index, expected_url in enumerate(expected_urls):
+            assert f"Auditing '{expected_url}' ({index + 1} of 2)..." in output
+
+    # ----------------------------------------------------------------------
+    # Modules that do not accept a url produce the same results for every repository, so they only
+    # run with the first.
+    def test_ModulesWithoutUrlRunWithFirstRepository(self, tmp_path):
+        url = _CreateRepositories(tmp_path, ["First", "Second"])
+        disabled_arguments = {"Disabled": {None: {"skip": True}}}
+
+        with (
+            mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock,
+            mock.patch(
+                "RepoAuditorWeb.__main__.DisableModulesWithoutUrl",
+                return_value=disabled_arguments,
+            ) as disable_mock,
+        ):
+            result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--url", url])
+
+        assert result.exit_code == 0, output
+        assert disable_mock.call_count == 1
+
+        first_arguments, second_arguments = (
+            call.kwargs["arguments"] for call in experience_mock.call_args_list
+        )
+
+        assert first_arguments == disable_mock.call_args.args[1]
+        assert second_arguments == disabled_arguments
+
+    # ----------------------------------------------------------------------
+    # A failure while auditing one repository does not prevent the others from being audited.
+    def test_ErrorDoesNotStopRemainingRepositories(self, tmp_path):
+        url = _CreateRepositories(tmp_path, ["First", "Second"])
+
+        with mock.patch(
+            "RepoAuditorWeb.__main__.ExecuteConsoleExperience",
+            side_effect=[RuntimeError("My error."), None],
+        ) as experience_mock:
+            result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--url", url])
+
+        assert result.exit_code != 0
+        assert experience_mock.call_count == 2
+        assert "My error." in output
+
+    # ----------------------------------------------------------------------
+    def test_ErrorIncludeOptionWithoutWildcard(self):
+        result, output = _InvokeAndCapture(
+            [*_SKIP_NETWORK, "--url", "https://github.com/gt-csse/RepoAuditorWeb", "--include-forked"],
+        )
+
+        assert result.exit_code != 0
+        assert "'--include-forked' is only valid with a GitHub url that ends with '/*'." in output
+
+    # ----------------------------------------------------------------------
+    # Each repository is audited in its own window, which waits for the user unless '--execute' is
+    # provided.
+    @pytest.mark.parametrize(("args", "expected"), [([], True), (["--execute"], False)])
+    def test_WebWarning(self, tmp_path, args, expected):
+        url = _CreateRepositories(tmp_path, ["First", "Second"])
+
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience") as experience_mock:
+            result, output = _InvokeAndCapture(["--experience", "web", "--url", url, *args])
+
+        # A warning is reported through the exit code, as it is for requirements.
+        assert result.exit_code == (1 if expected else 0), output
+        assert experience_mock.call_count == 2
+        assert ("A window is opened for each of the 2 repositories" in output) is expected
+
+    # ----------------------------------------------------------------------
+    def test_NoWebWarningForSingleRepository(self):
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteWebExperience"):
+            result, output = _InvokeAndCapture(["--experience", "web"])
+
+        assert result.exit_code == 0, output
+        assert "A window is opened" not in output
+
+    # ----------------------------------------------------------------------
+    # A port that was not provided is chosen for each repository, as a server from a previous
+    # repository may still hold its port while shutting down.
+    def test_PortIsResolvedForEachRepository(self, tmp_path):
+        url = _CreateRepositories(tmp_path, ["First", "Second"])
+
+        with (
+            mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock,
+            mock.patch("RepoAuditorWeb.impl.entry_point_utils.GetUnusedPort", side_effect=[1111, 2222]),
+        ):
+            result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--url", url])
+
+        assert result.exit_code == 0, output
+        assert [call.kwargs["port"] for call in experience_mock.call_args_list] == [1111, 2222]
+
+
+# ----------------------------------------------------------------------
+# The document is valid however the run ends, so that a consumer can always parse it.
+class TestJsonDocument:
+    # ----------------------------------------------------------------------
+    def test_Repositories(self, tmp_path):
+        url = _CreateRepositories(tmp_path, ["First", "Second"])
+
+        result = CliRunner().invoke(app, ["--experience", "json", "--url", url, "--pat", "my_pat"])
+
+        assert result.exit_code == 0, result.output
+
+        document = json.loads(result.stdout)
+
+        assert document["error"] is None
+        assert [repository["common_arguments"] for repository in document["repositories"]] == [
+            {"url": (tmp_path / name).resolve().as_uri(), "pat": "***", "branch": None}
+            for name in ["First", "Second"]
+        ]
+
+    # ----------------------------------------------------------------------
+    def test_RepositoryError(self, tmp_path):
+        url = _CreateRepositories(tmp_path, ["First", "Second"])
+        entry = {"error": None}
+
+        with mock.patch(
+            "RepoAuditorWeb.__main__.ExecuteJsonExperience",
+            side_effect=[RuntimeError("My error."), entry],
+        ):
+            result = CliRunner().invoke(app, ["--experience", "json", "--url", url])
+
+        assert result.exit_code != 0
+
+        document = json.loads(result.stdout)
+
+        assert document["error"] is None
+        assert len(document["repositories"]) == 2
+        assert document["repositories"][0]["error"] == "My error."
+        assert document["repositories"][0]["results"] is None
+        assert document["repositories"][1] == entry
+
+    # ----------------------------------------------------------------------
+    def test_RunError(self):
+        result = CliRunner().invoke(
+            app,
+            [
+                "--experience",
+                "json",
+                "--url",
+                "https://github.com/gt-csse/RepoAuditorWeb",
+                "--include-forked",
+            ],
+        )
+
+        assert result.exit_code != 0
+        assert json.loads(result.stdout) == {
+            "schema_version": 2,
+            "error": "'--include-forked' is only valid with a GitHub url that ends with '/*'.",
+            "repositories": [],
+        }
+
+    # ----------------------------------------------------------------------
+    # CliRunner does not capture output when the run is interrupted, so the command is invoked
+    # directly and its output captured by pytest.
+    def test_Interrupted(self, capsys):
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteJsonExperience", side_effect=KeyboardInterrupt):
+            typer.main.get_command(app).main(["--experience", "json"], standalone_mode=False)
+
+        assert json.loads(capsys.readouterr().out) == {
+            "schema_version": 2,
+            "error": "The run was interrupted.",
+            "repositories": [],
+        }

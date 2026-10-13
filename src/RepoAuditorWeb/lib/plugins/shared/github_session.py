@@ -9,6 +9,11 @@ from urllib3.util import Retry
 
 
 # ----------------------------------------------------------------------
+# The characters GitHub permits in user, organization, and repository names, excluding '.' and '..'.
+NAME_REGEX = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_.-]+$")
+
+
+# ----------------------------------------------------------------------
 def GetApiBaseUrl(scheme: str, netloc: str) -> str:
     """Return the base url of the REST API exposed by the GitHub server at netloc."""
 
@@ -126,7 +131,7 @@ class GitHubSession(GitHubApiSession):
         # identify a repository that can be queried.
         if (
             len(path_parts) != 3  # noqa: PLR2004
-            or not all(_NAME_REGEX.match(part) for part in path_parts[1:])
+            or not all(NAME_REGEX.match(part) for part in path_parts[1:])
             or url_parts.scheme not in ("https", "http")
             or not url_parts.netloc
         ):
@@ -149,6 +154,3 @@ class GitHubSession(GitHubApiSession):
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 _PUBLIC_API_URL = "https://api.github.com"
-
-# The characters GitHub permits in user, organization, and repository names, excluding '.' and '..'.
-_NAME_REGEX = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_.-]+$")

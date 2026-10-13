@@ -29,27 +29,79 @@ def ExecuteExperience(  # noqa: PLR0913
     evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
-) -> None:
-    """Execute the application in a json experience."""
+) -> dict[str, object]:
+    """Execute the application in a json experience, returning the repository's entry in the document."""
 
     # The json experience has no control to invoke, so `execute` is implied.
 
     results = Execute(dm, modules, arguments, common_arguments, evaluate_all=evaluate_all)
+
+    return CreateRepositoryEntry(
+        arguments,
+        common_arguments,
+        results=results,
+        display_resolution=display_resolution,
+        display_rationale=display_rationale,
+    )
+
+
+# ----------------------------------------------------------------------
+def CreateRepositoryEntry(
+    arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
+    *,
+    results: list[EvaluateResult] | None = None,
+    error: str | None = None,
+    display_resolution: bool = True,
+    display_rationale: bool = True,
+) -> dict[str, object]:
+    """Create the document's entry for a repository, which has either results or an error."""
+
+    assert (results is None) != (error is None), (results, error)
+
+    return {
+        "arguments": {
+            module_name: {
+                "module": module_arguments.get(None, {}),
+                "requirements": {
+                    requirement_name: requirement_arguments
+                    for requirement_name, requirement_arguments in module_arguments.items()
+                    if requirement_name is not None
+                },
+            }
+            for module_name, module_arguments in arguments.items()
+        },
+        # The document is written where it may be shared, so the PAT is never included.
+        "common_arguments": {
+            **common_arguments,
+            **({"pat": _REDACTED} if common_arguments.get("pat") else {}),
+        },
+        "error": error,
+        "summary": None if results is None else _CreateSummary(results),
+        "results": None
+        if results is None
+        else [
+            _CreateResult(
+                result,
+                display_resolution=display_resolution,
+                display_rationale=display_rationale,
+            )
+            for result in results
+        ],
+    }
+
+
+# ----------------------------------------------------------------------
+def WriteDocument(repositories: list[dict[str, object]], error: str | None) -> None:
+    """Write the document for a run, which is valid however the run ended."""
 
     # The document is the only thing written to stdout (everything that DoneManager produces is
     # written to stderr), so it can be redirected to a file or piped to another process as-is.
     json.dump(
         {
             "schema_version": _SCHEMA_VERSION,
-            "summary": _CreateSummary(results),
-            "results": [
-                _CreateResult(
-                    result,
-                    display_resolution=display_resolution,
-                    display_rationale=display_rationale,
-                )
-                for result in results
-            ],
+            "error": error,
+            "repositories": repositories,
         },
         sys.stdout,
         indent=_INDENT,
@@ -65,7 +117,9 @@ _INDENT = 2
 
 # Incremented whenever a change to the document would break a consumer that reads it, so that the
 # consumer can detect the change rather than misinterpret the content.
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+
+_REDACTED = "***"
 
 
 # ----------------------------------------------------------------------

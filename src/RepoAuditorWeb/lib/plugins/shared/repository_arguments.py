@@ -71,27 +71,14 @@ def ResolveRepositoryArguments(
         )
         raise ValueError(msg)
 
-    # Get the PAT
+    # Wildcards are expanded into repositories on the command line, so a url that still contains one
+    # was entered somewhere that does not expand it (such as the web form).
+    if "*" in url:
+        msg = f"'{url}' contains a wildcard; wildcard urls are only supported on the command line."
+        raise ValueError(msg)
+
     pat = module_data.get("pat")
-    if pat is not None:
-        assert isinstance(pat, str), (pat, type(pat))
-
-        potential_filename = Path(pat)
-        if potential_filename.is_file():
-            with potential_filename.open(encoding="utf-8") as f:
-                pat = f.read()
-
-            # The contents are sent to the repository's server as a credential, so a file that does
-            # not hold a single token (e.g. one named by mistake) is rejected without revealing it.
-            if len(pat.split()) > 1:
-                msg = f"'{potential_filename}' does not contain a Personal Access Token."
-                raise ValueError(msg)
-
-        # A blank PAT would otherwise be sent as an empty credential rather than being omitted.
-        pat = pat.strip()
-        if not pat:
-            msg = "'pat' must not be empty or contain only whitespace."
-            raise ValueError(msg)
+    assert pat is None or isinstance(pat, str), (pat, type(pat))
 
     branch = module_data.get("branch")
     assert branch is None or isinstance(branch, str), (branch, type(branch))
@@ -102,7 +89,34 @@ def ResolveRepositoryArguments(
         msg = f"'{branch}' is not a valid branch name."
         raise ValueError(msg)
 
-    return RepositoryArguments(url, pat, branch)
+    return RepositoryArguments(url, ResolvePat(pat), branch)
+
+
+# ----------------------------------------------------------------------
+def ResolvePat(pat: str | None) -> str | None:
+    """Return the PAT, reading it from a file when it names one."""
+
+    if pat is None:
+        return None
+
+    potential_filename = Path(pat)
+    if potential_filename.is_file():
+        with potential_filename.open(encoding="utf-8") as f:
+            pat = f.read()
+
+        # The contents are sent to the repository's server as a credential, so a file that does
+        # not hold a single token (e.g. one named by mistake) is rejected without revealing it.
+        if len(pat.split()) > 1:
+            msg = f"'{potential_filename}' does not contain a Personal Access Token."
+            raise ValueError(msg)
+
+    # A blank PAT would otherwise be sent as an empty credential rather than being omitted.
+    pat = pat.strip()
+    if not pat:
+        msg = "'pat' must not be empty or contain only whitespace."
+        raise ValueError(msg)
+
+    return pat
 
 
 # ----------------------------------------------------------------------

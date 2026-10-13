@@ -11,7 +11,12 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.console_experience import ExecuteExperience as ExecuteConsoleExperience
 from RepoAuditorWeb.impl import entry_point_utils
-from RepoAuditorWeb.json_experience import ExecuteExperience as ExecuteJsonExperience
+from RepoAuditorWeb.impl.repositories import DisableModulesWithoutUrl, ResolveRepositories
+from RepoAuditorWeb.json_experience import (
+    CreateRepositoryEntry as CreateJsonRepositoryEntry,
+    ExecuteExperience as ExecuteJsonExperience,
+    WriteDocument as WriteJsonDocument,
+)
 from RepoAuditorWeb.web_experience import ExecuteExperience as ExecuteWebExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
 from RepoAuditorWeb.lib.modules import MODULES
@@ -65,7 +70,9 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
         str | None,
         typer.Option(
             "--url",
-            help=_URL_HELP,
+            # Wildcards are expanded here, so they are described for this option but not for the
+            # common value displayed by the web form.
+            help=f"{_URL_HELP} End the url with '/*' to audit every repository of a GitHub owner or local directory.",
             envvar="REPO_AUDITOR_WEB_GITHUB_URL",
         ),
     ] = None,
@@ -85,6 +92,20 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
             envvar="REPO_AUDITOR_WEB_GITHUB_BRANCH",
         ),
     ] = None,
+    include_archived: Annotated[  # noqa: FBT002
+        bool,
+        typer.Option(
+            "--include-archived",
+            help="Include archived repositories when a GitHub url ends with '/*'.",
+        ),
+    ] = False,
+    include_forked: Annotated[  # noqa: FBT002
+        bool,
+        typer.Option(
+            "--include-forked",
+            help="Include forked repositories when a GitHub url ends with '/*'.",
+        ),
+    ] = False,
     port: Annotated[
         int | None,
         typer.Option("--port", min=1024, max=65535, help="The port to run the server on."),
@@ -148,6 +169,11 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
     # written to stderr in order to keep that document parsable.
     stream = sys.stderr if experience == Experience.Json else sys.stdout
 
+    # The json experience contributes an entry per repository, and the document is written once
+    # however the run ends so that it is always valid.
+    json_entries: list[dict[str, object]] = []
+    json_error: str | None = None
+
     # DoneManager raises typer.Exit when it exits, so the separator is written from a 'finally'
     # clause in order to land after the final status message rather than before it.
     try:
@@ -155,41 +181,103 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
             stream,
             flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
         ) as dm:
-            port = entry_point_utils.ResolvePort(port)
-            token = entry_point_utils.ResolveToken(token)
-            common_arguments: dict[str, object] = {"url": url, "pat": pat, "branch": branch}
+            try:
+                token = entry_point_utils.ResolveToken(token)
+                arguments = _dynamic_parameters.Parse(kwargs)
 
-            experience_kwargs = {
-                "dm": dm,
-                "port": port,
-                "token": token,
-                "modules": MODULES,
-                "dynamic_parameters": _dynamic_parameters,
-                "arguments": _dynamic_parameters.Parse(kwargs),
-                "common_arguments": common_arguments,
-                "execute": execute,
-                "evaluate_all": evaluate_all,
-                "display_resolution": not no_resolution,
-                "display_rationale": not no_rationale,
-            }
+                repositories = ResolveRepositories(
+                    dm,
+                    url,
+                    pat,
+                    include_archived=include_archived,
+                    include_forked=include_forked,
+                )
 
-            if experience == Experience.Console:
-                ExecuteConsoleExperience(**experience_kwargs)
-            elif experience == Experience.Json:
-                ExecuteJsonExperience(**experience_kwargs)
-            elif experience == Experience.Web:
-                ExecuteWebExperience(**experience_kwargs)
-            else:
-                assert False, experience  # noqa: B011, PT015  # pragma: no cover
+                if experience == Experience.Web and len(repositories) > 1 and not execute:
+                    dm.WriteWarning(
+                        f"A window is opened for each of the {len(repositories)} repositories in turn; use '--execute' to run each audit without waiting for it to be invoked.\n\n",
+                    )
+
+                for index, repository in enumerate(repositories):
+                    with dm.Nested(
+                        f"Auditing {'' if repository is None else f"'{repository}' "}({index + 1} of {len(repositories)})...",
+                        suffix="\n",
+                        suppress_exceptions=True,
+                    ) as repository_dm:
+                        repository_arguments = (
+                            arguments if index == 0 else DisableModulesWithoutUrl(MODULES, arguments)
+                        )
+                        common_arguments: dict[str, object] = {
+                            "url": repository,
+                            "pat": pat,
+                            "branch": branch,
+                        }
+
+                        try:
+                            entry = _ExecuteExperience(
+                                experience,
+                                dm=repository_dm,
+                                # A server from a previous repository may still hold its port while
+                                # shutting down, so a new port is chosen unless one was provided.
+                                port=entry_point_utils.ResolvePort(port),
+                                token=token,
+                                modules=MODULES,
+                                dynamic_parameters=_dynamic_parameters,
+                                arguments=repository_arguments,
+                                common_arguments=common_arguments,
+                                execute=execute,
+                                evaluate_all=evaluate_all,
+                                display_resolution=not no_resolution,
+                                display_rationale=not no_rationale,
+                            )
+
+                            if entry is not None:
+                                json_entries.append(entry)
+                        except Exception as ex:
+                            # DoneManager displays the failure and the remaining repositories are
+                            # audited; the document records the failure in the repository's entry.
+                            json_entries.append(
+                                CreateJsonRepositoryEntry(
+                                    repository_arguments,
+                                    common_arguments,
+                                    error=str(ex),
+                                ),
+                            )
+                            raise
+            except KeyboardInterrupt:
+                json_error = "The run was interrupted."
+                raise
+            except Exception as ex:
+                json_error = str(ex)
+                raise
     finally:
         if experience == Experience.Json:
             # The status output and the document are written to different streams, so
             # whitespace is added to separate them when both are displayed together.
             stream.write("\n")
 
+            WriteJsonDocument(json_entries, json_error)
+
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def _ExecuteExperience(
+    experience: Experience,
+    **experience_kwargs,
+) -> dict[str, object] | None:
+    if experience == Experience.Console:
+        ExecuteConsoleExperience(**experience_kwargs)
+    elif experience == Experience.Json:
+        return ExecuteJsonExperience(**experience_kwargs)
+    elif experience == Experience.Web:
+        ExecuteWebExperience(**experience_kwargs)
+    else:
+        assert False, experience  # noqa: B011, PT015  # pragma: no cover
+
+    return None
+
+
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     app()  # pragma: no cover
