@@ -20,6 +20,7 @@ def _CreateFormField(
     choices: list[str] | None = None,
     help_text: str = "",
     required: bool = False,
+    read_only_reason: str = "",
 ) -> FormField:
     return FormField(
         name=name,
@@ -29,6 +30,7 @@ def _CreateFormField(
         help=help_text,
         choices=choices or [],
         required=required,
+        read_only_reason=read_only_reason,
     )
 
 
@@ -106,6 +108,39 @@ class TestCreateField:
         assert control.value == "my value"
         assert control.type == "text"
         assert label is not None
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.asyncio
+    async def test_TextIsEditable(self):
+        control, label = await _Mount(_CreateFormField(FieldType.Text, "my value"))
+
+        assert control.disabled is False
+        assert label is not None
+        assert str(label.content) == "one"
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.asyncio
+    async def test_ReadOnlyText(self):
+        control, label = await _Mount(
+            _CreateFormField(FieldType.Text, "my value", read_only_reason="My reason."),
+        )
+
+        assert isinstance(control, Input)
+        assert control.disabled is True
+        assert control.value == "my value"
+        assert label is not None
+        assert str(label.content) == "one (My reason.)"
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.asyncio
+    async def test_ReadOnlyBoolean(self):
+        control, _ = await _Mount(
+            _CreateFormField(FieldType.Boolean, True, read_only_reason="My reason."),
+        )
+
+        assert isinstance(control, Checkbox)
+        assert control.disabled is True
+        assert str(control.label) == "one (My reason.)"
 
     # ----------------------------------------------------------------------
     # A value that was never provided displays as an empty control.

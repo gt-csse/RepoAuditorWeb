@@ -339,6 +339,26 @@ _STYLE = textwrap.dedent(
 
     .field:has(:disabled) > label { opacity: 0.5; }
 
+    .field input[readonly] { opacity: 0.5; cursor: not-allowed; }
+
+    /* Styled as a badge rather than as help text so that it reads as the reason the control is
+       locked rather than as a description of what the value means. */
+    .field .read-only {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      width: fit-content;
+      margin-top: 4px;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--warning);
+      font-size: 12px;
+    }
+
+    .field .read-only::before { content: "\\1F512"; font-size: 11px; }
+
     #status { color: var(--muted); }
 
     #output {
@@ -633,6 +653,7 @@ _SCRIPT = textwrap.dedent(
 
       input.value = field.value === null || field.value === undefined ? "" : field.value;
       input.required = field.required;
+      input.readOnly = Boolean(field.read_only_reason);
       readers.set(field.name, () => input.value);
 
       return input;
@@ -664,6 +685,18 @@ _SCRIPT = textwrap.dedent(
       const control = CreateControl(field);
       control.id = field.name;
       control.name = field.name;
+
+      // The reason is repeated on the control, since that is where an attempt to edit happens.
+      if (field.read_only_reason) {
+        const reason = document.createElement("span");
+        reason.className = "read-only";
+        reason.id = `${field.name}-read-only`;
+        reason.textContent = field.read_only_reason;
+        label.appendChild(reason);
+
+        control.title = field.read_only_reason;
+        control.setAttribute("aria-describedby", reason.id);
+      }
 
       row.appendChild(label);
       row.appendChild(control);
