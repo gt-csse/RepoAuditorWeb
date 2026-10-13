@@ -75,22 +75,20 @@ def test_DynamicModuleOptionsAppearInHelp():
 
     assert {
         "--GitHub-include",
-        "--GitHub-url",
-        "--GitHub-pat",
-        "--GitHub-branch",
         "--CommunityStandards-include",
-        "--CommunityStandards-url",
-        "--CommunityStandards-pat",
-        "--CommunityStandards-branch",
         "--ScientificSoftware-include",
-        "--ScientificSoftware-url",
-        "--ScientificSoftware-pat",
-        "--ScientificSoftware-branch",
         "--JOSS-include",
-        "--JOSS-url",
-        "--JOSS-pat",
-        "--JOSS-branch",
     } <= _GetOptionNames(app)
+
+
+# ----------------------------------------------------------------------
+# Every module operates on the common value, so a module-specific value is not accepted.
+def test_ModuleOptionsForCommonOptionsAreNotAvailable():
+    option_names = _GetOptionNames(app)
+
+    for module_name in ["GitHub", "CommunityStandards", "ScientificSoftware", "JOSS"]:
+        for parameter_name in ["url", "pat", "branch"]:
+            assert f"--{module_name}-{parameter_name}" not in option_names
 
 
 # ----------------------------------------------------------------------
@@ -150,7 +148,7 @@ def test_ModuleIncludeOptionIsResolved(tmp_path):
     source_repo.index.commit("Initial commit", author=git.Actor("Me", "me@example.com"))
 
     result, output = _InvokeAndCapture(
-        [*_SKIP_NETWORK, "--ScientificSoftware-include", "--ScientificSoftware-url", tmp_path.as_uri()],
+        [*_SKIP_NETWORK, "--ScientificSoftware-include", "--url", tmp_path.as_uri()],
     )
 
     assert result.exit_code == 0, output
@@ -362,7 +360,7 @@ class TestCommonOptions:
     def _InvokeAndCaptureArguments(
         args: list[str],
         env: dict[str, str | None] | None = None,
-    ) -> dict[str, dict[str | None, dict[str, object]]]:
+    ) -> tuple[dict[str, dict[str | None, dict[str, object]]], dict[str, object]]:
         # The environment is cleared so that values set on the host do not influence the results.
         env = {
             "REPO_AUDITOR_WEB_GITHUB_URL": None,
@@ -377,13 +375,23 @@ class TestCommonOptions:
         assert result.exit_code == 0, result.output
         assert experience_mock.call_count == 1
 
-        return experience_mock.call_args.kwargs["arguments"]
+        kwargs = experience_mock.call_args.kwargs
+
+        return kwargs["arguments"], kwargs["common_arguments"]
 
     # ----------------------------------------------------------------------
     def test_InHelp(self):
         assert {"--url", "--pat", "--branch"} <= _GetOptionNames(app)
 
     # ----------------------------------------------------------------------
+    def test_NoneByDefault(self):
+        _, common_arguments = self._InvokeAndCaptureArguments([])
+
+        assert common_arguments == {"url": None, "pat": None, "branch": None}
+
+    # ----------------------------------------------------------------------
+    # Common values are applied to the modules when they are executed, so they are forwarded on their
+    # own rather than as module arguments.
     @pytest.mark.parametrize(
         ("option", "parameter_name", "value"),
         [
@@ -392,12 +400,13 @@ class TestCommonOptions:
             ("--branch", "branch", "my_branch"),
         ],
     )
-    def test_ForwardedToModules(self, option, parameter_name, value):
-        arguments = self._InvokeAndCaptureArguments([option, value])
+    def test_ForwardedToExperience(self, option, parameter_name, value):
+        arguments, common_arguments = self._InvokeAndCaptureArguments([option, value])
 
-        assert arguments["GitHub"][None][parameter_name] == value
-        assert arguments["CommunityStandards"][None][parameter_name] == value
-        assert arguments["ScientificSoftware"][None][parameter_name] == value
+        assert common_arguments[parameter_name] == value
+
+        for module_name in ["GitHub", "CommunityStandards", "ScientificSoftware", "JOSS"]:
+            assert parameter_name not in arguments[module_name][None]
 
     # ----------------------------------------------------------------------
     @pytest.mark.parametrize(
@@ -409,48 +418,23 @@ class TestCommonOptions:
         ],
     )
     def test_EnvironmentVariables(self, envvar, parameter_name, value):
-        arguments = self._InvokeAndCaptureArguments([], env={envvar: value})
+        _, common_arguments = self._InvokeAndCaptureArguments([], env={envvar: value})
 
-        assert arguments["GitHub"][None][parameter_name] == value
-        assert arguments["CommunityStandards"][None][parameter_name] == value
-        assert arguments["ScientificSoftware"][None][parameter_name] == value
+        assert common_arguments[parameter_name] == value
 
     # ----------------------------------------------------------------------
-    # Module-specific values are left untouched when the common option is not provided.
-    def test_ModuleValuesPreservedWhenAbsent(self):
-        arguments = self._InvokeAndCaptureArguments(
-            [
-                "--GitHub-url",
-                "https://github.com/gt-csse/GitHubRepo",
-                "--CommunityStandards-url",
-                "https://github.com/gt-csse/CommunityStandardsRepo",
-            ],
+    # Every module operates on the common value, so a module-specific value is rejected.
+    @pytest.mark.parametrize("parameter_name", ["url", "pat", "branch"])
+    def test_ErrorModuleValue(self, parameter_name):
+        # The exception is asserted rather than the output, as rich splits option names across
+        # color escapes when rendering against a terminal (which is forced on GitHub Actions).
+        result = CliRunner().invoke(
+            app,
+            [*_SKIP_NETWORK, f"--GitHub-{parameter_name}", "module_value"],
+            standalone_mode=False,
         )
 
-        assert arguments["GitHub"][None]["url"] == "https://github.com/gt-csse/GitHubRepo"
-        assert (
-            arguments["CommunityStandards"][None]["url"]
-            == "https://github.com/gt-csse/CommunityStandardsRepo"
-        )
-
-    # ----------------------------------------------------------------------
-    # Module-specific values take precedence over the common option, which still applies to the
-    # modules that were not given a specific value.
-    @pytest.mark.parametrize(
-        ("parameter_name", "value"),
-        [
-            ("url", "https://github.com/gt-csse/RepoAuditorWeb"),
-            ("pat", "my_pat"),
-            ("branch", "my_branch"),
-        ],
-    )
-    def test_ModuleValuesTakePrecedence(self, parameter_name, value):
-        arguments = self._InvokeAndCaptureArguments(
-            [f"--{parameter_name}", value, f"--GitHub-{parameter_name}", "module_value"],
-        )
-
-        assert arguments["GitHub"][None][parameter_name] == "module_value"
-        assert arguments["CommunityStandards"][None][parameter_name] == value
+        assert str(result.exception) == f"No such option: --GitHub-{parameter_name}"
 
     # ----------------------------------------------------------------------
     # Config file keys are the python parameter names, which is how the dynamic module and
@@ -461,31 +445,23 @@ class TestCommonOptions:
             textwrap.dedent(
                 """\
                 url: https://github.com/gt-csse/RepoAuditorWeb
+                branch: config_branch
                 GitHub_include: true
-                GitHub_branch: config_branch
                 GitHub_Description_value: empty
                 """,
             ),
             encoding="utf-8",
         )
 
-        arguments = self._InvokeAndCaptureArguments(
-            ["--config", str(config_filename), "--GitHub-branch", "cli_branch"],
+        arguments, common_arguments = self._InvokeAndCaptureArguments(
+            ["--config", str(config_filename), "--branch", "cli_branch"],
         )
 
+        assert common_arguments == {
+            "url": "https://github.com/gt-csse/RepoAuditorWeb",
+            "pat": None,
+            "branch": "cli_branch",
+        }
         assert arguments["GitHub"][None]["include"] is True
-        assert arguments["GitHub"][None]["url"] == "https://github.com/gt-csse/RepoAuditorWeb"
-        assert arguments["GitHub"][None]["branch"] == "cli_branch"
         assert arguments["GitHub"]["Description"]["value"] == "empty"
         assert arguments["CommunityStandards"][None]["include"] is False
-        assert arguments["CommunityStandards"][None]["url"] == "https://github.com/gt-csse/RepoAuditorWeb"
-
-    # ----------------------------------------------------------------------
-    def test_ModuleValuesTakePrecedenceOverEnvironmentVariables(self):
-        arguments = self._InvokeAndCaptureArguments(
-            ["--CommunityStandards-branch", "module_branch"],
-            env={"REPO_AUDITOR_WEB_GITHUB_BRANCH": "env_branch"},
-        )
-
-        assert arguments["GitHub"][None]["branch"] == "env_branch"
-        assert arguments["CommunityStandards"][None]["branch"] == "module_branch"

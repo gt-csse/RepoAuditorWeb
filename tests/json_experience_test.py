@@ -62,6 +62,7 @@ def _ExecuteRaw(
             [module],
             DynamicParameters([module]),
             arguments,
+            {},
             evaluate_all=evaluate_all,
             display_resolution=display_resolution,
             display_rationale=display_rationale,

@@ -47,7 +47,9 @@ def _Invoke(
             flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
         ) as dm,
     ):
-        ExecuteExperience(dm, 8080, "my_token", modules, DynamicParameters(modules), arguments, **kwargs)
+        ExecuteExperience(
+            dm, 8080, "my_token", modules, DynamicParameters(modules), arguments, {"url": "my_url"}, **kwargs
+        )
 
     return webview_mock, uvicorn_mock, sink.getvalue()
 
@@ -75,7 +77,7 @@ def test_ErrorServerDoesNotStart():
         uvicorn_mock.Server.return_value.started = False
 
         with pytest.raises(RuntimeError) as exc_info:
-            ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {})
+            ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {})
 
     assert str(exc_info.value) == "The server could not be started on port 8080."
     assert webview_mock.create_window.call_count == 0
@@ -103,7 +105,7 @@ def test_WindowWaitsForTheServer():
 
         time_mock.sleep.side_effect = Sleep
 
-        ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {})
+        ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {})
 
     assert time_mock.sleep.call_count == 1
     assert webview_mock.create_window.call_count == 1
@@ -179,7 +181,7 @@ class TestApp:
         args, _ = self._InvokeAndCaptureKwargs()
 
         assert args[0][0].name == "MyModule"
-        assert args[3] == "my_token"
+        assert args[4] == "my_token"
 
     # ----------------------------------------------------------------------
     # The values a run starts with are displayed for editing.
@@ -187,6 +189,12 @@ class TestApp:
         args, _ = self._InvokeAndCaptureKwargs()
 
         assert args[2] == {"MyModule": {None: {"one": "provided"}}}
+
+    # ----------------------------------------------------------------------
+    def test_CommonArgumentsAreForwarded(self):
+        args, _ = self._InvokeAndCaptureKwargs()
+
+        assert args[3] == {"url": "my_url"}
 
     # ----------------------------------------------------------------------
     def test_Defaults(self):

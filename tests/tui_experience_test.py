@@ -45,7 +45,9 @@ def _Invoke(
             flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
         ) as dm,
     ):
-        ExecuteExperience(dm, 8080, "my_token", modules, DynamicParameters(modules), arguments, **kwargs)
+        ExecuteExperience(
+            dm, 8080, "my_token", modules, DynamicParameters(modules), arguments, {"url": "my_url"}, **kwargs
+        )
 
     return app_mock, sink.getvalue()
 
@@ -89,6 +91,12 @@ class TestApp:
         args, _ = self._InvokeAndCaptureKwargs()
 
         assert args[2] == {"MyModule": {None: {"one": "provided"}}}
+
+    # ----------------------------------------------------------------------
+    def test_CommonArgumentsAreForwarded(self):
+        args, _ = self._InvokeAndCaptureKwargs()
+
+        assert args[3] == {"url": "my_url"}
 
     # ----------------------------------------------------------------------
     def test_Defaults(self):

@@ -51,6 +51,7 @@ class AuditorApp(App):
         modules: list[Module],
         dynamic_parameters: DynamicParameters,
         arguments: dict[str, dict[str | None, dict[str, object]]],
+        common_arguments: dict[str, object],
         *,
         execute: bool = False,
         evaluate_all: bool = False,
@@ -64,6 +65,7 @@ class AuditorApp(App):
         self.modules = modules
         self.dynamic_parameters = dynamic_parameters
         self.arguments = arguments
+        self.common_arguments = common_arguments
         self.execute_on_start = execute
         self.evaluate_all = evaluate_all
         self.display_resolution = display_resolution
@@ -73,6 +75,7 @@ class AuditorApp(App):
         self.is_verbose = verbose
         self.is_debug = debug
 
+        self.common = form.CreateCommonContainer(dynamic_parameters, self.common_arguments)
         self.groups = form.CreateGroups(dynamic_parameters, arguments)
 
         # The log is resolved once a run begins and retained so that the thread performing the run
@@ -93,6 +96,16 @@ class AuditorApp(App):
         with Vertical(id="body"):
             with VerticalScroll(id="arguments"):
                 yield Label("Arguments", classes="heading")
+
+                # Common values apply to every module, so they are displayed ahead of the modules
+                # and expanded.
+                if self.common.fields:
+                    yield Collapsible(
+                        *_EnumerateContainerWidgets(self.common),
+                        title=self.common.name,
+                        collapsed=False,
+                        classes="group",
+                    )
 
                 for group in self.groups:
                     yield from _EnumerateGroupWidgets(group)
@@ -196,7 +209,7 @@ class AuditorApp(App):
             widget.id: widget for widget in self.query(".field-control") if widget.id is not None
         }
 
-        values: dict[str, object] = {}
+        values = fields.CreateValues(self.common.fields, controls)
 
         for group in self.groups:
             for container in (group, *group.sections):
@@ -220,16 +233,26 @@ class AuditorApp(App):
             # a run used are what the next one starts from. The values are parsed before the retained
             # ones are replaced so that a failure leaves them intact.
             parsed = form.ParseValues(self.dynamic_parameters, values)
+            parsed_common = form.ParseCommonValues(self.dynamic_parameters, values)
 
             self.arguments.clear()
             self.arguments.update(parsed)
+
+            self.common_arguments.clear()
+            self.common_arguments.update(parsed_common)
 
             with DoneManager.Create(
                 sink,
                 "Executing...",
                 flags=DoneManagerFlags.Create(verbose=self.is_verbose, debug=self.is_debug),
             ) as dm:
-                evaluate_results = Execute(dm, self.modules, self.arguments, evaluate_all=self.evaluate_all)
+                evaluate_results = Execute(
+                    dm,
+                    self.modules,
+                    self.arguments,
+                    self.common_arguments,
+                    evaluate_all=self.evaluate_all,
+                )
 
             self.call_from_thread(self._DisplayResults, evaluate_results)
         except Exception as ex:

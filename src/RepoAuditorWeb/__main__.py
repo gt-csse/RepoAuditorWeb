@@ -7,13 +7,14 @@ import typer
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 from typer.core import TyperGroup
+from typer.models import OptionInfo
 
 from RepoAuditorWeb.console_experience import ExecuteExperience as ExecuteConsoleExperience
 from RepoAuditorWeb.impl import entry_point_utils
 from RepoAuditorWeb.json_experience import ExecuteExperience as ExecuteJsonExperience
 from RepoAuditorWeb.tui_experience import ExecuteExperience as ExecuteTuiExperience
 from RepoAuditorWeb.web_experience import ExecuteExperience as ExecuteWebExperience
-from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
+from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
 from RepoAuditorWeb.lib.modules import MODULES
 
 
@@ -45,7 +46,18 @@ class Experience(StrEnum):
 
 
 # ----------------------------------------------------------------------
-_dynamic_parameters = DynamicParameters(MODULES)
+_URL_HELP = "GitHub URL (e.g. https://github.com/gt-csse/RepoAuditorWeb)."
+_PAT_HELP = "GitHub Personal Access Token (PAT) or path to a local file containing the PAT."
+_BRANCH_HELP = "Branch to evaluate. The default branch will be used if not specified."
+
+_dynamic_parameters = DynamicParameters(
+    MODULES,
+    {
+        "url": TyperParameter(str | None, None, OptionInfo(help=_URL_HELP)),
+        "pat": TyperParameter(str | None, None, OptionInfo(help=_PAT_HELP)),
+        "branch": TyperParameter(str | None, None, OptionInfo(help=_BRANCH_HELP)),
+    },
+)
 
 
 # ----------------------------------------------------------------------
@@ -55,7 +67,7 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
         str | None,
         typer.Option(
             "--url",
-            help="GitHub URL (e.g. https://github.com/gt-csse/RepoAuditorWeb).",
+            help=_URL_HELP,
             envvar="REPO_AUDITOR_WEB_GITHUB_URL",
         ),
     ] = None,
@@ -63,7 +75,7 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
         str | None,
         typer.Option(
             "--pat",
-            help="GitHub Personal Access Token (PAT) or path to a local file containing the PAT.",
+            help=_PAT_HELP,
             envvar="REPO_AUDITOR_WEB_GITHUB_PAT",
         ),
     ] = None,
@@ -71,7 +83,7 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
         str | None,
         typer.Option(
             "--branch",
-            help="Branch to evaluate. The default branch will be used if not specified.",
+            help=_BRANCH_HELP,
             envvar="REPO_AUDITOR_WEB_GITHUB_BRANCH",
         ),
     ] = None,
@@ -147,30 +159,7 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
         ) as dm:
             port = entry_point_utils.ResolvePort(port)
             token = entry_point_utils.ResolveToken(token)
-            arguments = _dynamic_parameters.Parse(kwargs)
-
-            # Common options are applied to every module that declares a parameter with the same name,
-            # so that modules opt in through their parameters rather than being listed here.
-            common_arguments = {
-                name: value
-                for name, value in {"url": url, "pat": pat, "branch": branch}.items()
-                if value is not None
-            }
-
-            for argument_info in _dynamic_parameters.argument_lookup.values():
-                if (
-                    argument_info.requirement_name is None
-                    and argument_info.parameter_name in common_arguments
-                ):
-                    current_value = (
-                        arguments.setdefault(argument_info.module_name, {})
-                        .setdefault(None, {})
-                        .get(argument_info.parameter_name)
-                    )
-                    if current_value is None:
-                        arguments[argument_info.module_name][None][argument_info.parameter_name] = (
-                            common_arguments[argument_info.parameter_name]
-                        )
+            common_arguments: dict[str, object] = {"url": url, "pat": pat, "branch": branch}
 
             experience_kwargs = {
                 "dm": dm,
@@ -178,7 +167,8 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
                 "token": token,
                 "modules": MODULES,
                 "dynamic_parameters": _dynamic_parameters,
-                "arguments": arguments,
+                "arguments": _dynamic_parameters.Parse(kwargs),
+                "common_arguments": common_arguments,
                 "execute": execute,
                 "evaluate_all": evaluate_all,
                 "display_resolution": not no_resolution,

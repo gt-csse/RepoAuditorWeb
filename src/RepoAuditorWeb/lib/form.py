@@ -164,6 +164,36 @@ def CreateGroups(
 
 
 # ----------------------------------------------------------------------
+def CreateCommonContainer(
+    dynamic_parameters: DynamicParameters,
+    common_arguments: dict[str, object],
+) -> FormContainer:
+    """Create the container of fields whose values apply to every module that accepts them."""
+
+    return FormContainer(
+        _COMMON_CONTAINER_NAME,
+        [
+            _CreateField(name, name, parameter, common_arguments.get(name, parameter.default))
+            for name, parameter in dynamic_parameters.common_parameters.items()
+        ],
+        _COMMON_CONTAINER_DESCRIPTION,
+    )
+
+
+# ----------------------------------------------------------------------
+def ParseCommonValues(
+    dynamic_parameters: DynamicParameters,
+    values: dict[str, object],
+) -> dict[str, object]:
+    """Convert values submitted by the form's common fields into arguments of the declared types."""
+
+    return {
+        name: _ParseValue(name, parameter, values)
+        for name, parameter in dynamic_parameters.common_parameters.items()
+    }
+
+
+# ----------------------------------------------------------------------
 def ParseValues(
     dynamic_parameters: DynamicParameters,
     values: dict[str, object],
@@ -187,11 +217,8 @@ def ParseValues(
 
         if name in mode_values:
             value: object = mode_values[name]
-        elif name in values:
-            value = _CoerceValue(parameter, values[name])
-            _VerifyRange(name, parameter, value)
         else:
-            value = parameter.default
+            value = _ParseValue(name, parameter, values)
 
         results.setdefault(argument_info.module_name, {}).setdefault(
             argument_info.requirement_name,
@@ -251,6 +278,9 @@ _OPTIONAL_MODE_HELP = (
 )
 
 _LIST_DELIMITER = ","
+
+_COMMON_CONTAINER_NAME = "Common"
+_COMMON_CONTAINER_DESCRIPTION = "Values applied to every module that uses them."
 
 # The states of a tri-state boolean, named so that the control reads as the choice being made rather
 # than as a value that happens to be empty.
@@ -641,6 +671,17 @@ def _CoerceValue(parameter: TyperParameter, value: object) -> object:
         return float(str(value))
 
     return str(value)
+
+
+# ----------------------------------------------------------------------
+def _ParseValue(name: str, parameter: TyperParameter, values: dict[str, object]) -> object:
+    if name not in values:
+        return parameter.default
+
+    value = _CoerceValue(parameter, values[name])
+    _VerifyRange(name, parameter, value)
+
+    return value
 
 
 # ----------------------------------------------------------------------

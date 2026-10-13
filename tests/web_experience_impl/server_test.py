@@ -47,7 +47,7 @@ def _GetIndex(app) -> dict[str, object]:
 
 # ----------------------------------------------------------------------
 def _CreateApp(*, execute: bool) -> object:
-    return CreateApp([], DynamicParameters([]), {}, _TOKEN, execute=execute)
+    return CreateApp([], DynamicParameters([]), {}, {}, _TOKEN, execute=execute)
 
 
 # ----------------------------------------------------------------------
@@ -104,7 +104,7 @@ def _GetContent(events: list[dict[str, object]], event_type: str, key: str) -> l
 
 # ----------------------------------------------------------------------
 def test_NoExecuteByDefault():
-    assert _GetIndex(CreateApp([], DynamicParameters([]), {}, _TOKEN))["execute"] is False
+    assert _GetIndex(CreateApp([], DynamicParameters([]), {}, {}, _TOKEN))["execute"] is False
 
 
 # ----------------------------------------------------------------------
@@ -139,7 +139,7 @@ def test_Icon():
 # performs against the body, so the name the page submits under is asserted against the name the
 # route declares.
 def test_ExecuteBodyMatchesWhatThePageSubmits():
-    app = CreateApp([], DynamicParameters([]), {}, _TOKEN)
+    app = CreateApp([], DynamicParameters([]), {}, {}, _TOKEN)
 
     route = next(
         route for route in app.routes if isinstance(route, APIRoute) and route.path == "/api/execute"
@@ -154,14 +154,48 @@ def test_ExecuteBodyMatchesWhatThePageSubmits():
 class TestFields:
     # ----------------------------------------------------------------------
     def test_Empty(self):
-        app = CreateApp([], DynamicParameters([]), {}, _TOKEN)
+        app = CreateApp([], DynamicParameters([]), {}, {}, _TOKEN)
 
-        assert _GetEndpoint(app, "/api/fields")(_TOKEN) == {"groups": []}
+        assert _GetEndpoint(app, "/api/fields")(_TOKEN) == {
+            "common": {
+                "name": "Common",
+                "fields": [],
+                "description": "Values applied to every module that uses them.",
+                "toggle": None,
+                "toggle_includes": False,
+            },
+            "groups": [],
+        }
+
+    # ----------------------------------------------------------------------
+    def test_CommonIsDisplayedOnThePage(self):
+        dynamic_parameters = DynamicParameters([], {"url": TyperParameter(str | None, None)})
+        app = CreateApp([], dynamic_parameters, {}, {"url": "my_url"}, _TOKEN)
+
+        assert _GetIndex(app)["common"] == {
+            "name": "Common",
+            "fields": [
+                {
+                    "name": "url",
+                    "label": "url",
+                    "type": "text",
+                    "value": "my_url",
+                    "help": "",
+                    "choices": [],
+                    "minimum": None,
+                    "maximum": None,
+                    "required": False,
+                },
+            ],
+            "description": "Values applied to every module that uses them.",
+            "toggle": None,
+            "toggle_includes": False,
+        }
 
     # ----------------------------------------------------------------------
     def test_Groups(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         groups = _GetEndpoint(app, "/api/fields")(_TOKEN)["groups"]
 
@@ -177,7 +211,7 @@ class TestFields:
     # ----------------------------------------------------------------------
     def test_Descriptions(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         groups = _GetEndpoint(app, "/api/fields")(_TOKEN)["groups"]
 
@@ -191,6 +225,7 @@ class TestFields:
             [module],
             DynamicParameters([module]),
             {"MyModule": {None: {"one": "provided"}}},
+            {},
             _TOKEN,
         )
 
@@ -304,7 +339,7 @@ class TestStream:
     # instructed not to.
     def test_Headers(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         assert _GetEndpoint(app, "/api/execute")({}, _TOKEN) == {"status": "started"}
 
@@ -322,7 +357,7 @@ class TestStream:
     # rather than inferring it from the connection closing.
     def test_DoneIsTheFinalEvent(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         assert _Execute(app, {})[-1] == {"type": "done"}
 
@@ -332,7 +367,7 @@ class TestExecution:
     # ----------------------------------------------------------------------
     def test_OutputIsStreamed(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         output = "".join(_GetContent(_Execute(app, {}), "output", "content"))
 
@@ -341,7 +376,7 @@ class TestExecution:
     # ----------------------------------------------------------------------
     def test_ResultsAreRendered(self):
         module = _CreateModule(evaluate_values=EvaluateValues(EvaluateResultValue.Error))
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         results = _GetContent(_Execute(app, {}), "results", "html")
 
@@ -362,6 +397,7 @@ class TestExecution:
             [module],
             DynamicParameters([module]),
             {},
+            {},
             _TOKEN,
             display_resolution=False,
             display_rationale=False,
@@ -377,7 +413,7 @@ class TestExecution:
     def test_Verbose(self):
         module = _CreateModule()
 
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN, verbose=True)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN, verbose=True)
 
         html = _GetContent(_Execute(app, {}), "results", "html")[0]
 
@@ -386,7 +422,7 @@ class TestExecution:
     # ----------------------------------------------------------------------
     def test_Debug(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN, debug=True)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN, debug=True)
 
         assert _Execute(app, {})[-1] == {"type": "done"}
 
@@ -402,7 +438,7 @@ class TestExecution:
             parameters={"one": TyperParameter(int, 0, OptionInfo(help="One"))},
         )
 
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         errors = _GetContent(_Execute(app, {"MyModule_one": "not_a_number"}), "error", "message")
 
@@ -420,7 +456,7 @@ class TestExecution:
             parameters={"one": TyperParameter(int, 0, OptionInfo(help="One"))},
         )
 
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         assert _Execute(app, {"MyModule_one": "not_a_number"})[-1] == {"type": "done"}
 
@@ -430,13 +466,32 @@ class TestExecution:
     def test_SubmittedValuesAreRetained(self):
         module = _CreateModule()
         values: dict[str, dict[str | None, dict[str, object]]] = {}
-        app = CreateApp([module], DynamicParameters([module]), values, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), values, {}, _TOKEN)
 
         _Execute(app, {"MyModule_one": "provided"})
 
         fields = _GetEndpoint(app, "/api/fields")(_TOKEN)["groups"][0]["fields"]
 
         assert next(field for field in fields if field["name"] == "MyModule_one")["value"] == "provided"
+
+    # ----------------------------------------------------------------------
+    def test_CommonValuesAreAppliedAndRetained(self):
+        module = MyModule(
+            "MyModule",
+            "My description.",
+            [MyQuery("MyQuery", [], query_data={})],
+            parameters={"url": TyperParameter(str | None, None)},
+        )
+        dynamic_parameters = DynamicParameters([module], {"url": TyperParameter(str | None, None)})
+        app = CreateApp([module], dynamic_parameters, {}, {}, _TOKEN)
+
+        _Execute(app, {"url": "common_url", "MyModule_skip": False})
+
+        assert module.module_data_args == {None: {"skip": False, "url": "common_url"}}
+
+        fields = _GetEndpoint(app, "/api/fields")(_TOKEN)["common"]["fields"]
+
+        assert [(field["name"], field["value"]) for field in fields] == [("url", "common_url")]
 
     # ----------------------------------------------------------------------
     # A page served while a run replaces the retained values renders the submitted values rather
@@ -458,7 +513,7 @@ class TestExecution:
 
         module = _CreateModule()
         values = BlockingDict()
-        app = CreateApp([module], DynamicParameters([module]), values, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), values, {}, _TOKEN)
 
         assert _GetEndpoint(app, "/api/execute")({"MyModule_one": "provided"}, _TOKEN) == {
             "status": "started",
@@ -494,7 +549,7 @@ class TestExecution:
         )
 
         values: dict[str, dict[str | None, dict[str, object]]] = {"MyModule": {None: {"one": 1}}}
-        app = CreateApp([module], DynamicParameters([module]), values, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), values, {}, _TOKEN)
 
         _Execute(app, {"MyModule_one": "not_a_number"})
 
@@ -504,7 +559,7 @@ class TestExecution:
     # A reconnecting page receives the whole run rather than the remainder of a split stream.
     def test_StreamIsReplayedToEachSubscriber(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         first = _Execute(app, {})
         second = _Consume(_GetEndpoint(app, "/api/stream")(_TOKEN))
@@ -537,7 +592,7 @@ class TestExecution:
             [BlockingQuery("MyQuery", [requirement])],
         )
 
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
         endpoint = _GetEndpoint(app, "/api/execute")
 
         assert endpoint({}, _TOKEN) == {"status": "started"}
@@ -559,7 +614,7 @@ class TestExecution:
     # A run that fails to start must not hold the lock, or every later request would be rejected.
     def test_LockIsReleasedWhenStartFails(self, monkeypatch):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         # ----------------------------------------------------------------------
         def RaiseError():
@@ -579,7 +634,7 @@ class TestExecution:
     # The lock is released once a run completes, so the next one is admitted.
     def test_RunsAreSequential(self):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         assert _Execute(app, {})[-1] == {"type": "done"}
         assert _Execute(app, {})[-1] == {"type": "done"}
@@ -589,7 +644,7 @@ class TestExecution:
     # moment is admitted rather than rejected as overlapping the one that just ended.
     def test_RunIsAdmittedWhenSinkCloses(self, monkeypatch):
         module = _CreateModule()
-        app = CreateApp([module], DynamicParameters([module]), {}, _TOKEN)
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
 
         probed = threading.Event()
         statuses: list[object] = []

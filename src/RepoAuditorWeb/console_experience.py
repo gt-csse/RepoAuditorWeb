@@ -23,13 +23,14 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def ExecuteExperience(  # noqa: C901
+def ExecuteExperience(  # noqa: C901, PLR0913
     dm: DoneManager,
     port: int,  # noqa: ARG001
     token: str,  # noqa: ARG001
     modules: list[Module],
     dynamic_parameters: DynamicParameters,  # noqa: ARG001
     arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
     *,
     execute: bool = False,  # noqa: ARG001
     evaluate_all: bool = False,
@@ -40,7 +41,7 @@ def ExecuteExperience(  # noqa: C901
 
     # The console experience has no control to invoke, so `execute` is implied.
 
-    results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
+    results = Execute(dm, modules, arguments, common_arguments, evaluate_all=evaluate_all)
 
     num_skipped = 0
     num_does_not_apply = 0
