@@ -47,10 +47,14 @@ class Experience(StrEnum):
 # ----------------------------------------------------------------------
 _dynamic_parameters = DynamicParameters(MODULES)
 
+# Typer-config applies a config file through the context's default map.
+_READ_ONLY_SOURCES = frozenset(["COMMANDLINE", "DEFAULT_MAP"])
+
 
 # ----------------------------------------------------------------------
 @entry_point_utils.dynamic_command(app, _dynamic_parameters.dynamic_parameters, no_args_is_help=False)
 def EntryPoint(  # noqa: PLR0913, PLR0917
+    ctx: typer.Context,
     url: Annotated[
         str | None,
         typer.Option(
@@ -157,7 +161,12 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
                 if value is not None
             }
 
-            for argument_info in _dynamic_parameters.argument_lookup.values():
+            # A value provided on the command line or in a config file is what the user asked to
+            # audit, so the interactive experiences display it without allowing it to be changed.
+            # Values from the environment are defaults and remain editable.
+            read_only: dict[str, object] = {}
+
+            for name, argument_info in _dynamic_parameters.argument_lookup.items():
                 if (
                     argument_info.requirement_name is None
                     and argument_info.parameter_name in common_arguments
@@ -168,9 +177,16 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
                         .get(argument_info.parameter_name)
                     )
                     if current_value is None:
-                        arguments[argument_info.module_name][None][argument_info.parameter_name] = (
-                            common_arguments[argument_info.parameter_name]
-                        )
+                        value = common_arguments[argument_info.parameter_name]
+
+                        arguments[argument_info.module_name][None][argument_info.parameter_name] = value
+
+                        source = ctx.get_parameter_source(argument_info.parameter_name)
+
+                        # ParameterSource belongs to the click that typer vendors privately, so its
+                        # members are identified by name.
+                        if source is not None and source.name in _READ_ONLY_SOURCES:
+                            read_only[name] = value
 
             experience_kwargs = {
                 "dm": dm,
@@ -179,6 +195,7 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
                 "modules": MODULES,
                 "dynamic_parameters": _dynamic_parameters,
                 "arguments": arguments,
+                "read_only": read_only,
                 "execute": execute,
                 "evaluate_all": evaluate_all,
                 "display_resolution": not no_resolution,
