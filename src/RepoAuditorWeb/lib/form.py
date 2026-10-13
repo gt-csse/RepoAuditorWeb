@@ -45,9 +45,6 @@ class FormField:
     maximum: float | None = None
     required: bool = False
 
-    # Why the value cannot be changed; empty when it can.
-    read_only_reason: str = ""
-
 
 # ----------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -87,15 +84,8 @@ class FormGroup(FormContainer):
 def CreateGroups(
     dynamic_parameters: DynamicParameters,
     arguments: dict[str, dict[str | None, dict[str, object]]],
-    read_only: dict[str, object] | None = None,
 ) -> list[FormGroup]:
-    """Create the form's display groups from the dynamic parameters and their current values.
-
-    'read_only' maps the name of each parameter whose value was provided on the command line to that
-    value.
-    """
-
-    read_only = read_only or {}
+    """Create the form's display groups from the dynamic parameters and their current values."""
 
     # A requirement name of None indicates a parameter of the module itself, which is displayed
     # ahead of the requirements rather than in a section of its own.
@@ -147,15 +137,7 @@ def CreateGroups(
 
         # A control is addressed by a single string, so the name that identifies the parameter
         # among all modules is what the page submits its value under.
-        fields.append(
-            _CreateField(
-                name,
-                argument_info.parameter_name,
-                parameter,
-                read_only.get(name, value),
-                read_only_reason=_READ_ONLY_REASON if name in read_only else "",
-            ),
-        )
+        fields.append(_CreateField(name, argument_info.parameter_name, parameter, value))
 
     descriptions = dynamic_parameters.description_lookup
 
@@ -185,14 +167,8 @@ def CreateGroups(
 def ParseValues(
     dynamic_parameters: DynamicParameters,
     values: dict[str, object],
-    read_only: dict[str, object] | None = None,
 ) -> dict[str, dict[str | None, dict[str, object]]]:
-    """Convert values submitted by the form into structured arguments of the declared types.
-
-    'read_only' values replace whatever was submitted for the same parameters.
-    """
-
-    read_only = read_only or {}
+    """Convert values submitted by the form into structured arguments of the declared types."""
 
     results: dict[str, dict[str | None, dict[str, object]]] = {}
 
@@ -209,11 +185,8 @@ def ParseValues(
     for name, parameter in dynamic_parameters.dynamic_parameters.items():
         argument_info = dynamic_parameters.argument_lookup[name]
 
-        # The display prevents editing a read-only value, but a submission is not bound by it.
-        if name in read_only:
-            value: object = read_only[name]
-        elif name in mode_values:
-            value = mode_values[name]
+        if name in mode_values:
+            value: object = mode_values[name]
         elif name in values:
             value = _CoerceValue(parameter, values[name])
             _VerifyRange(name, parameter, value)
@@ -290,11 +263,6 @@ _OPTIONAL_BOOLEAN_VALUES = {True: _OPTIONAL_BOOLEAN_TRUE, False: _OPTIONAL_BOOLE
 # A parameter that a module requires but declares a default for (so that its absence is reported by
 # the module rather than by the command line) says so at the beginning of its help text.
 _REQUIRED_HELP_PREFIX = "[REQUIRED]"
-
-_READ_ONLY_REASON = (
-    "This value was provided at runtime and cannot be changed; this ensures that all plugins "
-    "operate on the same value."
-)
 
 
 # ----------------------------------------------------------------------
@@ -529,8 +497,6 @@ def _CreateField(
     label: str,
     parameter: TyperParameter,
     value: object,
-    *,
-    read_only_reason: str = "",
 ) -> FormField:
     resolved_type = _ResolveType(parameter.type)
     field_type = _ResolveFieldType(resolved_type, allows_none=_AllowsNone(parameter.type))
@@ -576,7 +542,6 @@ def _CreateField(
         maximum=getattr(info, "max", None),
         # A parameter with no default cannot be satisfied by omitting it.
         required=required or parameter.default is inspect.Parameter.empty,
-        read_only_reason=read_only_reason,
     )
 
 

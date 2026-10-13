@@ -52,7 +52,6 @@ class AuditorApp(App):
         dynamic_parameters: DynamicParameters,
         arguments: dict[str, dict[str | None, dict[str, object]]],
         *,
-        read_only: dict[str, object] | None = None,
         execute: bool = False,
         evaluate_all: bool = False,
         display_resolution: bool = True,
@@ -65,7 +64,6 @@ class AuditorApp(App):
         self.modules = modules
         self.dynamic_parameters = dynamic_parameters
         self.arguments = arguments
-        self.read_only = read_only
         self.execute_on_start = execute
         self.evaluate_all = evaluate_all
         self.display_resolution = display_resolution
@@ -75,7 +73,7 @@ class AuditorApp(App):
         self.is_verbose = verbose
         self.is_debug = debug
 
-        self.groups = form.CreateGroups(dynamic_parameters, arguments, read_only)
+        self.groups = form.CreateGroups(dynamic_parameters, arguments)
 
         # The log is resolved once a run begins and retained so that the thread performing the run
         # does not query the widget tree that another thread owns. '_log' is a method of the base
@@ -221,7 +219,7 @@ class AuditorApp(App):
             # application, so the conversion happens here. The result is retained so that the values
             # a run used are what the next one starts from. The values are parsed before the retained
             # ones are replaced so that a failure leaves them intact.
-            parsed = form.ParseValues(self.dynamic_parameters, values, self.read_only)
+            parsed = form.ParseValues(self.dynamic_parameters, values)
 
             self.arguments.clear()
             self.arguments.update(parsed)

@@ -27,7 +27,6 @@ def CreateField(field: FormField) -> Widget:
             id=CreateControlId(field.name),
             classes=_CONTROL_CLASS,
             tooltip=field.help or None,
-            disabled=bool(field.read_only_reason),
         )
 
     if field.type in (FieldType.Choice, FieldType.OptionalBoolean, FieldType.RequirementMode):
@@ -40,7 +39,6 @@ def CreateField(field: FormField) -> Widget:
             id=CreateControlId(field.name),
             classes=_CONTROL_CLASS,
             tooltip=field.help or None,
-            disabled=bool(field.read_only_reason),
         )
     else:
         control = Input(
@@ -49,7 +47,6 @@ def CreateField(field: FormField) -> Widget:
             classes=_CONTROL_CLASS,
             type=_INPUT_TYPES.get(field.type, "text"),
             tooltip=field.help or None,
-            disabled=bool(field.read_only_reason),
         )
 
     return Vertical(Label(_CreateLabel(field)), control, classes="field")
@@ -100,10 +97,7 @@ _INPUT_TYPES: dict[FieldType, InputType] = {
 def _CreateLabel(field: FormField) -> str:
     # A parameter that cannot be satisfied by omitting it is marked, matching what the web
     # experience indicates alongside the control.
-    label = f"{field.label} *" if field.required else field.label
-
-    # A disabled control does not otherwise say why it cannot be changed.
-    return f"{label} ({field.read_only_reason})" if field.read_only_reason else label
+    return f"{field.label} *" if field.required else field.label
 
 
 # ----------------------------------------------------------------------

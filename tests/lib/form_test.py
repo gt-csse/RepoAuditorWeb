@@ -348,26 +348,6 @@ class TestCreateGroups:
         assert field.value == "provided"
 
     # ----------------------------------------------------------------------
-    def test_EditableByDefault(self):
-        assert _CreateField(TyperParameter(str, "default")).read_only_reason == ""
-
-    # ----------------------------------------------------------------------
-    def test_ReadOnly(self):
-        groups = CreateGroups(
-            _CreateDynamicParameters(module_parameters={"one": TyperParameter(str, "default")}),
-            {},
-            {"MyModule_one": "read_only"},
-        )
-
-        field = next(field for field in groups[0].fields if field.name == "MyModule_one")
-
-        assert field.value == "read_only"
-        assert field.read_only_reason == (
-            "This value was provided at runtime and cannot be changed; this ensures that all plugins "
-            "operate on the same value."
-        )
-
-    # ----------------------------------------------------------------------
     def test_HelpAndBounds(self):
         field = _CreateField(TyperParameter(int, 10, OptionInfo(help="My help.", min=1, max=100)))
 
@@ -584,16 +564,6 @@ class TestParseValues:
     # A value that the form did not submit is not one the user cleared, so the default stands.
     def test_DefaultWhenNotSubmitted(self):
         assert _ParseValue(TyperParameter(str, "default"), {}) == "default"
-
-    # ----------------------------------------------------------------------
-    def test_ReadOnlyValueReplacesTheSubmittedValue(self):
-        arguments = ParseValues(
-            _CreateDynamicParameters(module_parameters={"one": TyperParameter(str, "default")}),
-            {"MyModule_one": "submitted"},
-            {"MyModule_one": "read_only"},
-        )
-
-        assert arguments["MyModule"][None]["one"] == "read_only"
 
     # ----------------------------------------------------------------------
     def test_ValuesNotDeclaredAsParametersAreIgnored(self):

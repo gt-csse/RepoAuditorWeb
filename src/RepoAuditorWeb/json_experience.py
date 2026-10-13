@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def ExecuteExperience(  # noqa: PLR0913
+def ExecuteExperience(
     dm: DoneManager,
     port: int,  # noqa: ARG001
     token: str,  # noqa: ARG001
@@ -24,7 +24,6 @@ def ExecuteExperience(  # noqa: PLR0913
     dynamic_parameters: DynamicParameters,  # noqa: ARG001
     arguments: dict[str, dict[str | None, dict[str, object]]],
     *,
-    read_only: dict[str, object] | None = None,  # noqa: ARG001
     execute: bool = False,  # noqa: ARG001
     evaluate_all: bool = False,
     display_resolution: bool = True,
