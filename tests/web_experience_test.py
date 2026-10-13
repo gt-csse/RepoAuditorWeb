@@ -1,4 +1,5 @@
 import io
+import re
 
 from collections.abc import Mapping
 from pathlib import Path
@@ -144,6 +145,25 @@ def test_ServerIsConfigured():
 # The application runs until the window is closed, at which point the server is no longer needed.
 def test_ServerIsStoppedWhenTheWindowCloses():
     _, uvicorn_mock, _ = _Invoke([], {})
+
+    assert uvicorn_mock.Server.return_value.should_exit is True
+
+
+# ----------------------------------------------------------------------
+# The process may continue after a window fails (for example, to audit the next repository), so the
+# server must not keep its port.
+def test_ServerIsStoppedWhenTheWindowFails():
+    with (
+        mock.patch("RepoAuditorWeb.web_experience.webview") as webview_mock,
+        mock.patch("RepoAuditorWeb.web_experience.uvicorn") as uvicorn_mock,
+    ):
+        webview_mock.start.side_effect = RuntimeError("My error.")
+
+        with (
+            pytest.raises(RuntimeError, match=re.escape("My error.")),
+            DoneManager.Create(io.StringIO(), "Testing...") as dm,
+        ):
+            ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {"url": "my_url"})
 
     assert uvicorn_mock.Server.return_value.should_exit is True
 

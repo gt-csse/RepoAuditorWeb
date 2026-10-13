@@ -65,18 +65,21 @@ def ExecuteExperience(  # noqa: PLR0913
 
         time.sleep(_STARTUP_POLL_SECONDS)
 
-    with dm.Nested(f"Serving content on http://{HOST}:{port}...") as serve_dm:
-        webview.create_window("RepoAuditor", f"http://{HOST}:{port}/?{urlencode({'token': token})}")
+    # The server is stopped even when the window fails, as the process may continue (for example, to
+    # audit the next repository) and the server would otherwise keep its port.
+    try:
+        with dm.Nested(f"Serving content on http://{HOST}:{port}...") as serve_dm:
+            webview.create_window("RepoAuditor", f"http://{HOST}:{port}/?{urlencode({'token': token})}")
 
-        # Debug mode enables the web inspector within the window. The icon is an ICO file because
-        # that is the only format the Windows backend loads.
-        webview.start(debug=dm.is_debug, icon=str(_ICON_PATH))
+            # Debug mode enables the web inspector within the window. The icon is an ICO file because
+            # that is the only format the Windows backend loads.
+            webview.start(debug=dm.is_debug, icon=str(_ICON_PATH))
 
-        serve_dm.WriteVerbose("The window was closed.\n")
-
-    # The application runs until the window is closed, at which point the server is no longer needed.
-    server.should_exit = True
-    server_thread.join(timeout=_SHUTDOWN_TIMEOUT_SECONDS)
+            serve_dm.WriteVerbose("The window was closed.\n")
+    finally:
+        # The application runs until the window is closed, at which point the server is no longer needed.
+        server.should_exit = True
+        server_thread.join(timeout=_SHUTDOWN_TIMEOUT_SECONDS)
 
 
 # ----------------------------------------------------------------------

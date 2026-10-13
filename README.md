@@ -51,6 +51,22 @@ Click `Execute` to run the audit. The results summarize the outcome of each requ
 
 ![Results for a repository that does not satisfy the requirements](https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/docs/images/web_experience_results.png)
 
+#### Auditing Multiple Repositories
+End `--url` with `/*` to audit every repository of a GitHub user or organization, or every git repository in a local directory:
+
+```shell
+uvx repoauditorweb --url "https://github.com/<owner>/*" --pat <pat> --experience console --GitHub-include
+uvx repoauditorweb --url "file:///<directory>/*" --experience json --CommunityStandards-include
+```
+
+The experience runs once for each repository, in name order, under an `Auditing '<url>' (i of N)...` heading; a failure while auditing one repository does not prevent the others from being audited. Modules that do not accept a url run only with the first repository.
+
+- `*` is only supported as the entire final path segment; partial wildcards (such as `Repo*`) are not supported. Quote the url so that the shell does not expand it.
+- Archived and forked GitHub repositories are excluded unless `--include-archived` or `--include-forked` is provided; these options are only valid with a GitHub url that ends with `/*`.
+- Without a PAT, GitHub only lists public repositories and limits requests to 60 per hour, so a warning is displayed.
+- A local directory's hidden subdirectories and subdirectories that are not git repositories are skipped.
+- The `web` experience opens a window for each repository in turn; provide `--execute` to run each audit without waiting for it to be invoked.
+
 #### Experiences
 Select the experience with `--experience`:
 
@@ -63,25 +79,35 @@ Select the experience with `--experience`:
 `--execute` runs the audit immediately in the `web` experience.
 
 #### JSON Output
-The `json` experience writes a single document; `schema_version` is incremented whenever a change would break an existing consumer.
+The `json` experience writes a single document with an entry for each audited repository; `schema_version` is incremented whenever a change would break an existing consumer.
 
 ```json
 {
-  "schema_version": 1,
-  "summary": {"skipped": 0, "does_not_apply": 0, "success": 0, "warning": 0, "error": 0, "total": 0},
-  "results": [
+  "schema_version": 2,
+  "error": "<message or null>",
+  "repositories": [
     {
-      "module": "<module name>",
-      "requirement": "<requirement name>",
-      "description": "<requirement description>",
-      "result": "skipped | does_not_apply | success | warning | error",
-      "context": "<Markdown or null>",
-      "resolution": "<Markdown or null>",
-      "rationale": "<Markdown or null>"
+      "arguments": {"<module name>": {"module": {}, "requirements": {"<requirement name>": {}}}},
+      "common_arguments": {"url": "<url>", "pat": "*** or null", "branch": "<branch or null>"},
+      "error": "<message or null>",
+      "summary": {"skipped": 0, "does_not_apply": 0, "success": 0, "warning": 0, "error": 0, "total": 0},
+      "results": [
+        {
+          "module": "<module name>",
+          "requirement": "<requirement name>",
+          "description": "<requirement description>",
+          "result": "skipped | does_not_apply | success | warning | error",
+          "context": "<Markdown or null>",
+          "resolution": "<Markdown or null>",
+          "rationale": "<Markdown or null>"
+        }
+      ]
     }
   ]
 }
 ```
+
+The document is valid however the run ends. The top-level `error` describes a failure that prevented any repository from being audited (such as an invalid wildcard url); a repository's `error` describes a failure while auditing it, in which case its `summary` and `results` are `null`. The PAT is never included in the document.
 
 Every result is included, not only failures. `resolution` and `rationale` are `null` when omitted via `--no-resolution` or `--no-rationale`.
 
@@ -90,7 +116,8 @@ Every module and requirement contributes command line options; run `repoauditorw
 
 | Option | Description |
 | --- | --- |
-| `--url` | The GitHub repository to audit; applied to every included module. The URL must begin with `https://`, `http://`, or `file://` (a local clone). The `GitHub` module requires the form `<server>/<owner>/<repository>`, where the owner and repository names contain only letters, digits, `-`, `_`, and `.`. |
+| `--url` | The GitHub repository to audit; applied to every included module. The URL must begin with `https://`, `http://`, or `file://` (a local clone). The `GitHub` module requires the form `<server>/<owner>/<repository>`, where the owner and repository names contain only letters, digits, `-`, `_`, and `.`. End the url with `/*` to audit multiple repositories; see [Auditing Multiple Repositories](#auditing-multiple-repositories). |
+| `--include-archived`, `--include-forked` | Include archived or forked repositories when a GitHub url ends with `/*`. |
 | `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing only that token. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
 | `--branch` | The branch to evaluate; the default branch is used if not specified. The name must be a valid git branch name; for example, it cannot contain `..`, `@{`, whitespace, or any of `~^:?*[\`. |
 | `--<Module>-include` | Include a module in the audit. |

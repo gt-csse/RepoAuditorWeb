@@ -5,6 +5,7 @@ import pytest
 from RepoAuditorWeb.lib.plugins.shared.repository_arguments import (
     GetRepositoryParameters,
     RepositoryArguments,
+    ResolvePat,
     ResolveRepositoryArguments,
 )
 
@@ -80,6 +81,19 @@ class TestResolveRepositoryArguments:
         assert ResolveRepositoryArguments({"url": url}) == RepositoryArguments(url, None, None)
 
     # ----------------------------------------------------------------------
+    # Wildcards are only expanded on the command line, so one entered elsewhere (such as the web form)
+    # is reported rather than passed to git or the GitHub API.
+    @pytest.mark.parametrize("url", ["https://github.com/gt-csse/*", "file:///repositories/*"])
+    def test_ErrorWildcard(self, url):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                f"'{url}' contains a wildcard; wildcard urls are only supported on the command line."
+            ),
+        ):
+            ResolveRepositoryArguments({"url": url})
+
+    # ----------------------------------------------------------------------
     # The contents are sent as a credential, so a file holding anything other than a single token is
     # rejected without its contents appearing in the error.
     def test_ErrorPatFileWithMultipleValues(self, tmp_path):
@@ -153,3 +167,21 @@ class TestResolveRepositoryArguments:
             ResolveRepositoryArguments(
                 {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": str(pat_filename)},
             )
+
+
+# ----------------------------------------------------------------------
+class TestResolvePat:
+    # ----------------------------------------------------------------------
+    def test_None(self):
+        assert ResolvePat(None) is None
+
+    # ----------------------------------------------------------------------
+    def test_Value(self):
+        assert ResolvePat(" my_pat\n") == "my_pat"
+
+    # ----------------------------------------------------------------------
+    def test_File(self, tmp_path):
+        pat_filename = tmp_path / "pat.txt"
+        pat_filename.write_text("  my_file_pat\n", encoding="utf-8")
+
+        assert ResolvePat(str(pat_filename)) == "my_file_pat"
