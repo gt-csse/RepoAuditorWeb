@@ -2,11 +2,14 @@ import io
 import json
 import textwrap
 
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
+from unittest import mock
+
+import pytest
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
-from RepoAuditorWeb.json_experience import CreateRepositoryEntry, ExecuteExperience, WriteDocument
+from RepoAuditorWeb.json_experience import CreateRepositoryEntry, ExecuteExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 
@@ -37,7 +40,9 @@ def _ExecuteWithOutput(
     evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
-) -> tuple[dict[str, object], str]:
+    urls: list[str | None] | None = None,
+    expected_exception: type[BaseException] | None = None,
+) -> tuple[str, str]:
     module = MyModule("MyModule", "My description.", [MyQuery("MyQuery", requirements, query_data={})])
 
     arguments: dict[str, dict[str | None, dict[str, object]]] = {
@@ -47,15 +52,19 @@ def _ExecuteWithOutput(
         },
     }
 
-    # DoneManager writes elsewhere, so anything written to stdout came from the experience itself.
+    # DoneManager writes elsewhere, so anything written to stdout or stderr came from the experience
+    # itself.
     progress = io.StringIO()
     output = io.StringIO()
+    status = io.StringIO()
 
     with (
         DoneManager.Create(progress, "Testing...", flags=DoneManagerFlags.Create(verbose=verbose)) as dm,
         redirect_stdout(output),
+        redirect_stderr(status),
+        pytest.raises(expected_exception) if expected_exception is not None else nullcontext(),
     ):
-        entry = ExecuteExperience(
+        ExecuteExperience(
             dm,
             1234,
             "my_token",
@@ -63,27 +72,27 @@ def _ExecuteWithOutput(
             DynamicParameters([module]),
             arguments,
             {} if common_arguments is None else common_arguments,
+            [None] if urls is None else urls,
             evaluate_all=evaluate_all,
             display_resolution=display_resolution,
             display_rationale=display_rationale,
         )
 
-    return entry, output.getvalue()
+    return output.getvalue(), status.getvalue()
+
+
+# ----------------------------------------------------------------------
+def _ExecuteDocument(requirements: list[MyRequirement], **kwargs) -> dict:
+    return json.loads(_ExecuteWithOutput(requirements, **kwargs)[0])
 
 
 # ----------------------------------------------------------------------
 def _Execute(requirements: list[MyRequirement], **kwargs) -> dict:
-    return _ExecuteWithOutput(requirements, **kwargs)[0]
+    repositories = _ExecuteDocument(requirements, **kwargs)["repositories"]
 
+    assert len(repositories) == 1
 
-# ----------------------------------------------------------------------
-def _WriteDocument(repositories: list[dict[str, object]], error: str | None = None) -> str:
-    output = io.StringIO()
-
-    with redirect_stdout(output):
-        WriteDocument(repositories, error)
-
-    return output.getvalue()
+    return repositories[0]
 
 
 # ----------------------------------------------------------------------
@@ -314,17 +323,54 @@ class TestArguments:
 
     # ----------------------------------------------------------------------
     def test_CommonArguments(self):
-        common_arguments = {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": None, "branch": "main"}
-
-        assert _Execute([], common_arguments=common_arguments)["common_arguments"] == common_arguments
+        assert _Execute(
+            [],
+            common_arguments={"pat": None, "branch": "main"},
+            urls=["https://github.com/gt-csse/RepoAuditorWeb"],
+        )["common_arguments"] == {
+            "url": "https://github.com/gt-csse/RepoAuditorWeb",
+            "pat": None,
+            "branch": "main",
+        }
 
     # ----------------------------------------------------------------------
     # The document may be shared, so the PAT is never included.
     def test_PatIsRedacted(self):
-        assert _Execute([], common_arguments={"url": None, "pat": "my_pat"})["common_arguments"] == {
+        assert _Execute([], common_arguments={"pat": "my_pat"})["common_arguments"] == {
             "url": None,
             "pat": "***",
         }
+
+
+# ----------------------------------------------------------------------
+class TestRepositories:
+    # ----------------------------------------------------------------------
+    def test_EntryForEachRepository(self):
+        document = _ExecuteDocument([_CreateRequirement()], urls=["first_url", "second_url"])
+
+        assert [repository["common_arguments"] for repository in document["repositories"]] == [
+            {"url": "first_url"},
+            {"url": "second_url"},
+        ]
+
+    # ----------------------------------------------------------------------
+    # A failure while auditing one repository is recorded in its entry and does not prevent the others
+    # from being audited.
+    def test_RepositoryError(self):
+        with mock.patch(
+            "RepoAuditorWeb.json_experience.Execute",
+            side_effect=[RuntimeError("My error."), []],
+        ):
+            document = _ExecuteDocument([], urls=["first_url", "second_url"])
+
+        repositories = document["repositories"]
+
+        assert document["error"] is None
+        assert len(repositories) == 2
+        assert repositories[0]["error"] == "My error."
+        assert repositories[0]["results"] is None
+        assert repositories[1]["error"] is None
+        assert repositories[1]["results"] == []
 
 
 # ----------------------------------------------------------------------
@@ -351,11 +397,11 @@ class TestDocument:
     # ----------------------------------------------------------------------
     # The document is indented so that it remains readable when it is displayed rather than piped.
     def test_Content(self):
-        entry = _Execute(
+        output, _ = _ExecuteWithOutput(
             [_CreateRequirement("MyRequirement", EvaluateResultValue.Error, context="My context.")]
         )
 
-        assert _WriteDocument([entry]) == textwrap.dedent(
+        assert output == textwrap.dedent(
             """            {
               "schema_version": 2,
               "error": null,
@@ -373,7 +419,9 @@ class TestDocument:
                       }
                     }
                   },
-                  "common_arguments": {},
+                  "common_arguments": {
+                    "url": null
+                  },
                   "error": null,
                   "summary": {
                     "skipped": 0,
@@ -401,16 +449,36 @@ class TestDocument:
         )
 
     # ----------------------------------------------------------------------
-    # A run that fails before any repository is audited still produces a valid document.
-    def test_Error(self):
-        assert json.loads(_WriteDocument([], "My error.")) == {
-            "schema_version": 2,
-            "error": "My error.",
-            "repositories": [],
-        }
+    # The status output is written to stderr, so a blank line separates it from the document when
+    # both are displayed together.
+    def test_StatusOutputSeparator(self):
+        assert _ExecuteWithOutput([_CreateRequirement()])[1] == "\n"
 
     # ----------------------------------------------------------------------
-    # The entry point writes the document once for every repository, so the experience writes
-    # nothing itself.
-    def test_ExperienceWritesNothing(self):
-        assert _ExecuteWithOutput([_CreateRequirement()])[1] == ""
+    # The document is valid however the run ends, so that a consumer can always parse it.
+    def test_Error(self):
+        with mock.patch(
+            "RepoAuditorWeb.json_experience.InvokeForEachRepository",
+            side_effect=RuntimeError("My error."),
+        ):
+            document = _ExecuteDocument([], expected_exception=RuntimeError)
+
+        assert document == {"schema_version": 2, "error": "My error.", "repositories": []}
+
+    # ----------------------------------------------------------------------
+    # Repositories audited before the run was interrupted are retained in the document.
+    def test_Interrupted(self):
+        with mock.patch(
+            "RepoAuditorWeb.json_experience.Execute",
+            side_effect=[[], KeyboardInterrupt],
+        ):
+            document = _ExecuteDocument(
+                [],
+                urls=["first_url", "second_url"],
+                expected_exception=KeyboardInterrupt,
+            )
+
+        assert document["error"] == "The run was interrupted."
+        assert [repository["common_arguments"] for repository in document["repositories"]] == [
+            {"url": "first_url"},
+        ]

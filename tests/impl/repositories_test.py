@@ -1,5 +1,8 @@
+import copy
 import io
 import re
+
+from unittest import mock
 
 import pytest
 import requests
@@ -7,7 +10,11 @@ import requests
 from dbrownell_Common.Streams.DoneManager import DoneManager
 from typer.models import OptionInfo
 
-from RepoAuditorWeb.impl.repositories import DisableModulesWithoutUrl, ResolveRepositories
+from RepoAuditorWeb.impl.repositories import (
+    DisableModulesWithoutUrl,
+    InvokeForEachRepository,
+    ResolveRepositories,
+)
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.module import Module
 
@@ -433,6 +440,88 @@ class TestDisableModulesWithoutUrl:
             "Skipped": {None: {"skip": True}},
         }
 
-        # The arguments are retained for the first repository, so they are not modified.
+        # The original arguments are copied for every repository, so they are not modified.
         assert arguments["Included"][None] == {"include": True}
         assert arguments["Skipped"][None] == {"skip": False}
+
+
+# ----------------------------------------------------------------------
+class TestInvokeForEachRepository:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _Invoke(
+        urls: list[str | None],
+        func,
+        modules: list[Module] | None = None,
+        arguments: dict[str, dict[str | None, dict[str, object]]] | None = None,
+    ) -> tuple[str, int]:
+        output = io.StringIO()
+
+        with DoneManager.Create(output, "Testing...") as dm:
+            InvokeForEachRepository(dm, modules or [], arguments or {}, {"pat": "my_pat"}, urls, func)
+            result = dm.result
+
+        return output.getvalue(), result
+
+    # ----------------------------------------------------------------------
+    # A single repository is audited under the same heading as each of several repositories.
+    def test_HeadingForSingleRepository(self):
+        output, _ = self._Invoke([None], mock.MagicMock())
+
+        assert "Auditing (1 of 1)..." in output
+
+    # ----------------------------------------------------------------------
+    def test_Repositories(self):
+        func = mock.MagicMock()
+
+        output, _ = self._Invoke(["first_url", "second_url"], func)
+
+        assert [call.args[2] for call in func.call_args_list] == [
+            {"pat": "my_pat", "url": "first_url"},
+            {"pat": "my_pat", "url": "second_url"},
+        ]
+        assert "Auditing 'first_url' (1 of 2)..." in output
+        assert "Auditing 'second_url' (2 of 2)..." in output
+
+    # ----------------------------------------------------------------------
+    # Modules that do not accept a url produce the same results for every repository, so they only
+    # run with the first.
+    def test_ModulesWithoutUrlRunWithFirstRepository(self):
+        func = mock.MagicMock()
+        modules: list[Module] = [MyModule("Skipped", "description", [])]
+        arguments: dict[str, dict[str | None, dict[str, object]]] = {"Skipped": {None: {"skip": False}}}
+
+        self._Invoke(["first_url", "second_url"], func, modules, arguments)
+
+        assert [call.args[1] for call in func.call_args_list] == [
+            {"Skipped": {None: {"skip": False}}},
+            {"Skipped": {None: {"skip": True}}},
+        ]
+
+    # ----------------------------------------------------------------------
+    # The web experience replaces the arguments it receives with the values submitted in its window,
+    # which must not affect the other repositories.
+    def test_ArgumentsAreNotModified(self):
+        received: list[dict] = []
+
+        def Func(_dm, repository_arguments, _common_arguments):
+            received.append(copy.deepcopy(repository_arguments))
+            repository_arguments.clear()
+
+        arguments: dict[str, dict[str | None, dict[str, object]]] = {"WithUrl": {None: {"skip": False}}}
+
+        self._Invoke(["first_url", "second_url"], Func, [], arguments)
+
+        assert received == [{"WithUrl": {None: {"skip": False}}}, {"WithUrl": {None: {"skip": False}}}]
+        assert arguments == {"WithUrl": {None: {"skip": False}}}
+
+    # ----------------------------------------------------------------------
+    # A failure while auditing one repository does not prevent the others from being audited.
+    def test_ErrorDoesNotStopRemainingRepositories(self):
+        func = mock.MagicMock(side_effect=[RuntimeError("My error."), None])
+
+        output, result = self._Invoke(["first_url", "second_url"], func)
+
+        assert func.call_count == 2
+        assert result < 0
+        assert "My error." in output

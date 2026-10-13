@@ -107,7 +107,7 @@ The `json` experience writes a single document with an entry for each audited re
 }
 ```
 
-The document is valid however the run ends. The top-level `error` describes a failure that prevented any repository from being audited (such as an invalid wildcard url); a repository's `error` describes a failure while auditing it, in which case its `summary` and `results` are `null`. The PAT is never included in the document.
+Once auditing begins, the document is valid however the run ends; a failure before auditing begins (such as an invalid wildcard url) is reported as an error and no document is written. The top-level `error` describes a failure that stopped the run (such as an interruption), in which case `repositories` contains the repositories audited before it; a repository's `error` describes a failure while auditing it, in which case its `summary` and `results` are `null`. The PAT is never included in the document.
 
 Every result is included, not only failures. `resolution` and `rationale` are `null` when omitted via `--no-resolution` or `--no-rationale`.
 

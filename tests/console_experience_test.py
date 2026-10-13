@@ -32,6 +32,7 @@ def _Execute(
     verbose: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
+    urls: list[str | None] | None = None,
 ) -> str:
     module = MyModule("MyModule", "My description.", [MyQuery("MyQuery", requirements, query_data={})])
 
@@ -53,6 +54,7 @@ def _Execute(
             DynamicParameters([module]),
             arguments,
             {},
+            [None] if urls is None else urls,
             display_resolution=display_resolution,
             display_rationale=display_rationale,
         )
@@ -527,3 +529,12 @@ def test_ExecutionOutputIsWritten():
 
     assert "Executing module 'MyModule' (1 of 1)..." in output
     assert output.index("Executing module 'MyModule' (1 of 1)...") < output.index("Skipped:")
+
+
+# ----------------------------------------------------------------------
+def test_EachRepositoryIsAudited():
+    output = _Execute([_CreateRequirement()], urls=["first_url", "second_url"])
+
+    assert "Auditing 'first_url' (1 of 2)..." in output
+    assert "Auditing 'second_url' (2 of 2)..." in output
+    assert output.count("Skipped:") == 2
