@@ -9,6 +9,7 @@ from rich.console import Console, ConsoleOptions, RenderResult
 from rich.markdown import ListElement, Markdown as RichMarkdown, MarkdownElement
 from rich.segment import Segment
 
+from RepoAuditorWeb.impl.repositories import InvokeForEachRepository
 from RepoAuditorWeb.lib.execute import Execute
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
 
@@ -23,14 +24,15 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def ExecuteExperience(  # noqa: C901, PLR0913
+def ExecuteExperience(  # noqa: PLR0913
     dm: DoneManager,
-    port: int,  # noqa: ARG001
+    port: int | None,  # noqa: ARG001
     token: str,  # noqa: ARG001
     modules: list[Module],
     dynamic_parameters: DynamicParameters,  # noqa: ARG001
     arguments: dict[str, dict[str | None, dict[str, object]]],
     common_arguments: dict[str, object],
+    urls: list[str | None],
     *,
     execute: bool = False,  # noqa: ARG001
     evaluate_all: bool = False,
@@ -41,6 +43,37 @@ def ExecuteExperience(  # noqa: C901, PLR0913
 
     # The console experience has no control to invoke, so `execute` is implied.
 
+    InvokeForEachRepository(
+        dm,
+        modules,
+        arguments,
+        common_arguments,
+        urls,
+        lambda repository_dm, repository_arguments, repository_common_arguments: _ExecuteRepository(
+            repository_dm,
+            modules,
+            repository_arguments,
+            repository_common_arguments,
+            evaluate_all=evaluate_all,
+            display_resolution=display_resolution,
+            display_rationale=display_rationale,
+        ),
+    )
+
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def _ExecuteRepository(  # noqa: C901
+    dm: DoneManager,
+    modules: list[Module],
+    arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
+    *,
+    evaluate_all: bool,
+    display_resolution: bool,
+    display_rationale: bool,
+) -> None:
     results = Execute(dm, modules, arguments, common_arguments, evaluate_all=evaluate_all)
 
     num_skipped = 0
@@ -126,8 +159,6 @@ def ExecuteExperience(  # noqa: C901, PLR0913
     )
 
 
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # The content is indented when written, so render into a narrower width to leave room for it.
 _MARKDOWN_WIDTH = 100

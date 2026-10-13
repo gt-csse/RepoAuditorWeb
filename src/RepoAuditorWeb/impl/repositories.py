@@ -11,6 +11,8 @@ from RepoAuditorWeb.lib.plugins.shared.github_session import GetApiBaseUrl, GitH
 from RepoAuditorWeb.lib.plugins.shared.repository_arguments import ResolvePat
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import requests
 
     from dbrownell_Common.Streams.DoneManager import DoneManager
@@ -103,6 +105,7 @@ def ResolveRepositories(
         msg = f"No repositories were found for '{url}'."
         raise ValueError(msg)
 
+    # Copied because a list[str] is not a list[str | None]; list is invariant.
     return list(repositories)
 
 
@@ -130,6 +133,32 @@ def DisableModulesWithoutUrl(
             module_arguments["skip"] = True
 
     return arguments
+
+
+# ----------------------------------------------------------------------
+def InvokeForEachRepository(
+    dm: DoneManager,
+    modules: list[Module],
+    arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
+    urls: list[str | None],
+    func: Callable[[DoneManager, dict[str, dict[str | None, dict[str, object]]], dict[str, object]], None],
+) -> None:
+    """Invoke func for each repository; a failure in one repository does not stop the others."""
+
+    # Each repository receives its own copy of the arguments, as the web experience replaces them
+    # with the values submitted in its window.
+    for index, url in enumerate(urls):
+        with dm.Nested(
+            f"Auditing {'' if url is None else f"'{url}' "}({index + 1} of {len(urls)})...",
+            suffix="\n",
+            suppress_exceptions=True,
+        ) as repository_dm:
+            func(
+                repository_dm,
+                copy.deepcopy(arguments) if index == 0 else DisableModulesWithoutUrl(modules, arguments),
+                {**common_arguments, "url": url},
+            )
 
 
 # ----------------------------------------------------------------------

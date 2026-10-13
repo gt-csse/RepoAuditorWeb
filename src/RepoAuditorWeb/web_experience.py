@@ -8,6 +8,8 @@ from urllib.parse import urlencode
 import uvicorn
 import webview
 
+from RepoAuditorWeb.impl.entry_point_utils import ResolvePort
+from RepoAuditorWeb.impl.repositories import InvokeForEachRepository
 from RepoAuditorWeb.web_experience_impl.server import CreateApp, HOST
 
 if TYPE_CHECKING:
@@ -20,6 +22,61 @@ if TYPE_CHECKING:
 # ----------------------------------------------------------------------
 def ExecuteExperience(  # noqa: PLR0913
     dm: DoneManager,
+    port: int | None,
+    token: str,
+    modules: list[Module],
+    dynamic_parameters: DynamicParameters,
+    arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
+    urls: list[str | None],
+    *,
+    execute: bool = False,
+    evaluate_all: bool = False,
+    display_resolution: bool = True,
+    display_rationale: bool = True,
+) -> None:
+    """Execute the application in a web experience, opening a window for each repository."""
+
+    if len(urls) > 1 and not execute:
+        dm.WriteWarning(
+            f"A window is opened for each of the {len(urls)} repositories in turn; use '--execute' to run each audit without waiting for it to be invoked.\n\n",
+        )
+
+    InvokeForEachRepository(
+        dm,
+        modules,
+        arguments,
+        common_arguments,
+        urls,
+        lambda repository_dm, repository_arguments, repository_common_arguments: _ExecuteRepository(
+            repository_dm,
+            # A server from a previous repository may still hold its port while shutting down, so a
+            # new port is chosen unless one was provided.
+            ResolvePort(port),
+            token,
+            modules,
+            dynamic_parameters,
+            repository_arguments,
+            repository_common_arguments,
+            execute=execute,
+            evaluate_all=evaluate_all,
+            display_resolution=display_resolution,
+            display_rationale=display_rationale,
+        ),
+    )
+
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+_SHUTDOWN_TIMEOUT_SECONDS = 5.0
+_STARTUP_POLL_SECONDS = 0.05
+_ICON_PATH = Path(__file__).parent / "web_experience_impl" / "icon.ico"
+
+
+# ----------------------------------------------------------------------
+def _ExecuteRepository(  # noqa: PLR0913
+    dm: DoneManager,
     port: int,
     token: str,
     modules: list[Module],
@@ -27,13 +84,11 @@ def ExecuteExperience(  # noqa: PLR0913
     arguments: dict[str, dict[str | None, dict[str, object]]],
     common_arguments: dict[str, object],
     *,
-    execute: bool = False,
-    evaluate_all: bool = False,
-    display_resolution: bool = True,
-    display_rationale: bool = True,
+    execute: bool,
+    evaluate_all: bool,
+    display_resolution: bool,
+    display_rationale: bool,
 ) -> None:
-    """Execute the application in a web experience."""
-
     app = CreateApp(
         modules,
         dynamic_parameters,
@@ -80,11 +135,3 @@ def ExecuteExperience(  # noqa: PLR0913
         # The application runs until the window is closed, at which point the server is no longer needed.
         server.should_exit = True
         server_thread.join(timeout=_SHUTDOWN_TIMEOUT_SECONDS)
-
-
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-_SHUTDOWN_TIMEOUT_SECONDS = 5.0
-_STARTUP_POLL_SECONDS = 0.05
-_ICON_PATH = Path(__file__).parent / "web_experience_impl" / "icon.ico"

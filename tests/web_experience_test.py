@@ -35,6 +35,8 @@ def _Invoke(
     *,
     verbose: bool = False,
     debug: bool = False,
+    port: int | None = 8080,
+    urls: list[str | None] | None = None,
     **kwargs,
 ) -> tuple[mock.MagicMock, mock.MagicMock, str]:
     sink = io.StringIO()
@@ -49,7 +51,15 @@ def _Invoke(
         ) as dm,
     ):
         ExecuteExperience(
-            dm, 8080, "my_token", modules, DynamicParameters(modules), arguments, {"url": "my_url"}, **kwargs
+            dm,
+            port,
+            "my_token",
+            modules,
+            DynamicParameters(modules),
+            arguments,
+            {"pat": "my_pat"},
+            ["my_url"] if urls is None else urls,
+            **kwargs,
         )
 
     return webview_mock, uvicorn_mock, sink.getvalue()
@@ -70,17 +80,20 @@ def test_WindowIsOpened():
 # ----------------------------------------------------------------------
 # The window is not opened against a server that never started listening.
 def test_ErrorServerDoesNotStart():
+    sink = io.StringIO()
+
     with (
         mock.patch("RepoAuditorWeb.web_experience.webview") as webview_mock,
         mock.patch("RepoAuditorWeb.web_experience.uvicorn") as uvicorn_mock,
-        DoneManager.Create(io.StringIO(), "Testing...") as dm,
+        DoneManager.Create(sink, "Testing...") as dm,
     ):
         uvicorn_mock.Server.return_value.started = False
 
-        with pytest.raises(RuntimeError) as exc_info:
-            ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {})
+        ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {}, [None])
 
-    assert str(exc_info.value) == "The server could not be started on port 8080."
+        assert dm.result < 0
+
+    assert "The server could not be started on port 8080." in sink.getvalue()
     assert webview_mock.create_window.call_count == 0
 
 
@@ -106,7 +119,7 @@ def test_WindowWaitsForTheServer():
 
         time_mock.sleep.side_effect = Sleep
 
-        ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {})
+        ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {}, [None])
 
     assert time_mock.sleep.call_count == 1
     assert webview_mock.create_window.call_count == 1
@@ -150,22 +163,23 @@ def test_ServerIsStoppedWhenTheWindowCloses():
 
 
 # ----------------------------------------------------------------------
-# The process may continue after a window fails (for example, to audit the next repository), so the
-# server must not keep its port.
+# The next repository is audited after a window fails, so the server must not keep its port.
 def test_ServerIsStoppedWhenTheWindowFails():
     with (
         mock.patch("RepoAuditorWeb.web_experience.webview") as webview_mock,
         mock.patch("RepoAuditorWeb.web_experience.uvicorn") as uvicorn_mock,
+        DoneManager.Create(io.StringIO(), "Testing...") as dm,
     ):
-        webview_mock.start.side_effect = RuntimeError("My error.")
+        webview_mock.start.side_effect = [RuntimeError("My error."), None]
 
-        with (
-            pytest.raises(RuntimeError, match=re.escape("My error.")),
-            DoneManager.Create(io.StringIO(), "Testing...") as dm,
-        ):
-            ExecuteExperience(dm, 8080, "my_token", [], DynamicParameters([]), {}, {"url": "my_url"})
+        ExecuteExperience(
+            dm, 8080, "my_token", [], DynamicParameters([]), {}, {}, ["first_url", "second_url"]
+        )
+
+        assert dm.result < 0
 
     assert uvicorn_mock.Server.return_value.should_exit is True
+    assert webview_mock.start.call_count == 2
 
 
 # ----------------------------------------------------------------------
@@ -180,6 +194,42 @@ def test_WindowClosingIsWrittenWhenVerbose():
     _, _, output = _Invoke([], {}, verbose=True)
 
     assert "The window was closed." in output
+
+
+# ----------------------------------------------------------------------
+class TestRepositories:
+    # ----------------------------------------------------------------------
+    def test_WindowForEachRepository(self):
+        webview_mock, _, output = _Invoke([], {}, urls=["first_url", "second_url"], execute=True)
+
+        assert webview_mock.create_window.call_count == 2
+        assert "Auditing 'first_url' (1 of 2)..." in output
+        assert "Auditing 'second_url' (2 of 2)..." in output
+
+    # ----------------------------------------------------------------------
+    # A port that was not provided is chosen for each repository, as a server from a previous
+    # repository may still hold its port while shutting down.
+    def test_PortIsResolvedForEachRepository(self):
+        with mock.patch("RepoAuditorWeb.impl.entry_point_utils.GetUnusedPort", side_effect=[1111, 2222]):
+            _, uvicorn_mock, _ = _Invoke([], {}, port=None, urls=["first_url", "second_url"])
+
+        assert [call.kwargs["port"] for call in uvicorn_mock.Config.call_args_list] == [1111, 2222]
+
+    # ----------------------------------------------------------------------
+    # Each repository is audited in its own window, which waits for the user unless 'execute' is
+    # provided.
+    @pytest.mark.parametrize(
+        ("urls", "execute", "expected"),
+        [
+            (["first_url", "second_url"], False, True),
+            (["first_url", "second_url"], True, False),
+            (["first_url"], False, False),
+        ],
+    )
+    def test_Warning(self, urls, execute, expected):
+        _, _, output = _Invoke([], {}, urls=urls, execute=execute)
+
+        assert ("A window is opened for each of the 2 repositories" in output) is expected
 
 
 # ----------------------------------------------------------------------
@@ -214,7 +264,7 @@ class TestApp:
     def test_CommonArgumentsAreForwarded(self):
         args, _ = self._InvokeAndCaptureKwargs()
 
-        assert args[3] == {"url": "my_url"}
+        assert args[3] == {"pat": "my_pat", "url": "my_url"}
 
     # ----------------------------------------------------------------------
     def test_Defaults(self):

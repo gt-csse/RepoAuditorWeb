@@ -4,6 +4,7 @@ import sys
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
+from RepoAuditorWeb.impl.repositories import InvokeForEachRepository
 from RepoAuditorWeb.lib.execute import Execute
 from RepoAuditorWeb.lib.summary import RESULT_VALUE_NAMES, Summary
 
@@ -18,31 +19,67 @@ if TYPE_CHECKING:
 # ----------------------------------------------------------------------
 def ExecuteExperience(  # noqa: PLR0913
     dm: DoneManager,
-    port: int,  # noqa: ARG001
+    port: int | None,  # noqa: ARG001
     token: str,  # noqa: ARG001
     modules: list[Module],
     dynamic_parameters: DynamicParameters,  # noqa: ARG001
     arguments: dict[str, dict[str | None, dict[str, object]]],
     common_arguments: dict[str, object],
+    urls: list[str | None],
     *,
     execute: bool = False,  # noqa: ARG001
     evaluate_all: bool = False,
     display_resolution: bool = True,
     display_rationale: bool = True,
-) -> dict[str, object]:
-    """Execute the application in a json experience, returning the repository's entry in the document."""
+) -> None:
+    """Execute the application in a json experience, writing a document with an entry for each repository."""
 
     # The json experience has no control to invoke, so `execute` is implied.
 
-    results = Execute(dm, modules, arguments, common_arguments, evaluate_all=evaluate_all)
+    entries: list[dict[str, object]] = []
+    error: str | None = None
 
-    return CreateRepositoryEntry(
-        arguments,
-        common_arguments,
-        results=results,
-        display_resolution=display_resolution,
-        display_rationale=display_rationale,
-    )
+    # ----------------------------------------------------------------------
+    def ExecuteRepository(
+        repository_dm: DoneManager,
+        repository_arguments: dict[str, dict[str | None, dict[str, object]]],
+        repository_common_arguments: dict[str, object],
+    ) -> None:
+        try:
+            results = Execute(
+                repository_dm,
+                modules,
+                repository_arguments,
+                repository_common_arguments,
+                evaluate_all=evaluate_all,
+            )
+        except Exception as ex:
+            entries.append(
+                CreateRepositoryEntry(repository_arguments, repository_common_arguments, error=str(ex)),
+            )
+            raise
+
+        entries.append(
+            CreateRepositoryEntry(
+                repository_arguments,
+                repository_common_arguments,
+                results=results,
+                display_resolution=display_resolution,
+                display_rationale=display_rationale,
+            ),
+        )
+
+    # ----------------------------------------------------------------------
+
+    # The document is written however the run ends so that it is always valid, including the
+    # entries of repositories that completed before an interruption.
+    try:
+        InvokeForEachRepository(dm, modules, arguments, common_arguments, urls, ExecuteRepository)
+    except BaseException as ex:
+        error = "The run was interrupted." if isinstance(ex, KeyboardInterrupt) else str(ex)
+        raise
+    finally:
+        _WriteDocument(entries, error)
 
 
 # ----------------------------------------------------------------------
@@ -92,25 +129,6 @@ def CreateRepositoryEntry(
 
 
 # ----------------------------------------------------------------------
-def WriteDocument(repositories: list[dict[str, object]], error: str | None) -> None:
-    """Write the document for a run, which is valid however the run ended."""
-
-    # The document is the only thing written to stdout (everything that DoneManager produces is
-    # written to stderr), so it can be redirected to a file or piped to another process as-is.
-    json.dump(
-        {
-            "schema_version": _SCHEMA_VERSION,
-            "error": error,
-            "repositories": repositories,
-        },
-        sys.stdout,
-        indent=_INDENT,
-    )
-
-    sys.stdout.write("\n")
-
-
-# ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 _INDENT = 2
@@ -120,6 +138,27 @@ _INDENT = 2
 _SCHEMA_VERSION = 2
 
 _REDACTED = "***"
+
+
+# ----------------------------------------------------------------------
+def _WriteDocument(entries: list[dict[str, object]], error: str | None) -> None:
+    # The status output and the document are written to different streams, so whitespace is added to
+    # separate them when both are displayed together.
+    sys.stderr.write("\n")
+
+    # The document is the only thing written to stdout (everything that DoneManager produces is
+    # written to stderr), so it can be redirected to a file or piped to another process as-is.
+    json.dump(
+        {
+            "schema_version": _SCHEMA_VERSION,
+            "error": error,
+            "repositories": entries,
+        },
+        sys.stdout,
+        indent=_INDENT,
+    )
+
+    sys.stdout.write("\n")
 
 
 # ----------------------------------------------------------------------
