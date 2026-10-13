@@ -52,6 +52,7 @@ def _Execute(
             [module],
             DynamicParameters([module]),
             arguments,
+            {},
             display_resolution=display_resolution,
             display_rationale=display_rationale,
         )

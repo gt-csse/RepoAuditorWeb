@@ -27,6 +27,7 @@ def Execute(
             ],
         ],
     ],
+    common_arguments: dict[str, object],
     *,
     evaluate_all: bool = False,
 ) -> list[EvaluateResult]:
@@ -45,9 +46,9 @@ def Execute(
                     suffix="\n",
                     suppress_exceptions=True,
                 ) as extract_dm:
-                    # Modules may modify the arguments they receive, which would otherwise corrupt the
-                    # values that the interactive experiences retain and display between runs.
-                    module_data = module.GetModuleData(copy.deepcopy(arguments[module.name]))
+                    module_data = module.GetModuleData(
+                        _CreateModuleArguments(module, arguments[module.name], common_arguments),
+                    )
                     if module_data is None:
                         extract_dm.WriteLine("SKIPPED.")
                         continue
@@ -116,3 +117,27 @@ def Execute(
                                             assert False, eval_result.result  # noqa: B011, PT015  # pragma: no cover
 
     return eval_results
+
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def _CreateModuleArguments(
+    module: Module,
+    module_arguments: dict[str | None, dict[str, object]],
+    common_arguments: dict[str, object],
+) -> dict[str | None, dict[str, object]]:
+    # Modules may modify the arguments they receive, which would otherwise corrupt the values that
+    # the interactive experiences retain and display between runs.
+    module_arguments = copy.deepcopy(module_arguments)
+
+    # Common values apply to every module that declares a parameter of the same name, so that modules
+    # opt in through their parameters rather than being listed by the caller.
+    module_parameters = module_arguments.setdefault(None, {})
+    parameter_names = module.GetParameters()
+
+    for name, value in common_arguments.items():
+        if name in parameter_names:
+            module_parameters[name] = value
+
+    return module_arguments

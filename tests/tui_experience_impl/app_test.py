@@ -45,7 +45,7 @@ def _CreateApp(
     if arguments is None:
         arguments = {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}
 
-    return AuditorApp(modules, DynamicParameters(modules), arguments, **kwargs)
+    return AuditorApp(modules, DynamicParameters(modules), arguments, {}, **kwargs)
 
 
 # ----------------------------------------------------------------------
@@ -611,3 +611,64 @@ class TestActions:
                 await pilot.press(key)
 
         assert method_mock.call_count == 1
+
+
+# ----------------------------------------------------------------------
+class TestCommon:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _CreateCommonApp(module: Module) -> AuditorApp:
+        return AuditorApp(
+            [module],
+            DynamicParameters([module], {"url": TyperParameter(str | None, None)}),
+            {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {"url": "https://common.example.com"},
+        )
+
+    # ----------------------------------------------------------------------
+    async def test_DisplayedAheadOfTheModules(self):
+        app = self._CreateCommonApp(_CreateModule())
+
+        async with app.run_test():
+            titles = _EnumerateTitles(app, "group")
+
+            assert app.query_one(f"#{CreateControlId('url')}", Input).value == "https://common.example.com"
+
+        assert titles == ["Common", "MyModule"]
+
+    # ----------------------------------------------------------------------
+    async def test_ModuleFieldIsNotDisplayed(self):
+        app = self._CreateCommonApp(_CreateModule())
+
+        async with app.run_test():
+            values = app.CreateValues()
+
+        assert values == {
+            "url": "https://common.example.com",
+            "MyModule_skip": False,
+            "MyModule_MyRequirement_skip": False,
+        }
+
+    # ----------------------------------------------------------------------
+    async def test_EditedValueIsApplied(self):
+        module = _CreateModule(parameters={"url": TyperParameter(str | None, None)})
+        app = self._CreateCommonApp(module)
+
+        async with app.run_test() as pilot:
+            app.query_one(f"#{CreateControlId('url')}", Input).value = "https://edited.example.com"
+
+            app.ExecuteRequirements()
+            await _WaitForExecution(app, pilot)
+
+        assert module.module_data_args is not None
+        assert module.module_data_args[None]["url"] == "https://edited.example.com"
+        assert app.common_arguments == {"url": "https://edited.example.com"}
+
+    # ----------------------------------------------------------------------
+    async def test_NotDisplayedWithoutCommonParameters(self):
+        app = _CreateApp()
+
+        async with app.run_test():
+            titles = _EnumerateTitles(app, "group")
+
+        assert titles == ["MyModule"]

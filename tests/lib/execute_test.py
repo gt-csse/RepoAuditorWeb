@@ -6,6 +6,7 @@ import pytest
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
+from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
 from RepoAuditorWeb.lib.execute import Execute
 from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
 
@@ -43,11 +44,23 @@ def _CreateModule(
 
 
 # ----------------------------------------------------------------------
-def _Execute(modules, arguments, *, evaluate_all: bool = False) -> tuple[list[EvaluateResult], str, int]:
+def _Execute(
+    modules,
+    arguments,
+    common_arguments: dict[str, object],
+    *,
+    evaluate_all: bool = False,
+) -> tuple[list[EvaluateResult], str, int]:
     sink = io.StringIO()
 
     with DoneManager.Create(sink, "Testing...", flags=DoneManagerFlags.Create()) as dm:
-        results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
+        results = Execute(
+            dm,
+            modules,
+            arguments,
+            common_arguments,
+            evaluate_all=evaluate_all,
+        )
         result_code = dm.result
 
     return results, sink.getvalue(), result_code
@@ -55,7 +68,7 @@ def _Execute(modules, arguments, *, evaluate_all: bool = False) -> tuple[list[Ev
 
 # ----------------------------------------------------------------------
 def test_NoModules():
-    results, _, result_code = _Execute([], {})
+    results, _, result_code = _Execute([], {}, {})
 
     assert results == []
     assert result_code == 0
@@ -67,7 +80,7 @@ def test_SingleRequirement():
     module = _CreateModule([MyQuery("MyQuery", [requirement], query_data={"response": {}})])
 
     results, _, result_code = _Execute(
-        [module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}
+        [module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}, {}
     )
 
     assert [result.result for result in results] == [EvaluateResultValue.Success]
@@ -96,6 +109,7 @@ def test_MultipleRequirements():
                 "Two": {"skip": False},
             },
         },
+        {},
     )
 
     assert [result.requirement.name for result in results] == ["One", "Two"]
@@ -119,6 +133,7 @@ def test_MultipleQueries():
                 "Two": {"skip": False},
             },
         },
+        {},
     )
 
     assert [result.requirement.name for result in results] == ["One", "Two"]
@@ -137,6 +152,7 @@ def test_MultipleModules():
             "ModuleA": {None: {"skip": False}, "One": {"skip": False}},
             "ModuleB": {None: {"skip": False}, "Two": {"skip": False}},
         },
+        {},
     )
 
     assert [result.requirement.name for result in results] == ["One", "Two"]
@@ -156,6 +172,7 @@ def test_ResultsAreAttributedToTheirModule():
             "ModuleA": {None: {"skip": False}, "One": {"skip": False}},
             "ModuleB": {None: {"skip": False}, "Two": {"skip": False}},
         },
+        {},
     )
 
     assert [result.module for result in results] == modules
@@ -165,7 +182,9 @@ def test_ResultsAreAttributedToTheirModule():
 def test_ModuleNamesAppearInOutput():
     module = _CreateModule([MyQuery("MyQuery", [_CreateRequirement()], query_data={})])
 
-    _, output, _ = _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}})
+    _, output, _ = _Execute(
+        [module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}, {}
+    )
 
     assert "Executing module 'MyModule' (1 of 1)..." in output
     assert "Executing query 'MyQuery' (1 of 1)..." in output
@@ -179,7 +198,7 @@ class TestSkip:
         query = MyQuery("MyQuery", [_CreateRequirement()], query_data={})
         module = _CreateModule([query])
 
-        results, output, result_code = _Execute([module], {"MyModule": {None: {"skip": True}}})
+        results, output, result_code = _Execute([module], {"MyModule": {None: {"skip": True}}}, {})
 
         assert results == []
         assert "SKIPPED." in output
@@ -195,7 +214,7 @@ class TestSkip:
             requires_explicit_include=True,
         )
 
-        results, _, _ = _Execute([module], {"MyModule": {None: {"include": False}}})
+        results, _, _ = _Execute([module], {"MyModule": {None: {"include": False}}}, {})
 
         assert results == []
 
@@ -207,6 +226,7 @@ class TestSkip:
         results, output, _ = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert results == []
@@ -219,6 +239,7 @@ class TestSkip:
         results, output, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": True}}},
+            {},
         )
 
         assert [result.result for result in results] == [EvaluateResultValue.Skipped]
@@ -242,6 +263,7 @@ class TestSkip:
         results, _, _ = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "One": {"skip": True}, "Two": {"skip": False}}},
+            {},
         )
 
         assert [(result.requirement.name, result.result) for result in results] == [
@@ -261,6 +283,7 @@ class TestResultCodes:
         results, _, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert [result.result for result in results] == [EvaluateResultValue.Warning]
@@ -275,6 +298,7 @@ class TestResultCodes:
         results, _, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert [result.result for result in results] == [EvaluateResultValue.Error]
@@ -295,6 +319,7 @@ class TestResultCodes:
         _, output, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert "My warning context." in output
@@ -315,6 +340,7 @@ class TestResultCodes:
         _, output, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert "My error context." in output
@@ -335,6 +361,7 @@ class TestResultCodes:
         results, output, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert [result.result for result in results] == [EvaluateResultValue.DoesNotApply]
@@ -360,6 +387,7 @@ class TestResultCodes:
         results, _, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+            {},
         )
 
         assert [result.result for result in results] == [
@@ -376,7 +404,7 @@ class TestDataFlow:
         module = _CreateModule([MyQuery("MyQuery", [], query_data={})])
         arguments = {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}
 
-        _Execute([module], arguments)
+        _Execute([module], arguments, {})
 
         assert module.module_data_args == arguments["MyModule"]
 
@@ -401,7 +429,7 @@ class TestDataFlow:
         module = ModifyingModule("MyModule", "My description.", [MyQuery("MyQuery", [], query_data={})])
         module_arguments: dict = {None: {"skip": False, "value": 10}}
 
-        _Execute([module], {"MyModule": module_arguments})
+        _Execute([module], {"MyModule": module_arguments}, {})
 
         assert module_arguments == {None: {"skip": False, "value": 10}}
 
@@ -412,7 +440,7 @@ class TestDataFlow:
         module = _CreateModule([query])
         module_arguments: dict = {None: {"skip": False, "value": 10}}
 
-        _Execute([module], {"MyModule": module_arguments})
+        _Execute([module], {"MyModule": module_arguments}, {})
 
         assert query.module_data == {"skip": False, "value": 10}
 
@@ -425,6 +453,7 @@ class TestDataFlow:
         _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
             evaluate_all=evaluate_all,
         )
 
@@ -435,7 +464,7 @@ class TestDataFlow:
         requirement = _CreateRequirement()
         module = _CreateModule([MyQuery("MyQuery", [requirement], query_data={"response": {}})])
 
-        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}})
+        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}, {})
 
         assert requirement.evaluate_all is False
 
@@ -446,7 +475,7 @@ class TestDataFlow:
         module = _CreateModule([MyQuery("MyQuery", [requirement], query_data=query_data)])
         requirement_arguments: dict[str, object] = {"skip": False, "value": "populated"}
 
-        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": requirement_arguments}})
+        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": requirement_arguments}}, {})
 
         assert requirement.evaluate_args is not None
         assert requirement.evaluate_args[0] is module
@@ -459,10 +488,71 @@ class TestDataFlow:
     def test_MissingModuleArgumentsProduceNoResults(self):
         module = _CreateModule([MyQuery("MyQuery", [], query_data={})])
 
-        results, _, result_code = _Execute([module], {})
+        results, _, result_code = _Execute([module], {}, {})
 
         assert results == []
         assert result_code == -1
+
+
+# ----------------------------------------------------------------------
+class TestCommonArguments:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _CreateModule() -> MyModule:
+        return MyModule(
+            "MyModule",
+            "My description.",
+            [MyQuery("MyQuery", [], query_data={})],
+            parameters={"url": TyperParameter(str | None, None)},
+        )
+
+    # ----------------------------------------------------------------------
+    def test_AppliedToDeclaredParameter(self):
+        module = self._CreateModule()
+
+        _Execute(
+            [module],
+            {"MyModule": {None: {"skip": False, "url": None}}},
+            {"url": "common_url"},
+        )
+
+        assert module.module_data_args == {None: {"skip": False, "url": "common_url"}}
+
+    # ----------------------------------------------------------------------
+    def test_NotAppliedToUndeclaredParameter(self):
+        module = self._CreateModule()
+
+        _Execute(
+            [module],
+            {"MyModule": {None: {"skip": False, "url": None}}},
+            {"branch": "common_branch"},
+        )
+
+        assert module.module_data_args == {None: {"skip": False, "url": None}}
+
+    # ----------------------------------------------------------------------
+    # Every module operates on the common value, so it replaces any value the module was given.
+    def test_ReplacesModuleValue(self):
+        module = self._CreateModule()
+
+        _Execute(
+            [module],
+            {"MyModule": {None: {"skip": False, "url": "module_url"}}},
+            {"url": "common_url"},
+        )
+
+        assert module.module_data_args == {None: {"skip": False, "url": "common_url"}}
+
+    # ----------------------------------------------------------------------
+    # The interactive experiences retain the arguments between runs, so a common value applied to
+    # one run must not become the module's own value in the next.
+    def test_ArgumentsAreNotModified(self):
+        module = self._CreateModule()
+        module_arguments: dict = {None: {"skip": False, "url": None}}
+
+        _Execute([module], {"MyModule": module_arguments}, {"url": "common_url"})
+
+        assert module_arguments == {None: {"skip": False, "url": None}}
 
 
 # ----------------------------------------------------------------------
@@ -486,6 +576,7 @@ class TestExceptions:
                 "ModuleA": {None: {"skip": False}, "One": {"skip": False}},
                 "ModuleB": {None: {"skip": False}, "Two": {"skip": False}},
             },
+            {},
         )
 
         assert "My module error." in output
@@ -499,7 +590,7 @@ class TestExceptions:
         query = MyQuery("MyQuery", [_CreateRequirement()], query_data={})
         module = _CreateModule([query], raise_exception=ValueError("My module error."))
 
-        results, output, result_code = _Execute([module], {"MyModule": {None: {"skip": False}}})
+        results, output, result_code = _Execute([module], {"MyModule": {None: {"skip": False}}}, {})
 
         assert results == []
         assert "My module error." in output
@@ -523,6 +614,7 @@ class TestExceptions:
         results, output, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+            {},
         )
 
         assert "My query error." in output
@@ -547,6 +639,7 @@ class TestExceptions:
         results, output, result_code = _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+            {},
         )
 
         assert "My cleanup error." in output
@@ -564,6 +657,7 @@ class TestCleanup:
         _Execute(
             [_CreateModule([query])],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert query.cleanup_query_data is query_data
@@ -588,6 +682,7 @@ class TestCleanup:
         _Execute(
             [_CreateModule([query])],
             {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+            {},
         )
 
         assert query.evaluated_at_cleanup == [True, True]
@@ -600,6 +695,7 @@ class TestCleanup:
         _Execute(
             [_CreateModule([query])],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": True}}},
+            {},
         )
 
         assert query.cleanup_query_data == {}
@@ -611,6 +707,7 @@ class TestCleanup:
         _Execute(
             [_CreateModule([query])],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert query.cleanup_query_data is None
@@ -622,6 +719,7 @@ class TestCleanup:
         _Execute(
             [_CreateModule([query])],
             {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}},
+            {},
         )
 
         assert query.cleanup_query_data is None
@@ -639,6 +737,7 @@ class TestCleanup:
         _Execute(
             [_CreateModule(queries)],
             {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+            {},
         )
 
         assert queries[0].cleanup_query_data is query_data1
@@ -652,7 +751,7 @@ class TestModuleCleanup:
         module_data: dict[str | None, dict[str, object]] = {None: {"session": "value"}}
         module = MyModule("MyModule", "My description.", [], module_data=module_data)
 
-        _Execute([module], {"MyModule": {None: {"skip": False}}})
+        _Execute([module], {"MyModule": {None: {"skip": False}}}, {})
 
         assert module.cleanup_module_data is module_data
 
@@ -681,6 +780,7 @@ class TestModuleCleanup:
         _Execute(
             [module],
             {"MyModule": {None: {"skip": False}, "One": {"skip": False}, "Two": {"skip": False}}},
+            {},
         )
 
         assert module.cleaned_queries == [True, True]
@@ -691,7 +791,7 @@ class TestModuleCleanup:
             [MyQuery("MyQuery", [_CreateRequirement()], raise_exception=ValueError("My query error."))]
         )
 
-        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}})
+        _Execute([module], {"MyModule": {None: {"skip": False}, "MyRequirement": {"skip": False}}}, {})
 
         assert module.cleanup_module_data == {None: {"skip": False}, "MyRequirement": {"skip": False}}
 
@@ -699,7 +799,7 @@ class TestModuleCleanup:
     def test_NotInvokedForSkippedModule(self):
         module = _CreateModule([MyQuery("MyQuery", [_CreateRequirement()], query_data={})])
 
-        _Execute([module], {"MyModule": {None: {"skip": True}, "MyRequirement": {"skip": False}}})
+        _Execute([module], {"MyModule": {None: {"skip": True}, "MyRequirement": {"skip": False}}}, {})
 
         assert module.cleanup_module_data is None
 
@@ -707,6 +807,6 @@ class TestModuleCleanup:
     def test_NotInvokedWhenModuleRaises(self):
         module = _CreateModule([], raise_exception=ValueError("My module error."))
 
-        _Execute([module], {"MyModule": {None: {"skip": False}}})
+        _Execute([module], {"MyModule": {None: {"skip": False}}}, {})
 
         assert module.cleanup_module_data is None

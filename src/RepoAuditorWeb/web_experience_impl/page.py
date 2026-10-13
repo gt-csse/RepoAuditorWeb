@@ -7,11 +7,17 @@ import textwrap
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from RepoAuditorWeb.lib.form import FormGroup
+    from RepoAuditorWeb.lib.form import FormContainer, FormGroup
 
 
 # ----------------------------------------------------------------------
-def CreatePage(groups: list[FormGroup], token: str, *, execute: bool = False) -> str:
+def CreatePage(
+    groups: list[FormGroup],
+    token: str,
+    *,
+    common: FormContainer | None = None,
+    execute: bool = False,
+) -> str:
     """Create the page that displays the form, the execution output, and the results."""
 
     # The form is built by the page from this data rather than being rendered here so that a single
@@ -20,6 +26,7 @@ def CreatePage(groups: list[FormGroup], token: str, *, execute: bool = False) ->
         {
             "token": token,
             "execute": execute,
+            "common": None if common is None else dataclasses.asdict(common),
             "groups": [dataclasses.asdict(group) for group in groups],
         },
         # A value containing '</script>' would otherwise end the element and run as markup.
@@ -825,6 +832,11 @@ _SCRIPT = textwrap.dedent(
       readers.clear();
       pendingDisabling.length = 0;
       refreshDisabling.length = 0;
+
+      // Common values apply to every module, so they are displayed ahead of the modules.
+      if (config.common && config.common.fields.length) {
+        form.appendChild(CreateContainer(config.common, "module-fields", true));
+      }
 
       for (const group of config.groups) {
         // A module is displayed expanded; the requirements it holds are collapsed until one is the

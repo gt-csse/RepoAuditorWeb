@@ -9,11 +9,14 @@ from typer.models import OptionInfo
 
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
 from RepoAuditorWeb.lib.form import (
+    CreateCommonContainer,
     CreateGroups,
     FieldType,
+    FormContainer,
     FormField,
     FormGroup,
     FormSection,
+    ParseCommonValues,
     ParseValues,
 )
 
@@ -1219,3 +1222,60 @@ class TestRequirementModeExclusions:
             ("skip", FieldType.Boolean),
             ("require", FieldType.Boolean),
         ]
+
+
+# ----------------------------------------------------------------------
+def _CreateCommonDynamicParameters() -> DynamicParameters:
+    return DynamicParameters(
+        [
+            MyModule(
+                "MyModule",
+                "My description.",
+                [MyQuery("MyQuery", [])],
+                parameters={
+                    "url": TyperParameter(str | None, None),
+                    "other": TyperParameter(str | None, None),
+                },
+            ),
+        ],
+        {"url": TyperParameter(str | None, None, OptionInfo(help="The url."))},
+    )
+
+
+# ----------------------------------------------------------------------
+class TestCommonParameters:
+    # ----------------------------------------------------------------------
+    def test_ModuleFieldIsNotDisplayed(self):
+        group = CreateGroups(_CreateCommonDynamicParameters(), {})[0]
+
+        assert [field.name for field in group.fields] == ["MyModule_skip", "MyModule_other"]
+
+    # ----------------------------------------------------------------------
+    def test_Container(self):
+        assert CreateCommonContainer(_CreateCommonDynamicParameters(), {"url": "my_url"}) == FormContainer(
+            "Common",
+            [FormField("url", "url", FieldType.Text, "my_url", help="The url.")],
+            "Values applied to every module that uses them.",
+        )
+
+    # ----------------------------------------------------------------------
+    def test_ContainerDefault(self):
+        container = CreateCommonContainer(_CreateCommonDynamicParameters(), {})
+
+        assert container.fields[0].value == ""
+
+    # ----------------------------------------------------------------------
+    def test_ContainerWithoutCommonParameters(self):
+        assert CreateCommonContainer(DynamicParameters([]), {}).fields == []
+
+    # ----------------------------------------------------------------------
+    def test_ParseCommonValues(self):
+        assert ParseCommonValues(
+            _CreateCommonDynamicParameters(),
+            {"url": "my_url", "MyModule_other": "other"},
+        ) == {"url": "my_url"}
+
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("values", [{}, {"url": ""}])
+    def test_ParseCommonValuesDefault(self, values):
+        assert ParseCommonValues(_CreateCommonDynamicParameters(), values) == {"url": None}

@@ -181,6 +181,41 @@ class TestDynamicParameters:
             DynamicParameters([_CreateModule("My_Module")])
 
     # ----------------------------------------------------------------------
+    def test_CommonParameters(self):
+        parameter = TyperParameter(str | None, None)
+
+        assert DynamicParameters([], {"url": parameter}).common_parameters == {"url": parameter}
+
+    # ----------------------------------------------------------------------
+    # Every module operates on the common value, so a module-specific value is not accepted.
+    def test_ModuleParameterForCommonParameterIsExcluded(self):
+        module = _CreateModule(
+            parameters={
+                "url": TyperParameter(str | None, None),
+                "other": TyperParameter(str | None, None),
+            },
+        )
+
+        dynamic_parameters = DynamicParameters([module], {"url": TyperParameter(str | None, None)})
+
+        assert list(dynamic_parameters.dynamic_parameters) == ["MyModule_skip", "MyModule_other"]
+        assert list(dynamic_parameters.argument_lookup) == ["MyModule_skip", "MyModule_other"]
+
+    # ----------------------------------------------------------------------
+    def test_CommonParametersAreEmptyByDefault(self):
+        assert DynamicParameters([]).common_parameters == {}
+
+    # ----------------------------------------------------------------------
+    # A common parameter is submitted by the form under its own name, which must not collide with
+    # the prefixed name of a module's parameter.
+    def test_ErrorUnderscoreInCommonParameterName(self):
+        with pytest.raises(
+            ValueError,
+            match="'my_url' contains '_', which is not allowed.",
+        ):
+            DynamicParameters([], {"my_url": TyperParameter(str | None, None)})
+
+    # ----------------------------------------------------------------------
     def test_ErrorUnderscoreInRequirementName(self):
         module = _CreateModule(
             requirements=[MyRequirement("My_Requirement", "My requirement description.")],

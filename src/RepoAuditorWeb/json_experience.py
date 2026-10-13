@@ -16,13 +16,14 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def ExecuteExperience(
+def ExecuteExperience(  # noqa: PLR0913
     dm: DoneManager,
     port: int,  # noqa: ARG001
     token: str,  # noqa: ARG001
     modules: list[Module],
     dynamic_parameters: DynamicParameters,  # noqa: ARG001
     arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
     *,
     execute: bool = False,  # noqa: ARG001
     evaluate_all: bool = False,
@@ -33,7 +34,7 @@ def ExecuteExperience(
 
     # The json experience has no control to invoke, so `execute` is implied.
 
-    results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
+    results = Execute(dm, modules, arguments, common_arguments, evaluate_all=evaluate_all)
 
     # The document is the only thing written to stdout (everything that DoneManager produces is
     # written to stderr), so it can be redirected to a file or piped to another process as-is.

@@ -60,6 +60,7 @@ class DynamicParameters:
     def __init__(
         self,
         modules: list[Module],
+        common_parameters: dict[str, TyperParameter] | None = None,
     ) -> None:
         # ----------------------------------------------------------------------
         def ValidateName(name: str, *, allow_underscore: bool = False) -> str:
@@ -75,6 +76,12 @@ class DynamicParameters:
 
         # ----------------------------------------------------------------------
 
+        # Prohibiting '_' ensures that a common parameter cannot collide with a module's prefixed
+        # parameter names, as both are submitted by the form under their names.
+        self.common_parameters = {
+            ValidateName(name): parameter for name, parameter in (common_parameters or {}).items()
+        }
+
         dynamic_parameters: dict[str, TyperParameter] = {}
         argument_lookup: dict[str, ArgumentInfo] = {}
         description_lookup: dict[str, dict[str | None, str]] = {}
@@ -86,6 +93,11 @@ class DynamicParameters:
             descriptions[None] = module.description
 
             for parameter_name, parameter in module.GetParameters().items():
+                # A common value is applied to every module that declares the parameter, so that all
+                # modules operate on the same value; a module-specific value is not accepted.
+                if parameter_name in self.common_parameters:
+                    continue
+
                 full_parameter_name = f"{module_name}_{ValidateName(parameter_name, allow_underscore=True)}"
 
                 if full_parameter_name in dynamic_parameters:

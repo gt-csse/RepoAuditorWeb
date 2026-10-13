@@ -27,10 +27,11 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def CreateApp(
+def CreateApp(  # noqa: PLR0913
     modules: list[Module],
     dynamic_parameters: DynamicParameters,
     arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
     token: str,
     *,
     execute: bool = False,
@@ -58,9 +59,12 @@ def CreateApp(
     arguments_lock = threading.Lock()
 
     # ----------------------------------------------------------------------
-    def CreateGroups() -> list[form.FormGroup]:
+    def CreateContainers() -> tuple[form.FormContainer, list[form.FormGroup]]:
         with arguments_lock:
-            return form.CreateGroups(dynamic_parameters, arguments)
+            return (
+                form.CreateCommonContainer(dynamic_parameters, common_arguments),
+                form.CreateGroups(dynamic_parameters, arguments),
+            )
 
     # ----------------------------------------------------------------------
     def VerifyToken(token_header: str | None) -> None:
@@ -81,9 +85,12 @@ def CreateApp(
         # the flag in a single operation ensures that concurrent loads cannot both observe it.
         execute_on_load = bool(state.pop("execute", False))
 
+        common, groups = CreateContainers()
+
         return CreatePage(
-            CreateGroups(),
+            groups,
             token,
+            common=common,
             execute=execute_on_load,
         )
 
@@ -97,8 +104,11 @@ def CreateApp(
     def GetFields(x_auditor_token: Annotated[str | None, Header()] = None) -> dict[str, object]:
         VerifyToken(x_auditor_token)
 
+        common, groups = CreateContainers()
+
         return {
-            "groups": [dataclasses.asdict(group) for group in CreateGroups()],
+            "common": dataclasses.asdict(common),
+            "groups": [dataclasses.asdict(group) for group in groups],
         }
 
     # ----------------------------------------------------------------------
@@ -123,6 +133,7 @@ def CreateApp(
                 target=_Run,
                 args=(sink, lock, arguments_lock, modules, dynamic_parameters, arguments, submitted),
                 kwargs={
+                    "common_arguments": common_arguments,
                     "evaluate_all": evaluate_all,
                     "display_resolution": display_resolution,
                     "display_rationale": display_rationale,
@@ -179,6 +190,7 @@ def _Run(  # noqa: PLR0913
     arguments: dict[str, dict[str | None, dict[str, object]]],
     submitted: dict[str, object],
     *,
+    common_arguments: dict[str, object],
     evaluate_all: bool,
     display_resolution: bool,
     display_rationale: bool,
@@ -192,17 +204,21 @@ def _Run(  # noqa: PLR0913
         # The values are parsed before the retained ones are replaced so that a failure leaves them
         # intact.
         parsed = form.ParseValues(dynamic_parameters, submitted)
+        parsed_common = form.ParseCommonValues(dynamic_parameters, submitted)
 
         with arguments_lock:
             arguments.clear()
             arguments.update(parsed)
+
+            common_arguments.clear()
+            common_arguments.update(parsed_common)
 
         with DoneManager.Create(
             sink,
             "Executing...",
             flags=DoneManagerFlags.Create(verbose=verbose, debug=debug),
         ) as dm:
-            results = Execute(dm, modules, arguments, evaluate_all=evaluate_all)
+            results = Execute(dm, modules, arguments, common_arguments, evaluate_all=evaluate_all)
 
         sink.Send(
             "results",

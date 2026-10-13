@@ -18,13 +18,14 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def ExecuteExperience(
+def ExecuteExperience(  # noqa: PLR0913
     dm: DoneManager,
     port: int,
     token: str,
     modules: list[Module],
     dynamic_parameters: DynamicParameters,
     arguments: dict[str, dict[str | None, dict[str, object]]],
+    common_arguments: dict[str, object],
     *,
     execute: bool = False,
     evaluate_all: bool = False,
@@ -37,6 +38,7 @@ def ExecuteExperience(
         modules,
         dynamic_parameters,
         arguments,
+        common_arguments,
         token,
         execute=execute,
         evaluate_all=evaluate_all,
