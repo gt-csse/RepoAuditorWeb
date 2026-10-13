@@ -264,13 +264,14 @@ def test_ModulesAreExpandedAndRequirementsAreCollapsed():
 
     assert 'CreateContainer(group, "module-fields", true)' in page
     assert 'CreateContainer(section, "requirement-fields", false)' in page
+    assert 'CreateContainer({ name: query, fields: [] }, "query-fields", false)' in page
     assert "details.open = open;" in page
 
 
 # ----------------------------------------------------------------------
-# The requirements of a query are displayed together under its name, which is emitted once for the
-# run of them rather than by each one.
-def test_RequirementsAreGroupedByTheirQuery():
+# The requirements of a query are enclosed by a single container for the run of them, which is
+# collapsed so that a module with many queries stays legible.
+def test_RequirementsAreGroupedByTheirCollapsedQuery():
     page = CreatePage(_GROUPS, "my_token")
 
     assert (
@@ -279,8 +280,11 @@ def test_RequirementsAreGroupedByTheirQuery():
                 """\
                 if (section.query && section.query !== query) {
                   query = section.query;
-                  details.appendChild(CreateQueryHeading(query));
+                  parent = CreateContainer({ name: query, fields: [] }, "query-fields", false);
+                  details.appendChild(parent);
                 }
+
+                parent.appendChild(CreateContainer(section, "requirement-fields", false));
                 """,
             ),
             "      ",
@@ -290,19 +294,40 @@ def test_RequirementsAreGroupedByTheirQuery():
 
 
 # ----------------------------------------------------------------------
-# A query names the data its requirements are evaluated against rather than anything that can be
-# set, so the heading labels them instead of enclosing them in something that could be collapsed.
-def test_QueryHeadingIsNotCollapsible():
+# A query has no toggle of its own, so a module disables the requirements nested within its queries.
+def test_ModuleDisablesRequirementsWithinQueries():
     page = CreatePage(_GROUPS, "my_token")
 
+    assert 'details.querySelectorAll(":scope > details, :scope > .query-fields > details")' in page
+
+
+# ----------------------------------------------------------------------
+# The module is the outermost grouping, so its name is set at least as prominently as the queries
+# nested within it.
+def test_ModuleNameIsMoreProminentThanQueryName():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert ".module-fields > summary { font-size: 17px; padding: 10px 0; }" in page
     assert (
         textwrap.dedent(
             """\
-            function CreateQueryHeading(name) {
-              const heading = document.createElement("div");
-              heading.className = "query-heading";
-              heading.textContent = name;
-              return heading;
+            .module-fields > summary,
+            .query-fields > summary { font-weight: 700; }
+            """,
+        )
+        in page
+    )
+    assert (
+        textwrap.dedent(
+            """\
+            .query-fields > summary {
+              margin-left: -12px;
+              padding: 8px 0;
+              /* Uppercase distinguishes a query from the requirements it holds without competing with the
+                 module name in size. */
+              font-size: 13px;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
             }
             """,
         )

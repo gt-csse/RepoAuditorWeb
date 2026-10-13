@@ -166,7 +166,9 @@ _STYLE = textwrap.dedent(
        from the border belongs to the summary rather than to the container. */
     .module-fields:not([open]) { padding-bottom: 0; }
 
-    .module-fields > summary { font-size: 15px; padding: 10px 0; }
+    /* The module is the outermost grouping, so its name is set larger than the query names nested
+       within it. */
+    .module-fields > summary { font-size: 17px; padding: 10px 0; }
 
     /* The label column is as wide as the widest label on the page, measured once the form is built,
        so that labels are not truncated while space is available and the controls of every module
@@ -195,41 +197,36 @@ _STYLE = textwrap.dedent(
       margin-left: 3px;
     }
 
-    /* The requirements of a query are labeled rather than enclosed, so the heading is styled as the
-       divider that begins the run of them instead of as a row that can be acted on. */
-    .query-heading {
-      border-top: 1px solid var(--border);
-      margin-top: 14px;
-      padding: 12px 0 4px;
-      /* Set above the requirement names it labels so that it reads as the heading of the run rather
-         than as one more row within it. */
-      font-size: 15px;
-      font-weight: 700;
-      text-transform: uppercase;
-      /* Wide tracking is what makes a small label legible; at this size it only separates the
-         letters, so it is reduced rather than kept in proportion. */
-      letter-spacing: 0.04em;
-      color: var(--fg);
-    }
-
-    /* A requirement's fields are indented beneath its name so that they read as belonging to the
-       requirement rather than to the module. */
+    /* A query's and a requirement's contents are indented beneath its name so that they read as
+       belonging to it rather than to the container that holds it. */
+    .query-fields,
     .requirement-fields {
       border-top: 1px solid var(--border);
       margin-top: 6px;
       padding-left: 12px;
     }
 
-    /* The heading already divides the requirements above it from those below, so the first
-       requirement of a query does not draw a second rule immediately beneath it. */
-    .query-heading + .requirement-fields {
+    /* The query's summary already divides it from what precedes it, so its first requirement does
+       not draw a second rule immediately beneath it. */
+    .query-fields > summary + .requirement-fields {
       border-top: none;
       margin-top: 0;
+    }
+
+    .query-fields > summary {
+      margin-left: -12px;
+      padding: 8px 0;
+      /* Uppercase distinguishes a query from the requirements it holds without competing with the
+         module name in size. */
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .requirement-fields > summary { margin-left: -12px; padding: 7px 0; }
 
     .module-fields > summary,
+    .query-fields > summary,
     .requirement-fields > summary {
       display: flex;
       align-items: center;
@@ -239,10 +236,15 @@ _STYLE = textwrap.dedent(
       list-style: none;
     }
 
+    .module-fields > summary,
+    .query-fields > summary { font-weight: 700; }
+
     .module-fields > summary::-webkit-details-marker,
+    .query-fields > summary::-webkit-details-marker,
     .requirement-fields > summary::-webkit-details-marker { display: none; }
 
     .module-fields > summary::before,
+    .query-fields > summary::before,
     .requirement-fields > summary::before {
       content: "";
       width: 0;
@@ -255,6 +257,7 @@ _STYLE = textwrap.dedent(
     }
 
     .module-fields[open] > summary::before,
+    .query-fields[open] > summary::before,
     .requirement-fields[open] > summary::before { transform: rotate(90deg); }
 
     /* The description accompanies the name rather than competing with it, and yields its width to
@@ -725,8 +728,9 @@ _SCRIPT = textwrap.dedent(
         }
 
         // Requirement sections read this rather than the module's toggle, so that a section is
-        // disabled by its module without having to know which control governs it.
-        for (const nested of details.querySelectorAll(":scope > details")) {
+        // disabled by its module without having to know which control governs it. A query has no
+        // toggle of its own, so the sections it holds are reached through it.
+        for (const nested of details.querySelectorAll(":scope > details, :scope > .query-fields > details")) {
           nested.dataset.inherited = disabled ? "disabled" : "";
           nested.dispatchEvent(new Event("refresh-disabling"));
         }
@@ -741,16 +745,6 @@ _SCRIPT = textwrap.dedent(
 
       Refresh();
       return Refresh;
-    }
-
-    // What a query names is the data its requirements are evaluated against, which is not something
-    // that can be set, so the heading labels the requirements that follow rather than enclosing
-    // them in a container that could be collapsed.
-    function CreateQueryHeading(name) {
-      const heading = document.createElement("div");
-      heading.className = "query-heading";
-      heading.textContent = name;
-      return heading;
     }
 
     // A module and a requirement are displayed the same way; they differ in how prominent they are
@@ -844,16 +838,18 @@ _SCRIPT = textwrap.dedent(
         const details = CreateContainer(group, "module-fields", true);
 
         let query = null;
+        let parent = details;
 
         for (const section of group.sections) {
-          // The requirements of a query are contiguous, so its name introduces the run of them
-          // that follows rather than being repeated by each one.
+          // The requirements of a query are contiguous, so they are enclosed by a single container
+          // that is collapsed until the query is the one the user is interested in.
           if (section.query && section.query !== query) {
             query = section.query;
-            details.appendChild(CreateQueryHeading(query));
+            parent = CreateContainer({ name: query, fields: [] }, "query-fields", false);
+            details.appendChild(parent);
           }
 
-          details.appendChild(CreateContainer(section, "requirement-fields", false));
+          parent.appendChild(CreateContainer(section, "requirement-fields", false));
         }
 
         form.appendChild(details);
