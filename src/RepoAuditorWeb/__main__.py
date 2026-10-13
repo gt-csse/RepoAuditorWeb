@@ -12,7 +12,6 @@ from typer.models import OptionInfo
 from RepoAuditorWeb.console_experience import ExecuteExperience as ExecuteConsoleExperience
 from RepoAuditorWeb.impl import entry_point_utils
 from RepoAuditorWeb.json_experience import ExecuteExperience as ExecuteJsonExperience
-from RepoAuditorWeb.tui_experience import ExecuteExperience as ExecuteTuiExperience
 from RepoAuditorWeb.web_experience import ExecuteExperience as ExecuteWebExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
 from RepoAuditorWeb.lib.modules import MODULES
@@ -41,7 +40,6 @@ class Experience(StrEnum):
 
     Console = "console"
     Json = "json"
-    Tui = "tui"
     Web = "web"
 
 
@@ -179,8 +177,6 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
                 ExecuteConsoleExperience(**experience_kwargs)
             elif experience == Experience.Json:
                 ExecuteJsonExperience(**experience_kwargs)
-            elif experience == Experience.Tui:
-                ExecuteTuiExperience(**experience_kwargs)
             elif experience == Experience.Web:
                 ExecuteWebExperience(**experience_kwargs)
             else:
