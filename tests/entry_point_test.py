@@ -228,16 +228,6 @@ class TestExperience:
         assert experience_mock.call_count == 1
 
     # ----------------------------------------------------------------------
-    # The TUI experience takes over the terminal and does not return until the user closes it, so it
-    # is replaced by a double rather than being invoked.
-    def test_Tui(self):
-        with mock.patch("RepoAuditorWeb.__main__.ExecuteTuiExperience") as experience_mock:
-            result, output = _InvokeAndCapture(["--experience", "tui"])
-
-        assert result.exit_code == 0, output
-        assert experience_mock.call_count == 1
-
-    # ----------------------------------------------------------------------
     def test_Json(self):
         result = CliRunner().invoke(app, ["--experience", "json"])
 

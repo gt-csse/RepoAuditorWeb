@@ -57,11 +57,10 @@ Select the experience with `--experience`:
 | Experience | Description |
 | --- | --- |
 | `web` (default) | Opens a window to configure and execute the audit. |
-| `tui` | Configures and executes the audit within the terminal. |
 | `console` | Executes the audit and writes the results to the terminal. |
 | `json` | Executes the audit and writes the results to `stdout` as JSON; status information is written to `stderr`. |
 
-`--execute` runs the audit immediately in the `web` and `tui` experiences.
+`--execute` runs the audit immediately in the `web` experience.
 
 #### JSON Output
 The `json` experience writes a single document; `schema_version` is incremented whenever a change would break an existing consumer.
@@ -99,7 +98,7 @@ Every module and requirement contributes command line options; run `repoauditorw
 | `--evaluate-all` | Evaluate requirements that would otherwise be suppressed because a parent setting is not enabled. |
 | `--no-resolution`, `--no-rationale` | Omit resolutions or rationales from the results. |
 
-`--url`, `--pat`, and `--branch` can also be provided through the environment variables `REPO_AUDITOR_WEB_GITHUB_URL`, `REPO_AUDITOR_WEB_GITHUB_PAT`, and `REPO_AUDITOR_WEB_GITHUB_BRANCH`. They apply to every module that uses them, so modules do not accept their own values for them. The `web` and `tui` experiences display them in a `Common` section above the modules.
+`--url`, `--pat`, and `--branch` can also be provided through the environment variables `REPO_AUDITOR_WEB_GITHUB_URL`, `REPO_AUDITOR_WEB_GITHUB_PAT`, and `REPO_AUDITOR_WEB_GITHUB_BRANCH`. They apply to every module that uses them, so modules do not accept their own values for them. The `web` experience displays them in a `Common` section above the modules.
 
 #### PAT Permissions
 A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) is not required to audit public repositories, but GitHub only reports some settings to callers with elevated access. Requirements that cannot see a setting produce a warning without a PAT, and an error when the PAT lacks the necessary permissions.
