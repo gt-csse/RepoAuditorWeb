@@ -2,7 +2,6 @@ import json
 import textwrap
 
 from collections.abc import Mapping
-from typing import cast
 from unittest import mock
 
 import git
@@ -364,17 +363,6 @@ class TestCommonOptions:
         args: list[str],
         env: dict[str, str | None] | None = None,
     ) -> dict[str, dict[str | None, dict[str, object]]]:
-        return cast(
-            "dict[str, dict[str | None, dict[str, object]]]",
-            TestCommonOptions._InvokeAndCaptureKwargs(args, env)["arguments"],
-        )
-
-    # ----------------------------------------------------------------------
-    @staticmethod
-    def _InvokeAndCaptureKwargs(
-        args: list[str],
-        env: dict[str, str | None] | None = None,
-    ) -> Mapping[str, object]:
         # The environment is cleared so that values set on the host do not influence the results.
         env = {
             "REPO_AUDITOR_WEB_GITHUB_URL": None,
@@ -389,7 +377,7 @@ class TestCommonOptions:
         assert result.exit_code == 0, result.output
         assert experience_mock.call_count == 1
 
-        return experience_mock.call_args.kwargs
+        return experience_mock.call_args.kwargs["arguments"]
 
     # ----------------------------------------------------------------------
     def test_InHelp(self):
@@ -501,34 +489,3 @@ class TestCommonOptions:
 
         assert arguments["GitHub"][None]["branch"] == "env_branch"
         assert arguments["CommunityStandards"][None]["branch"] == "module_branch"
-
-    # ----------------------------------------------------------------------
-    def test_CommandLineValuesAreReadOnly(self):
-        kwargs = self._InvokeAndCaptureKwargs(["--url", "my_url", "--GitHub-url", "module_url"])
-
-        # The module-specific value takes precedence, so the GitHub field remains editable.
-        assert kwargs["read_only"] == {
-            "CommunityStandards_url": "my_url",
-            "ScientificSoftware_url": "my_url",
-            "JOSS_url": "my_url",
-        }
-
-    # ----------------------------------------------------------------------
-    def test_ConfigFileValuesAreReadOnly(self, tmp_path):
-        config_filename = tmp_path / "config.yaml"
-        config_filename.write_text("branch: config_branch\n", encoding="utf-8")
-
-        kwargs = self._InvokeAndCaptureKwargs(["--config", str(config_filename)])
-
-        assert kwargs["read_only"] == {
-            "GitHub_branch": "config_branch",
-            "CommunityStandards_branch": "config_branch",
-            "ScientificSoftware_branch": "config_branch",
-            "JOSS_branch": "config_branch",
-        }
-
-    # ----------------------------------------------------------------------
-    def test_EnvironmentVariableValuesAreEditable(self):
-        kwargs = self._InvokeAndCaptureKwargs([], env={"REPO_AUDITOR_WEB_GITHUB_PAT": "my_pat"})
-
-        assert kwargs["read_only"] == {}

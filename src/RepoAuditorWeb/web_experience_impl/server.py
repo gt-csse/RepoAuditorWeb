@@ -27,13 +27,12 @@ if TYPE_CHECKING:
 
 
 # ----------------------------------------------------------------------
-def CreateApp(  # noqa: PLR0913
+def CreateApp(
     modules: list[Module],
     dynamic_parameters: DynamicParameters,
     arguments: dict[str, dict[str | None, dict[str, object]]],
     token: str,
     *,
-    read_only: dict[str, object] | None = None,
     execute: bool = False,
     evaluate_all: bool = False,
     display_resolution: bool = True,
@@ -61,7 +60,7 @@ def CreateApp(  # noqa: PLR0913
     # ----------------------------------------------------------------------
     def CreateGroups() -> list[form.FormGroup]:
         with arguments_lock:
-            return form.CreateGroups(dynamic_parameters, arguments, read_only)
+            return form.CreateGroups(dynamic_parameters, arguments)
 
     # ----------------------------------------------------------------------
     def VerifyToken(token_header: str | None) -> None:
@@ -124,7 +123,6 @@ def CreateApp(  # noqa: PLR0913
                 target=_Run,
                 args=(sink, lock, arguments_lock, modules, dynamic_parameters, arguments, submitted),
                 kwargs={
-                    "read_only": read_only,
                     "evaluate_all": evaluate_all,
                     "display_resolution": display_resolution,
                     "display_rationale": display_rationale,
@@ -181,7 +179,6 @@ def _Run(  # noqa: PLR0913
     arguments: dict[str, dict[str | None, dict[str, object]]],
     submitted: dict[str, object],
     *,
-    read_only: dict[str, object] | None,
     evaluate_all: bool,
     display_resolution: bool,
     display_rationale: bool,
@@ -194,7 +191,7 @@ def _Run(  # noqa: PLR0913
         # page restores what the user entered rather than the values the experience started with.
         # The values are parsed before the retained ones are replaced so that a failure leaves them
         # intact.
-        parsed = form.ParseValues(dynamic_parameters, submitted, read_only)
+        parsed = form.ParseValues(dynamic_parameters, submitted)
 
         with arguments_lock:
             arguments.clear()

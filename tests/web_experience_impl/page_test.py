@@ -65,7 +65,6 @@ def test_GroupsAreEmbedded():
                     "minimum": None,
                     "maximum": None,
                     "required": False,
-                    "read_only_reason": "",
                 },
             ],
             "sections": [
@@ -82,7 +81,6 @@ def test_GroupsAreEmbedded():
                             "minimum": None,
                             "maximum": None,
                             "required": False,
-                            "read_only_reason": "",
                         },
                     ],
                     "description": "My requirement description.",
