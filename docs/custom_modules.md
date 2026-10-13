@@ -29,7 +29,9 @@ Reusable building blocks are available in `RepoAuditorWeb.lib.plugins.shared`:
 | `GetRepositoryDirectory`, `IsWithinRepository` | Return the cloned repository's directory, and determine whether a path (after resolving symlinks) is within it. |
 | `RationaleRequirement` | Requirement that returns its rationale only when its default values are in use. |
 | `FileExistsRequirement` | Requirement that validates that a file (or directory) exists in a cloned repository. |
-| `GitHubSession` | `requests.Session` that sends requests relative to the repository's GitHub API url, with a default timeout and retries. |
+| `GitHubApiSession` | `requests.Session` that sends requests relative to a GitHub API url, with a default timeout and retries; a PAT is only sent over https. |
+| `GitHubSession` | `GitHubApiSession` whose API url is that of the repository identified by an `http(s)` GitHub url. |
+| `GetApiBaseUrl` | Return the base url of the REST API exposed by a GitHub or GitHub Enterprise server. |
 | `GetRepositoryParameters`, `ResolveRepositoryArguments` | Declare and resolve the `url`, `pat`, and `branch` parameters for modules that do not clone the repository. |
 
 ## Creating the Package
