@@ -275,6 +275,9 @@ class TestSession:
             "https://github.com",
             # A url without a host has the right number of path parts but no server to query.
             "file:///gt-csse/RepoAuditorWeb",
+            # GitHub is only reached over http(s).
+            "file://server/gt-csse/RepoAuditorWeb",
+            "file://github.com/gt-csse/RepoAuditorWeb",
             # Names that would change the API resource requested.
             "https://github.com/../user",
             "https://github.com/gt-csse/..",
