@@ -199,7 +199,7 @@ def test_ErrorResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
         3) Clear the **Require linear history** checkbox in the **Branch rules** section.
         4) Click the **Save changes** button at the bottom of the page.
@@ -217,7 +217,7 @@ def test_ErrorResolutionWhenRequired():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
         3) Check the **Require linear history** checkbox in the **Branch rules** section.
         4) Click the **Save changes** button at the bottom of the page.

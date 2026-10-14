@@ -1,6 +1,10 @@
+from typing import cast
+
 import pytest
 
+from RepoAuditorWeb.lib.module import Module
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements import parent_rule
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue, Requirement
 
 
 # ----------------------------------------------------------------------
@@ -17,6 +21,42 @@ _OTHER_RULE: dict[str, object] = {"type": "deletion", "parameters": {}}
 # ----------------------------------------------------------------------
 def test_PullRequestRuleType():
     assert parent_rule.PULL_REQUEST_RULE_TYPE == "pull_request"
+
+
+# ----------------------------------------------------------------------
+class TestGetNotOwnedByOrganizationResult:
+    # ----------------------------------------------------------------------
+    def test_OwnedByOrganization(self):
+        assert (
+            parent_rule.GetNotOwnedByOrganizationResult(
+                {"owner_type": "Organization"},
+                "The context.",
+                cast(Requirement, None),
+                cast(Module, None),
+            )
+            is None
+        )
+
+    # ----------------------------------------------------------------------
+    def test_OwnedByUser(self):
+        requirement = cast(Requirement, object())
+        module = cast(Module, object())
+
+        result = parent_rule.GetNotOwnedByOrganizationResult(
+            {"owner_type": "User"},
+            "The context.",
+            requirement,
+            module,
+        )
+
+        assert result == EvaluateResult(
+            EvaluateResultValue.DoesNotApply,
+            "The context.",
+            None,
+            None,
+            requirement,
+            module,
+        )
 
 
 # ----------------------------------------------------------------------
@@ -125,7 +165,7 @@ class TestGetPullRequestRuleResolutionPrefix:
             {"response": [_PULL_REQUEST_RULE]},
             evaluate_all=evaluate_all,
         ) == (
-            "3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section."
+            "3) In the **Branch rules** section, find **Require a pull request before merging**, and click **Show additional settings**."
         )
 
     # ----------------------------------------------------------------------
@@ -144,20 +184,16 @@ class TestGetPullRequestRuleResolutionPrefix:
 # ----------------------------------------------------------------------
 class TestGetStatusChecksResolutionPrefix:
     # ----------------------------------------------------------------------
-    @pytest.mark.parametrize("evaluate_all", [True, False])
-    def test_ChecksPresent(self, evaluate_all):
-        assert parent_rule.GetStatusChecksResolutionPrefix(
-            [{"context": "my-check"}],
-            evaluate_all=evaluate_all,
-        ) == (
-            "3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section."
+    def test_ChecksPresent(self):
+        assert parent_rule.GetStatusChecksResolutionPrefix([{"context": "my-check"}]) == (
+            "3) In the **Branch rules** section, find **Require status checks to pass**, and click **Show additional settings**."
         )
 
     # ----------------------------------------------------------------------
     # GitHub does not apply the setting until the rule names a check, so the step names both the
     # rule and the check rather than only where the setting is found.
     def test_ChecksAbsent(self):
-        assert parent_rule.GetStatusChecksResolutionPrefix([], evaluate_all=True) == (
+        assert parent_rule.GetStatusChecksResolutionPrefix([]) == (
             "3) Check the **Require status checks to pass** checkbox in the **Branch rules** section "
             "and add at least one status check beneath it."
         )

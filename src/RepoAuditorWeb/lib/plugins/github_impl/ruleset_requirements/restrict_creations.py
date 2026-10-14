@@ -61,7 +61,7 @@ class RestrictCreationsRequirement(Requirement):
 
             resolution = textwrap.dedent(
                 f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                1) Open the repository's [Rulesets settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
                 3) {action} the **Restrict creations** checkbox in the **Branch rules** section.
                 4) Click the **Save changes** button at the bottom of the page.

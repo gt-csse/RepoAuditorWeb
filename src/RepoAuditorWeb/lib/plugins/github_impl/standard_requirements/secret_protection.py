@@ -80,8 +80,7 @@ class SecretProtectionRequirement(Requirement):
                 1) Open the repository's [Advanced Security settings]({repository_url}/settings/security_analysis) page.
                 2) Scroll to the **Secret Protection** row.
                 3) Click the **{action}** button.
-                4) Confirm the change when prompted.
-                5) Click the **Save changes** button at the bottom of the page.
+                4) Click the **{action} Secret Protection** button in the confirmation dialog.
 
                 See [Enabling secret scanning for your repository](https://docs.github.com/en/code-security/how-tos/secure-your-secrets/detect-secret-leaks/enable-secret-scanning)
                 for more information.

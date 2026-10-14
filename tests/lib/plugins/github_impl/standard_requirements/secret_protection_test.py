@@ -160,8 +160,7 @@ def test_ErrorResolution():
         1) Open the repository's [Advanced Security settings](https://github.com/gt-csse/RepoAuditorWeb/settings/security_analysis) page.
         2) Scroll to the **Secret Protection** row.
         3) Click the **Enable** button.
-        4) Confirm the change when prompted.
-        5) Click the **Save changes** button at the bottom of the page.
+        4) Click the **Enable Secret Protection** button in the confirmation dialog.
 
         See [Enabling secret scanning for your repository]({_DOCUMENTATION_URL})
         for more information.
@@ -179,8 +178,7 @@ def test_ErrorResolutionWhenProhibited():
         1) Open the repository's [Advanced Security settings](https://github.com/gt-csse/RepoAuditorWeb/settings/security_analysis) page.
         2) Scroll to the **Secret Protection** row.
         3) Click the **Disable** button.
-        4) Confirm the change when prompted.
-        5) Click the **Save changes** button at the bottom of the page.
+        4) Click the **Disable Secret Protection** button in the confirmation dialog.
 
         See [Enabling secret scanning for your repository]({_DOCUMENTATION_URL})
         for more information.

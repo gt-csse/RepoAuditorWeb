@@ -70,20 +70,6 @@ class RequireBranchesToBeUpToDateBeforeMergingRequirement(Requirement):
                 parameters.get("required_status_checks") or [],
             )
 
-        # GitHub does not apply the setting unless the rule names a check to run, so it governs
-        # nothing here. Reporting a failure would restate the state of the status checks rule, which
-        # RequireStatusChecksToPass already covers. Evaluating every requirement instead reports the
-        # setting against the default it would carry once a check is named.
-        if not checks and not evaluate_all:
-            return EvaluateResult(
-                EvaluateResultValue.DoesNotApply,
-                "The ruleset does not require any status checks to pass, so there are no check results that depend on the branch being up to date.",
-                None,
-                None,
-                self,
-                module,
-            )
-
         strict_value = any(
             bool(
                 cast(dict[str, object], rule.get("parameters") or {}).get(
@@ -101,16 +87,12 @@ class RequireBranchesToBeUpToDateBeforeMergingRequirement(Requirement):
 
             action = "Check" if acceptable_value else "Clear"
 
-            # The rule may name no check when every requirement is being evaluated, in which
-            # case the steps that reach the setting must establish it first.
-            resolution_prefix = parent_rule.GetStatusChecksResolutionPrefix(
-                checks,
-                evaluate_all=evaluate_all,
-            )
+            # When the rule names no check, the steps that reach the setting must establish one first.
+            resolution_prefix = parent_rule.GetStatusChecksResolutionPrefix(checks)
 
             resolution = textwrap.dedent(
                 f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                1) Open the repository's [Rulesets settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
                 {resolution_prefix}
                 4) {action} the **Require branches to be up to date before merging** checkbox.

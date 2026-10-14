@@ -370,9 +370,9 @@ def test_ErrorResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        3) In the **Branch rules** section, find **Require a pull request before merging**, and click **Show additional settings**.
         4) Check **Merge** in the **Allowed merge methods** dropdown, clearing the methods that are not listed.
         5) Click the **Save changes** button at the bottom of the page.
 
@@ -393,9 +393,9 @@ def test_ErrorResolutionNamesEachExpectedMethod():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section.
+        3) In the **Branch rules** section, find **Require a pull request before merging**, and click **Show additional settings**.
         4) Check **Squash**, **Rebase** in the **Allowed merge methods** dropdown, clearing the methods that are not listed.
         5) Click the **Save changes** button at the bottom of the page.
 

@@ -93,9 +93,9 @@ class DescriptionRequirement(Requirement):
             resolution = textwrap.dedent(
                 f"""\
                 1) Open the repository's [home]({repository_url}) page.
-                2) Click the **Edit** button (or the gear icon) next to the **About** section.
+                2) Click the gear icon to the right of the **About** heading.
                 3) {action}
-                4) Click the **Save changes** button.
+                4) Click the **Save changes** button in the **Edit repository details** dialog.
 
                 See [About repositories](https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories)
                 for more information.

@@ -199,7 +199,7 @@ def test_ErrorResolution():
         3) Enter a name for each ruleset that will be created.
         4) Review the **New behavior** section to confirm that the rules carry over as expected.
         5) Check the **Delete branch protection rule once migration is done** checkbox.
-        6) Click the **Create ruleset** button.
+        6) Click the **Create ruleset** button, which reads **Create N rulesets** when the conversion produces more than one.
 
         Note that **Require conversation resolution before merging** is not carried over,
         because rulesets express it within the pull request rule; enable it there afterwards

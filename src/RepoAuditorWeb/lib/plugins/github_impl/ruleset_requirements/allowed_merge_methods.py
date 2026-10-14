@@ -92,7 +92,7 @@ class AllowedMergeMethodsRequirement(Requirement):
 
         # The methods are a setting of the pull request rule, so they govern nothing on a branch
         # that does not require one. Reporting a failure here would restate the absence of the pull
-        # request rule, which RequirePullRequests already covers.
+        # request rule, which RequireAPullRequestBeforeMerging already covers.
         if rule_parameters is None:
             return EvaluateResult(
                 EvaluateResultValue.DoesNotApply,
@@ -137,7 +137,7 @@ class AllowedMergeMethodsRequirement(Requirement):
 
             resolution = textwrap.dedent(
                 f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                1) Open the repository's [Rulesets settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
                 {resolution_prefix}
                 4) Check {expected_labels} in the **Allowed merge methods** dropdown, clearing the methods that are not listed.

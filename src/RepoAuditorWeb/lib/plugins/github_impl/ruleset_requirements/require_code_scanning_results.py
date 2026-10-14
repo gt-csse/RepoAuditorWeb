@@ -100,7 +100,7 @@ class RequireCodeScanningResultsRequirement(Requirement):
 
             resolution = textwrap.dedent(
                 f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                1) Open the repository's [Rulesets settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
                 3) Clear the **Require code scanning results** checkbox in the **Branch rules** section.
                 4) Click the **Save changes** button at the bottom of the page.
@@ -127,10 +127,10 @@ class RequireCodeScanningResultsRequirement(Requirement):
 
             resolution = textwrap.dedent(
                 f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                1) Open the repository's [Rulesets settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
                 3) Check the **Require code scanning results** checkbox in the **Branch rules** section.
-                4) Add at least {acceptable_value} code scanning tool(s) beneath that checkbox.
+                4) Click **Add tool** beneath that checkbox until at least {acceptable_value} code scanning tool(s) are listed.
                 5) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-code-scanning-results)
@@ -155,9 +155,9 @@ class RequireCodeScanningResultsRequirement(Requirement):
             # directing the user to the checkbox.
             resolution = textwrap.dedent(
                 f"""\
-                1) Open the repository's [Rules settings]({repository_url}/settings/rules) page.
+                1) Open the repository's [Rulesets settings]({repository_url}/settings/rules) page.
                 2) Click the name of the ruleset that targets `{branch_name}`.
-                3) Add at least {acceptable_value} code scanning tool(s) beneath the **Require code scanning results** checkbox in the **Branch rules** section.
+                3) Click **Add tool** beneath the **Require code scanning results** checkbox in the **Branch rules** section until at least {acceptable_value} code scanning tool(s) are listed.
                 4) Click the **Save changes** button at the bottom of the page.
 
                 See [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-code-scanning-results)
