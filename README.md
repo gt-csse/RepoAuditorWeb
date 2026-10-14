@@ -79,11 +79,11 @@ Select the experience with `--experience`:
 `--execute` runs the audit immediately in the `web` experience.
 
 #### JSON Output
-The `json` experience writes a single document with an entry for each audited repository; `schema_version` is incremented whenever a change would break an existing consumer.
+The `json` experience writes a single document with an entry for each audited repository. `$schema` references the [JSON Schema](src/RepoAuditorWeb/schemas/json_experience_v3.schema.json) for the document; its version is incremented whenever a change would break an existing consumer, and it is also included in the installed package.
 
 ```json
 {
-  "schema_version": 2,
+  "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
   "error": "<message or null>",
   "repositories": [
     {

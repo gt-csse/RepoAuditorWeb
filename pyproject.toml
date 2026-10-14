@@ -58,6 +58,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "autogitsemver>=0.9.18",
+    "jsonschema>=4.26.0",
     "pre-commit>=4.6.1",
     "py-minisign>=0.13.2",
     "pytest>=9.1.1",

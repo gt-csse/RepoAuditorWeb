@@ -3,12 +3,15 @@ import json
 import textwrap
 
 from contextlib import nullcontext, redirect_stderr, redirect_stdout
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
+from jsonschema import Draft202012Validator
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
+from RepoAuditorWeb import json_experience
 from RepoAuditorWeb.json_experience import CreateRepositoryEntry, ExecuteExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters
 from RepoAuditorWeb.lib.requirement import EvaluateResultValue
@@ -403,7 +406,7 @@ class TestDocument:
 
         assert output == textwrap.dedent(
             """            {
-              "schema_version": 2,
+              "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
               "error": null,
               "repositories": [
                 {
@@ -463,7 +466,11 @@ class TestDocument:
         ):
             document = _ExecuteDocument([], expected_exception=RuntimeError)
 
-        assert document == {"schema_version": 2, "error": "My error.", "repositories": []}
+        assert document == {
+            "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
+            "error": "My error.",
+            "repositories": [],
+        }
 
     # ----------------------------------------------------------------------
     # Repositories audited before the run was interrupted are retained in the document.
@@ -482,3 +489,53 @@ class TestDocument:
         assert [repository["common_arguments"] for repository in document["repositories"]] == [
             {"url": "first_url"},
         ]
+
+
+# ----------------------------------------------------------------------
+# The schema is validated against documents produced by the experience so that the two cannot diverge.
+class TestSchema:
+    # ----------------------------------------------------------------------
+    @staticmethod
+    def _Validate(document: dict) -> None:
+        schema = json.loads(
+            (Path(json_experience.__file__).parent / "schemas" / "json_experience_v3.schema.json").read_text(
+                encoding="utf-8"
+            ),
+        )
+
+        Draft202012Validator.check_schema(schema)
+
+        assert document["$schema"] == schema["$id"]
+        Draft202012Validator(schema).validate(document)
+
+    # ----------------------------------------------------------------------
+    def test_Results(self):
+        self._Validate(
+            _ExecuteDocument(
+                [
+                    _CreateRequirement("Skipped", EvaluateResultValue.Skipped),
+                    _CreateRequirement("DoesNotApply", EvaluateResultValue.DoesNotApply),
+                    _CreateRequirement("Success", EvaluateResultValue.Success, context="My context."),
+                    _CreateRequirement("Warning", EvaluateResultValue.Warning, resolution="My resolution."),
+                    _CreateRequirement("Error", EvaluateResultValue.Error, rationale="My rationale."),
+                ],
+                common_arguments={"pat": "my_pat", "branch": "main"},
+                urls=["https://github.com/gt-csse/RepoAuditorWeb"],
+            ),
+        )
+
+    # ----------------------------------------------------------------------
+    def test_RepositoryError(self):
+        with mock.patch(
+            "RepoAuditorWeb.json_experience.Execute",
+            side_effect=[RuntimeError("My error."), []],
+        ):
+            self._Validate(_ExecuteDocument([], urls=["first_url", "second_url"]))
+
+    # ----------------------------------------------------------------------
+    def test_Error(self):
+        with mock.patch(
+            "RepoAuditorWeb.json_experience.InvokeForEachRepository",
+            side_effect=RuntimeError("My error."),
+        ):
+            self._Validate(_ExecuteDocument([], expected_exception=RuntimeError))
