@@ -18,7 +18,7 @@ class AutomatedTestsRequirement(FileExistsRequirement):
                 """\
                 Add automated tests to a `tests` directory in the root of the repository, and run them in
                 continuous integration (for example, with
-                [GitHub Actions](https://docs.github.com/en/actions/use-cases-and-examples/building-and-testing)).
+                [GitHub Actions](https://docs.github.com/en/actions/tutorials/build-and-test-code)).
                 Document how to run the tests in the README or the CONTRIBUTING file.
                 """,
             ),

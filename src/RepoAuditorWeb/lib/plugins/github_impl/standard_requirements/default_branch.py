@@ -58,7 +58,7 @@ class DefaultBranchRequirement(Requirement):
                 2) Scroll to the **Default branch** section.
                 3) Click the switch icon next to the current default branch name.
                 4) Select a branch whose name is one of these values: {acceptable_values_str}.
-                5) Click the **Rename branch** button.
+                5) Click the **Update** button.
                 6) Click the **I understand, update the default branch** button.
 
                 The repository must already contain the branch being selected, so create and push it

@@ -251,10 +251,10 @@ def test_CodeScanningNotRequiredResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
         3) Check the **Require code scanning results** checkbox in the **Branch rules** section.
-        4) Add at least 1 code scanning tool(s) beneath that checkbox.
+        4) Click **Add tool** beneath that checkbox until at least 1 code scanning tool(s) are listed.
         5) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_CODE_SCANNING_DOCUMENTATION_URL})
@@ -284,9 +284,9 @@ def test_RuleWithoutToolsResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Add at least 1 code scanning tool(s) beneath the **Require code scanning results** checkbox in the **Branch rules** section.
+        3) Click **Add tool** beneath the **Require code scanning results** checkbox in the **Branch rules** section until at least 1 code scanning tool(s) are listed.
         4) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_CODE_SCANNING_DOCUMENTATION_URL})
@@ -392,9 +392,9 @@ def test_ErrorResolutionUsesValue():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Add at least 3 code scanning tool(s) beneath the **Require code scanning results** checkbox in the **Branch rules** section.
+        3) Click **Add tool** beneath the **Require code scanning results** checkbox in the **Branch rules** section until at least 3 code scanning tool(s) are listed.
         4) Click the **Save changes** button at the bottom of the page.
 
         See [Available rules for rulesets]({_CODE_SCANNING_DOCUMENTATION_URL})
@@ -461,7 +461,7 @@ def test_ZeroResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
         3) Clear the **Require code scanning results** checkbox in the **Branch rules** section.
         4) Click the **Save changes** button at the bottom of the page.

@@ -191,7 +191,7 @@ def test_ErrorResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the **New ruleset** button, then click **New branch ruleset**.
         3) Enter `'main' - ruleset` in the **Ruleset name** field.
         4) Set the enforcement status to **Active**.
@@ -215,7 +215,7 @@ def test_ErrorResolutionWhenProhibited():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Delete each ruleset that targets `main`, or set its enforcement status to **Disabled**.
         3) Open the repository's [Branches settings](https://github.com/gt-csse/RepoAuditorWeb/settings/branches) page.
         4) Delete each classic branch protection rule whose branch name pattern matches `main`.

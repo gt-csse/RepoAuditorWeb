@@ -54,7 +54,7 @@ class ProtectedDefaultBranchRequirement(Requirement):
             repository_url = cast("GitHubSession", query_data["session"]).github_url
             branch_name = cast(str, query_data["default_branch"])
 
-            rules_link = f"[Rules settings]({repository_url}/settings/rules)"
+            rules_link = f"[Rulesets settings]({repository_url}/settings/rules)"
             branches_link = f"[Branches settings]({repository_url}/settings/branches)"
 
             open_rules_step = f"Open the repository's {rules_link} page."

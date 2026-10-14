@@ -104,10 +104,10 @@ def test_DynamicRequirementOptionsAppearInHelp():
         "--GitHub-Description-value",
         "--GitHub-License-skip",
         "--GitHub-License-value",
-        "--GitHub-Template-skip",
-        "--GitHub-Template-require",
-        "--GitHub-WebCommitSignoff-skip",
-        "--GitHub-WebCommitSignoff-require",
+        "--GitHub-TemplateRepository-skip",
+        "--GitHub-TemplateRepository-require",
+        "--GitHub-RequireContributorsToSignOffOnWebBasedCommits-skip",
+        "--GitHub-RequireContributorsToSignOffOnWebBasedCommits-require",
     } <= _GetOptionNames(app)
 
 

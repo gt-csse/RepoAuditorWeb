@@ -2,61 +2,67 @@ from typing import cast, override
 
 import requests
 
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.auto_merge import AutoMergeRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.allow_auto_merge import (
+    AllowAutoMergeRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.allow_merge_commits import (
+    AllowMergeCommitsRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.allow_rebase_merging import (
+    AllowRebaseMergingRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.allow_squash_merging import (
+    AllowSquashMergingRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.always_suggest_updating_pull_request_branches import (
+    AlwaysSuggestUpdatingPullRequestBranchesRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.automatically_delete_head_branches import (
+    AutomaticallyDeleteHeadBranchesRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.default_branch import (
     DefaultBranchRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.delete_branch_on_merge import (
-    DeleteBranchOnMergeRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.dependabot_security_updates import (
     DependabotSecurityUpdatesRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.description import DescriptionRequirement
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.discussions import (
+    DiscussionsRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.issues import (
+    IssuesRequirement,
+)
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.license import LicenseRequirement
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit_message import (
     MergeCommitMessageRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.merge_commit import MergeCommitRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.public_private import (
-    PublicPrivateRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.projects import (
+    ProjectsRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.rebase_commit import (
-    RebaseCommitRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.pull_requests import (
+    PullRequestsRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.push_protection import (
+    PushProtectionRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.repository_visibility import (
+    RepositoryVisibilityRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.require_contributors_to_sign_off_on_web_based_commits import (
+    RequireContributorsToSignOffOnWebBasedCommitsRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.secret_protection import (
     SecretProtectionRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.secret_push_protection import (
-    SecretPushProtectionRequirement,
-)
 from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.squash_commit_message import (
     SquashCommitMessageRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.squash_commit import (
-    SquashCommitRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.template_repository import (
+    TemplateRepositoryRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.suggest_updating_pull_request_branches import (
-    SuggestUpdatingPullRequestBranchesRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_discussions import (
-    SupportDiscussionsRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_issues import (
-    SupportIssuesRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_projects import (
-    SupportProjectsRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_pull_requests import (
-    SupportPullRequestsRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.support_wikis import (
-    SupportWikisRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.template import TemplateRequirement
-from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.web_commit_signoff import (
-    WebCommitSignoffRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.standard_requirements.wikis import (
+    WikisRequirement,
 )
 from RepoAuditorWeb.lib.query import Query
 
@@ -74,30 +80,31 @@ class StandardQuery(Query):
                 DescriptionRequirement(),
                 LicenseRequirement(),
                 # settings page
-                TemplateRequirement(),
-                WebCommitSignoffRequirement(),
+                TemplateRepositoryRequirement(),
                 DefaultBranchRequirement(),
                 # settings page (Features)
-                SupportWikisRequirement(),
-                SupportIssuesRequirement(),
-                SupportDiscussionsRequirement(),
-                SupportProjectsRequirement(),
-                SupportPullRequestsRequirement(),
+                WikisRequirement(),
+                IssuesRequirement(),
+                DiscussionsRequirement(),
+                ProjectsRequirement(),
+                PullRequestsRequirement(),
                 # settings page (Pull Requests)
-                MergeCommitRequirement(),
+                AllowMergeCommitsRequirement(),
                 MergeCommitMessageRequirement(),
-                SquashCommitRequirement(),
+                AllowSquashMergingRequirement(),
                 SquashCommitMessageRequirement(),
-                RebaseCommitRequirement(),
-                SuggestUpdatingPullRequestBranchesRequirement(),
-                AutoMergeRequirement(),
-                DeleteBranchOnMergeRequirement(),
+                AllowRebaseMergingRequirement(),
+                AlwaysSuggestUpdatingPullRequestBranchesRequirement(),
+                AllowAutoMergeRequirement(),
+                AutomaticallyDeleteHeadBranchesRequirement(),
+                # settings page (Commits)
+                RequireContributorsToSignOffOnWebBasedCommitsRequirement(),
                 # settings page (Danger Zone)
-                PublicPrivateRequirement(),
+                RepositoryVisibilityRequirement(),
                 # advanced security page
                 DependabotSecurityUpdatesRequirement(),
                 SecretProtectionRequirement(),
-                SecretPushProtectionRequirement(),
+                PushProtectionRequirement(),
             ],
         )
 

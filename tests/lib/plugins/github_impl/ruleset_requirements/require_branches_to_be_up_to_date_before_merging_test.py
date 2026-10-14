@@ -206,59 +206,46 @@ def test_RationaleOmittedWhenProhibited(response):
 
 
 # ----------------------------------------------------------------------
-# The setting determines which commit the required checks run against, so it governs nothing on a
-# branch whose ruleset requires no checks. The rationale describes a default that is not being
-# applied, so it is omitted along with the resolution.
+@pytest.mark.parametrize("evaluate_all", [True, False])
 @pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_DoesNotApplyWithoutStatusChecksRule(response):
-    result = _Evaluate(response)
-
-    assert result.result == EvaluateResultValue.DoesNotApply
-    assert result.context == (
-        "The ruleset does not require any status checks to pass, so there are no check results that depend on the branch being up to date."
-    )
-    assert result.resolution is None
-    assert result.rationale is None
-
-
-# ----------------------------------------------------------------------
-# GitHub does not apply the setting unless the rule names a check to run, so a rule that is enabled
-# while naming none leaves nothing for the setting to govern.
-@pytest.mark.parametrize(
-    "parameters",
-    [
-        {"strict_required_status_checks_policy": True, "required_status_checks": []},
-        {"strict_required_status_checks_policy": True, "required_status_checks": None},
-        {"strict_required_status_checks_policy": True},
-        {},
-    ],
-)
-def test_DoesNotApplyWithoutChecks(parameters):
-    result = _Evaluate([{**_CreateStatusChecksRule(strict=True), "parameters": parameters}])
-
-    assert result.result == EvaluateResultValue.DoesNotApply
-    assert result.resolution is None
-    assert result.rationale is None
-
-
-# ----------------------------------------------------------------------
-# A single run is expected to report every failure, so the flag evaluates the setting against the
-# value it would carry once the rule names a check rather than deferring to a later run.
-@pytest.mark.parametrize("response", [[], [_OTHER_RULE]])
-def test_EvaluatedWithoutStatusChecksRuleWhenEvaluatingAll(response):
-    result = _Evaluate(response, evaluate_all=True)
+def test_ErrorWithoutStatusChecksRule(response, evaluate_all):
+    result = _Evaluate(response, evaluate_all=evaluate_all)
 
     assert result.result == EvaluateResultValue.Error
     assert result.context == (
         "The repository's value is 'False', but the requirement was configured to require 'True'."
     )
+    assert result.rationale == _RATIONALE
+
+
+# ----------------------------------------------------------------------
+# The setting is evaluated even when the rule names no check, so its value alone decides the result.
+@pytest.mark.parametrize(
+    ("parameters", "expected"),
+    [
+        (
+            {"strict_required_status_checks_policy": True, "required_status_checks": []},
+            EvaluateResultValue.Success,
+        ),
+        (
+            {"strict_required_status_checks_policy": True, "required_status_checks": None},
+            EvaluateResultValue.Success,
+        ),
+        ({"strict_required_status_checks_policy": True}, EvaluateResultValue.Success),
+        ({}, EvaluateResultValue.Error),
+    ],
+)
+def test_EvaluatedWithoutChecks(parameters, expected):
+    result = _Evaluate([{**_CreateStatusChecksRule(strict=True), "parameters": parameters}])
+
+    assert result.result == expected
 
 
 # ----------------------------------------------------------------------
 # GitHub does not apply the setting until the rule names a check, so the resolution establishes
 # both before directing the user to the setting nested within the rule.
-def test_ResolutionEnablesStatusChecksRuleWhenEvaluatingAll():
-    result = _Evaluate([], evaluate_all=True)
+def test_ResolutionEnablesStatusChecksRule():
+    result = _Evaluate([])
 
     assert result.resolution is not None
     assert (
@@ -344,9 +331,9 @@ def test_ErrorResolution():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+        3) In the **Branch rules** section, find **Require status checks to pass**, and click **Show additional settings**.
         4) Check the **Require branches to be up to date before merging** checkbox.
         5) Click the **Save changes** button at the bottom of the page.
 
@@ -364,9 +351,9 @@ def test_ErrorResolutionWhenProhibited():
 
     assert result.resolution == textwrap.dedent(
         f"""\
-        1) Open the repository's [Rules settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
+        1) Open the repository's [Rulesets settings](https://github.com/gt-csse/RepoAuditorWeb/settings/rules) page.
         2) Click the name of the ruleset that targets `main`.
-        3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section.
+        3) In the **Branch rules** section, find **Require status checks to pass**, and click **Show additional settings**.
         4) Clear the **Require branches to be up to date before merging** checkbox.
         5) Click the **Save changes** button at the bottom of the page.
 

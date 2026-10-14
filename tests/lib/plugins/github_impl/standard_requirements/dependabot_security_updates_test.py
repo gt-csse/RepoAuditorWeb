@@ -163,7 +163,6 @@ def test_ErrorResolution():
         1) Open the repository's [Advanced Security settings](https://github.com/gt-csse/RepoAuditorWeb/settings/security_analysis) page.
         2) Scroll to the **Dependabot security updates** row.
         3) Click the **Enable** button.
-        4) Click the **Save changes** button at the bottom of the page.
 
         See [Configuring Dependabot security updates]({_DOCUMENTATION_URL})
         for more information.
@@ -181,7 +180,6 @@ def test_ErrorResolutionWhenProhibited():
         1) Open the repository's [Advanced Security settings](https://github.com/gt-csse/RepoAuditorWeb/settings/security_analysis) page.
         2) Scroll to the **Dependabot security updates** row.
         3) Click the **Disable** button.
-        4) Click the **Save changes** button at the bottom of the page.
 
         See [Configuring Dependabot security updates]({_DOCUMENTATION_URL})
         for more information.

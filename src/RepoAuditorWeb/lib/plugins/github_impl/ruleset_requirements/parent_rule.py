@@ -2,14 +2,41 @@
 
 from typing import cast, TYPE_CHECKING
 
+from RepoAuditorWeb.lib.requirement import EvaluateResult, EvaluateResultValue
+
 if TYPE_CHECKING:
-    from RepoAuditorWeb.lib.requirement import Markdown
+    from RepoAuditorWeb.lib.module import Module
+    from RepoAuditorWeb.lib.requirement import Markdown, Requirement
 
 
 # ----------------------------------------------------------------------
 # The rule type reported by the branch rules endpoint for GitHub's "Require a pull request before
 # merging" rule, which hosts the settings that several requirements validate.
 PULL_REQUEST_RULE_TYPE = "pull_request"
+
+
+# ----------------------------------------------------------------------
+# Shared by requirements that reach the status checks rule's settings once it already names checks.
+STATUS_CHECKS_SETTINGS_STEP = "3) In the **Branch rules** section, find **Require status checks to pass**, and click **Show additional settings**."
+
+
+# ----------------------------------------------------------------------
+def GetNotOwnedByOrganizationResult(
+    query_data: dict[str, object],
+    context: Markdown,
+    requirement: Requirement,
+    module: Module,
+) -> EvaluateResult | None:
+    """Return a DoesNotApply result when the repository is not owned by an organization, or None when it is.
+
+    Some nested settings are only offered on repositories owned by an organization, so a failure
+    elsewhere would describe a setting that cannot be changed.
+    """
+
+    if query_data["owner_type"] == "Organization":
+        return None
+
+    return EvaluateResult(EvaluateResultValue.DoesNotApply, context, None, None, requirement, module)
 
 
 # ----------------------------------------------------------------------
@@ -70,11 +97,11 @@ def GetPullRequestRuleResolutionPrefix(
     rules = cast(list[dict[str, object]], query_data["response"])
 
     if any(rule.get("type") == PULL_REQUEST_RULE_TYPE for rule in rules):
-        return "3) Click **Show additional settings** beneath **Require a pull request before merging** in the **Branch rules** section."
+        return "3) In the **Branch rules** section, find **Require a pull request before merging**, and click **Show additional settings**."
 
     # The requirement is only reached with the rule absent when every requirement is being
     # evaluated, where enabling the rule is what makes the nested setting reachable. The step is
-    # stated here rather than left to RequirePullRequests because the user works through one
+    # stated here rather than left to RequireAPullRequestBeforeMerging because the user works through one
     # requirement's resolution at a time.
     assert evaluate_all
 
@@ -82,11 +109,7 @@ def GetPullRequestRuleResolutionPrefix(
 
 
 # ----------------------------------------------------------------------
-def GetStatusChecksResolutionPrefix(
-    checks: list[dict[str, object]],
-    *,
-    evaluate_all: bool,
-) -> Markdown:
+def GetStatusChecksResolutionPrefix(checks: list[dict[str, object]]) -> Markdown:
     """Return the resolution steps that reach the nested settings of the status checks rule.
 
     The steps that follow are numbered from 4, so a rule that names no check contributes the steps
@@ -94,12 +117,10 @@ def GetStatusChecksResolutionPrefix(
     """
 
     if checks:
-        return "3) Click **Show additional settings** beneath **Require status checks to pass** in the **Branch rules** section."
+        return STATUS_CHECKS_SETTINGS_STEP
 
     # GitHub does not apply the setting until the rule names a check, so the resolution states what
     # makes the checkbox take effect rather than only where to find it.
-    assert evaluate_all
-
     return (
         "3) Check the **Require status checks to pass** checkbox in the **Branch rules** section "
         "and add at least one status check beneath it."

@@ -9,14 +9,14 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.allowed_merge_m
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.block_force_pushes import (
     BlockForcePushesRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.dismiss_stale_pull_request_approvals import (
-    DismissStalePullRequestApprovalsRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.dismiss_stale_pull_request_approvals_when_new_commits_are_pushed import (
+    DismissStalePullRequestApprovalsWhenNewCommitsArePushedRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approval_of_most_recent_push import (
-    RequireApprovalOfMostRecentPushRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_a_pull_request_before_merging import (
+    RequireAPullRequestBeforeMergingRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approvals import (
-    RequireApprovalsRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_approval_of_the_most_recent_reviewable_push import (
+    RequireApprovalOfTheMostRecentReviewablePushRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_branches_to_be_up_to_date_before_merging import (
     RequireBranchesToBeUpToDateBeforeMergingRequirement,
@@ -24,17 +24,20 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_branche
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_code_scanning_results import (
     RequireCodeScanningResultsRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_conversation_resolution import (
-    RequireConversationResolutionRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_conversation_resolution_before_merging import (
+    RequireConversationResolutionBeforeMergingRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_deployments_to_succeed import (
+    RequireDeploymentsToSucceedRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_linear_history import (
     RequireLinearHistoryRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_pull_requests import (
-    RequirePullRequestsRequirement,
-)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_review_from_code_owners import (
     RequireReviewFromCodeOwnersRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_review_from_specific_teams import (
+    RequireReviewFromSpecificTeamsRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_signed_commits import (
     RequireSignedCommitsRequirement,
@@ -42,11 +45,8 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_signed_
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_status_checks_to_pass import (
     RequireStatusChecksToPassRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.require_successful_deployments import (
-    RequireSuccessfulDeploymentsRequirement,
-)
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.required_reviewers import (
-    RequiredReviewersRequirement,
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.required_approvals import (
+    RequiredApprovalsRequirement,
 )
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_creations import (
     RestrictCreationsRequirement,
@@ -54,11 +54,11 @@ from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_creati
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_deletions import (
     RestrictDeletionsRequirement,
 )
-from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_dismiss_pull_request_reviews import (
-    RestrictDismissPullRequestReviewsRequirement,
-)
 from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_updates import (
     RestrictUpdatesRequirement,
+)
+from RepoAuditorWeb.lib.plugins.github_impl.ruleset_requirements.restrict_who_can_dismiss_pull_request_reviews import (
+    RestrictWhoCanDismissPullRequestReviewsRequirement,
 )
 from RepoAuditorWeb.lib.query import Query
 
@@ -77,17 +77,17 @@ class RulesetQuery(Query):
                 RestrictUpdatesRequirement(),
                 RestrictDeletionsRequirement(),
                 RequireLinearHistoryRequirement(),
-                RequireSuccessfulDeploymentsRequirement(),
+                RequireDeploymentsToSucceedRequirement(),
                 RequireSignedCommitsRequirement(),
                 # branch rules (Require a pull request before merging)
-                RequirePullRequestsRequirement(),
-                RequireApprovalsRequirement(),
-                DismissStalePullRequestApprovalsRequirement(),
+                RequireAPullRequestBeforeMergingRequirement(),
+                RequiredApprovalsRequirement(),
+                DismissStalePullRequestApprovalsWhenNewCommitsArePushedRequirement(),
                 RequireReviewFromCodeOwnersRequirement(),
-                RequireApprovalOfMostRecentPushRequirement(),
-                RestrictDismissPullRequestReviewsRequirement(),
-                RequiredReviewersRequirement(),
-                RequireConversationResolutionRequirement(),
+                RequireApprovalOfTheMostRecentReviewablePushRequirement(),
+                RestrictWhoCanDismissPullRequestReviewsRequirement(),
+                RequireReviewFromSpecificTeamsRequirement(),
+                RequireConversationResolutionBeforeMergingRequirement(),
                 AllowedMergeMethodsRequirement(),
                 # branch rules (continued)
                 RequireStatusChecksToPassRequirement(),
@@ -102,16 +102,15 @@ class RulesetQuery(Query):
     def GetQueryData(self, module_data: dict[str, object]) -> dict[str, object] | None:
         session = cast(requests.Session, module_data["session"])
 
+        repository = session.get("")
+
+        repository.raise_for_status()
+        repository = repository.json()
+
         # Get the branch
         branch = module_data["branch"]
         if branch is None:
-            # Get the default branch name
-            response = session.get("")
-
-            response.raise_for_status()
-            response = response.json()
-
-            branch = response["default_branch"]
+            branch = repository["default_branch"]
 
         assert isinstance(branch, str), (branch, type(branch))
 
@@ -127,6 +126,9 @@ class RulesetQuery(Query):
 
         module_data["branch"] = branch
         module_data["response"] = response
+
+        # Some ruleset settings are only offered on repositories owned by an organization.
+        module_data["owner_type"] = repository["owner"]["type"]
 
         return module_data
 

@@ -20,7 +20,7 @@ class SecurityRequirement(FileExistsRequirement):
                 """\
                 Add a `SECURITY.md` file to the `.github` directory, the root of the repository, or the `docs` directory. The file should list the versions that receive security updates and explain how to privately report a vulnerability, such as through GitHub's private vulnerability reporting or a dedicated email address, along with the response timeline reporters can expect.
 
-                See [Adding a security policy to your repository](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository) for more information.
+                See [Adding a security policy to your repository](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/add-security-policy) for more information.
                 """
             ),
             textwrap.dedent(

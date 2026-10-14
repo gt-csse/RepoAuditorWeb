@@ -170,9 +170,9 @@ def test_PopulatedFailureResolution():
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [home](https://github.com/gt-csse/RepoAuditorWeb) page.
-        2) Click the **Edit** button (or the gear icon) next to the **About** section.
+        2) Click the gear icon to the right of the **About** heading.
         3) Enter a description in the **Description** text box.
-        4) Click the **Save changes** button.
+        4) Click the **Save changes** button in the **Edit repository details** dialog.
 
         See [About repositories]({_DOCUMENTATION_URL})
         for more information.
@@ -188,9 +188,9 @@ def test_EmptyFailureResolution():
     assert result.resolution == textwrap.dedent(
         f"""\
         1) Open the repository's [home](https://github.com/gt-csse/RepoAuditorWeb) page.
-        2) Click the **Edit** button (or the gear icon) next to the **About** section.
+        2) Click the gear icon to the right of the **About** heading.
         3) Clear the contents of the **Description** text box.
-        4) Click the **Save changes** button.
+        4) Click the **Save changes** button in the **Edit repository details** dialog.
 
         See [About repositories]({_DOCUMENTATION_URL})
         for more information.
