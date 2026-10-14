@@ -135,7 +135,11 @@ _INDENT = 2
 
 # Incremented whenever a change to the document would break a consumer that reads it, so that the
 # consumer can detect the change rather than misinterpret the content.
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
+
+# Each version has its own schema file so that a document continues to reference the schema it was
+# written against after the version is incremented.
+_SCHEMA_URI = f"https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v{_SCHEMA_VERSION}.schema.json"
 
 _REDACTED = "***"
 
@@ -150,7 +154,7 @@ def _WriteDocument(entries: list[dict[str, object]], error: str | None) -> None:
     # written to stderr), so it can be redirected to a file or piped to another process as-is.
     json.dump(
         {
-            "schema_version": _SCHEMA_VERSION,
+            "$schema": _SCHEMA_URI,
             "error": error,
             "repositories": entries,
         },

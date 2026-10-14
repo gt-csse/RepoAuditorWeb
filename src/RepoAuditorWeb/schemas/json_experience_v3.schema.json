@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
+  "title": "RepoAuditorWeb json experience document",
+  "description": "The results of auditing one or more repositories.",
+  "type": "object",
+  "required": ["$schema", "error", "repositories"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json"
+    },
+    "error": {
+      "description": "A failure that stopped the run; repositories contains those audited before it.",
+      "$ref": "#/$defs/nullable_string"
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/repository"
+      }
+    }
+  },
+  "$defs": {
+    "nullable_string": {
+      "type": ["string", "null"]
+    },
+    "argument_values": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "repository": {
+      "type": "object",
+      "required": ["arguments", "common_arguments", "error", "summary", "results"],
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["module", "requirements"],
+            "additionalProperties": false,
+            "properties": {
+              "module": {
+                "$ref": "#/$defs/argument_values"
+              },
+              "requirements": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/$defs/argument_values"
+                }
+              }
+            }
+          }
+        },
+        "common_arguments": {
+          "type": "object",
+          "required": ["url"],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "$ref": "#/$defs/nullable_string"
+            },
+            "pat": {
+              "description": "A provided PAT is always redacted.",
+              "enum": ["***", "", null]
+            },
+            "branch": {
+              "$ref": "#/$defs/nullable_string"
+            }
+          }
+        },
+        "error": {
+          "description": "A failure while auditing the repository, in which case summary and results are null.",
+          "$ref": "#/$defs/nullable_string"
+        },
+        "summary": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/summary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "results": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/result"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "error": {
+              "type": "null"
+            },
+            "summary": {
+              "type": "object"
+            },
+            "results": {
+              "type": "array"
+            }
+          }
+        },
+        {
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "null"
+            },
+            "results": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "summary": {
+      "type": "object",
+      "required": ["skipped", "does_not_apply", "success", "warning", "error", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "skipped": {
+          "$ref": "#/$defs/count"
+        },
+        "does_not_apply": {
+          "$ref": "#/$defs/count"
+        },
+        "success": {
+          "$ref": "#/$defs/count"
+        },
+        "warning": {
+          "$ref": "#/$defs/count"
+        },
+        "error": {
+          "$ref": "#/$defs/count"
+        },
+        "total": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["module", "requirement", "description", "result", "context", "resolution", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "module": {
+          "type": "string"
+        },
+        "requirement": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "result": {
+          "enum": ["skipped", "does_not_apply", "success", "warning", "error"]
+        },
+        "context": {
+          "description": "Markdown.",
+          "$ref": "#/$defs/nullable_string"
+        },
+        "resolution": {
+          "description": "Markdown; null when omitted via --no-resolution.",
+          "$ref": "#/$defs/nullable_string"
+        },
+        "rationale": {
+          "description": "Markdown; null when omitted via --no-rationale.",
+          "$ref": "#/$defs/nullable_string"
+        }
+      }
+    }
+  }
+}

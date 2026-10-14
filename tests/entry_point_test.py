@@ -237,7 +237,10 @@ class TestExperience:
 
         document = json.loads(result.stdout)
 
-        assert document["schema_version"] == 2
+        assert (
+            document["$schema"]
+            == "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json"
+        )
         assert document["error"] is None
         assert len(document["repositories"]) == 1
 
