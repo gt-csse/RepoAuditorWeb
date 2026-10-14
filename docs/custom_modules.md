@@ -322,6 +322,7 @@ Guidelines for requirements:
 - Author `context`, `resolution`, and `rationale` as Markdown; every experience renders it.
 - Return a rationale only when `UsesDefaultValues` is `True`, as it justifies the defaults rather than an overridden configuration.
 - Use `EvaluateResultValue.Warning` for conditions that limit the evaluation (such as a missing PAT), and `DoesNotApply` when the requirement is not relevant to the repository.
+- A `Skipped` result must provide `context` explaining why the requirement did not run; `EvaluateResult` raises `ValueError` otherwise.
 
 ## Naming Rules
 Command line options are generated from module, requirement, and parameter names (`--<Module>-<parameter>` and `--<Module>-<Requirement>-<parameter>`), so names are validated when `RepoAuditorWeb` starts:

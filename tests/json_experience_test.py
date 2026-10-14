@@ -126,7 +126,7 @@ class TestSummary:
     def test_AllResultValues(self):
         assert _Execute(
             [
-                _CreateRequirement("Skipped", EvaluateResultValue.Skipped),
+                _CreateRequirement("Skipped", EvaluateResultValue.Skipped, "My context."),
                 _CreateRequirement("DoesNotApply", EvaluateResultValue.DoesNotApply),
                 _CreateRequirement("Success", EvaluateResultValue.Success),
                 _CreateRequirement("Warning", EvaluateResultValue.Warning),
@@ -186,7 +186,7 @@ class TestResults:
     def test_ResultValueNames(self):
         results = _Execute(
             [
-                _CreateRequirement("Skipped", EvaluateResultValue.Skipped),
+                _CreateRequirement("Skipped", EvaluateResultValue.Skipped, "My context."),
                 _CreateRequirement("DoesNotApply", EvaluateResultValue.DoesNotApply),
                 _CreateRequirement("Success", EvaluateResultValue.Success),
                 _CreateRequirement("Warning", EvaluateResultValue.Warning),
@@ -513,7 +513,7 @@ class TestSchema:
         self._Validate(
             _ExecuteDocument(
                 [
-                    _CreateRequirement("Skipped", EvaluateResultValue.Skipped),
+                    _CreateRequirement("Skipped", EvaluateResultValue.Skipped, "My context."),
                     _CreateRequirement("DoesNotApply", EvaluateResultValue.DoesNotApply),
                     _CreateRequirement("Success", EvaluateResultValue.Success, context="My context."),
                     _CreateRequirement("Warning", EvaluateResultValue.Warning, resolution="My resolution."),

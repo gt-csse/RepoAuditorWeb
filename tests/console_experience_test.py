@@ -108,7 +108,7 @@ class TestSummary:
     def test_AllResultValues(self):
         output = _Execute(
             [
-                _CreateRequirement("Skipped", EvaluateResultValue.Skipped),
+                _CreateRequirement("Skipped", EvaluateResultValue.Skipped, "My context."),
                 _CreateRequirement("DoesNotApply", EvaluateResultValue.DoesNotApply),
                 _CreateRequirement("Success", EvaluateResultValue.Success),
                 _CreateRequirement("Warning", EvaluateResultValue.Warning),
@@ -158,7 +158,7 @@ class TestRequirementOutput:
 
     # ----------------------------------------------------------------------
     def test_SkippedIsNotDisplayed(self):
-        output = _Execute([_CreateRequirement("MyRequirement", EvaluateResultValue.Skipped)])
+        output = _Execute([_CreateRequirement("MyRequirement", EvaluateResultValue.Skipped, "My context.")])
 
         assert "Requirement 'MyRequirement'" not in output
 
@@ -248,11 +248,12 @@ class TestVerbose:
     # ----------------------------------------------------------------------
     def test_SkippedIsDisplayed(self):
         output = _Execute(
-            [_CreateRequirement("MyRequirement", EvaluateResultValue.Skipped)],
+            [_CreateRequirement("MyRequirement", EvaluateResultValue.Skipped, "My context.")],
             verbose=True,
         )
 
         assert "Requirement 'MyRequirement'" in output
+        assert "My context." in output
 
     # ----------------------------------------------------------------------
     def test_DoesNotApplyIsDisplayed(self):
