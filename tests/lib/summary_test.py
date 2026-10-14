@@ -9,7 +9,7 @@ def _CreateResult(result: EvaluateResultValue = EvaluateResultValue.Error) -> Ev
     requirement = MyRequirement("MyRequirement", "My requirement description.")
     module = MyModule("MyModule", "My description.", [MyQuery("MyQuery", [requirement])])
 
-    return EvaluateResult(result, None, None, None, requirement, module)
+    return EvaluateResult(result, "My context.", None, None, requirement, module)
 
 
 # ----------------------------------------------------------------------

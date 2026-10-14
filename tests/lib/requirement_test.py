@@ -140,6 +140,22 @@ def test_EvaluateResultConstruct():
 
 
 # ----------------------------------------------------------------------
+@pytest.mark.parametrize("context", [None, ""])
+def test_EvaluateResultErrorSkippedWithoutContext(context):
+    requirement = _CreateRequirement()
+
+    with pytest.raises(ValueError, match=r"^Skipped results must provide context\.$"):
+        EvaluateResult(
+            EvaluateResultValue.Skipped,
+            context,
+            None,
+            None,
+            requirement,
+            _CreateModule(requirement),
+        )
+
+
+# ----------------------------------------------------------------------
 def test_EvaluateResultFrozen():
     requirement = _CreateRequirement()
 
@@ -258,7 +274,7 @@ class TestEvaluate:
 
         assert result == EvaluateResult(
             EvaluateResultValue.Skipped,
-            None,
+            "The 'MyName' requirement was configured to be skipped.",
             None,
             None,
             requirement,
@@ -275,7 +291,7 @@ class TestEvaluate:
 
         assert result == EvaluateResult(
             EvaluateResultValue.Skipped,
-            None,
+            "The 'MyName' requirement runs only when explicitly included, and it was not included.",
             None,
             None,
             requirement,

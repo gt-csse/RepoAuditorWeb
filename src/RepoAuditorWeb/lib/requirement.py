@@ -43,6 +43,14 @@ class EvaluateResult:
     requirement: Requirement
     module: Module
 
+    # ----------------------------------------------------------------------
+    def __post_init__(self) -> None:
+        # A skipped requirement produces no other information, so the context is the only way to tell
+        # users why it did not run.
+        if self.result == EvaluateResultValue.Skipped and not self.context:
+            msg = "Skipped results must provide context."
+            raise ValueError(msg)
+
 
 # ----------------------------------------------------------------------
 class Requirement(ABC):
@@ -113,10 +121,16 @@ class Requirement(ABC):
     ) -> EvaluateResult:
         """Evaluate the requirement based on the results of the query."""
 
-        if (self.requires_explicit_include and not requirement_data["include"]) or (
-            not self.requires_explicit_include and requirement_data["skip"]
-        ):
-            return EvaluateResult(EvaluateResultValue.Skipped, None, None, None, self, module)
+        skipped_context: Markdown | None = None
+
+        if self.requires_explicit_include:
+            if not requirement_data["include"]:
+                skipped_context = f"The '{self.name}' requirement runs only when explicitly included, and it was not included."
+        elif requirement_data["skip"]:
+            skipped_context = f"The '{self.name}' requirement was configured to be skipped."
+
+        if skipped_context is not None:
+            return EvaluateResult(EvaluateResultValue.Skipped, skipped_context, None, None, self, module)
 
         return self._EvaluateImpl(
             module,
