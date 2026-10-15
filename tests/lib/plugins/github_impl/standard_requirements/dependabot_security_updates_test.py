@@ -269,8 +269,11 @@ def test_MissingStatusWithPat():
     result = _Evaluate({})
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's security and analysis settings are not visible because the Personal Access Token provided does not grant admin access to the repository."
+    assert result.context == textwrap.dedent(
+        """\
+        The repository's security and analysis settings are not visible because the Personal Access Token (PAT) provided does not grant admin access to the repository.
+
+        Please make sure it was created by a GitHub user with access to this repository and it has the `Administration: Read` permission.""",
     )
 
 

@@ -240,8 +240,11 @@ def test_MissingStatusWithPat():
     result = _Evaluate({})
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's pull request branch update settings are not visible because the Personal Access Token provided does not grant push access to the repository."
+    assert result.context == textwrap.dedent(
+        """\
+        The repository's pull request branch update settings are not visible because the Personal Access Token (PAT) provided does not grant push access to the repository.
+
+        Please make sure it was created by a GitHub user with access to this repository and it has the `Contents: Read and write` permission.""",
     )
 
 
