@@ -99,8 +99,11 @@ def test_AdminAccessLevelContext():
     result = _Invoke({}, value_description="security and analysis settings", access_level=AccessLevel.Admin)
 
     assert isinstance(result, EvaluateResult)
-    assert result.context == (
-        "The repository's security and analysis settings are not visible because the Personal Access Token provided does not grant admin access to the repository."
+    assert result.context == textwrap.dedent(
+        """\
+        The repository's security and analysis settings are not visible because the Personal Access Token (PAT) provided does not grant admin access to the repository.
+
+        Please make sure it was created by a GitHub user with access to this repository and it has the `Administration: Read` permission.""",
     )
 
 
@@ -180,8 +183,11 @@ def test_NotVisibleWithPat():
 
     assert isinstance(result, EvaluateResult)
     assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's merge settings are not visible because the Personal Access Token provided does not grant push access to the repository."
+    assert result.context == textwrap.dedent(
+        """\
+        The repository's merge settings are not visible because the Personal Access Token (PAT) provided does not grant push access to the repository.
+
+        Please make sure it was created by a GitHub user with access to this repository and it has the `Contents: Read and write` permission.""",
     )
 
 

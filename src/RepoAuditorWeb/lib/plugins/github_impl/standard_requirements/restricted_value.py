@@ -68,7 +68,7 @@ def GetRestrictedValue(
     if cast("GitHubSession", query_data["session"]).has_pat:
         return EvaluateResult(
             EvaluateResultValue.Error,
-            f"The repository's {value_description} are not visible because the Personal Access Token provided does not grant {access_level} access to the repository.",
+            f"The repository's {value_description} are not visible because the Personal Access Token (PAT) provided does not grant {access_level} access to the repository.\n\nPlease make sure it was created by a GitHub user with access to this repository and it has the {_FINE_GRAINED_PERMISSIONS[access_level]} permission.",
             _CreateInsufficientPatResolution(access_level),
             None,
             requirement,

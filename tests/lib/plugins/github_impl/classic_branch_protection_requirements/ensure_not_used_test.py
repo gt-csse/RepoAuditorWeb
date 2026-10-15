@@ -153,8 +153,11 @@ def test_NotVisibleWithPat():
     result = _EvaluateNotVisible(pat="my-pat")
 
     assert result.result == EvaluateResultValue.Error
-    assert result.context == (
-        "The repository's classic branch protection rules are not visible because the Personal Access Token provided does not grant admin access to the repository."
+    assert result.context == textwrap.dedent(
+        """\
+        The repository's classic branch protection rules are not visible because the Personal Access Token (PAT) provided does not grant admin access to the repository.
+
+        Please make sure it was created by a GitHub user with access to this repository and it has the `Administration: Read` permission.""",
     )
 
 
