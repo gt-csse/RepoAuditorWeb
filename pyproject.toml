@@ -45,6 +45,7 @@ JOSSPlugin = "RepoAuditorWeb.lib.plugins.joss_plugin"
 
 [project.scripts]
 repoauditorweb = "RepoAuditorWeb.__main__:app"
+RepoAuditorWeb = "RepoAuditorWeb.__main__:app"
 
 [project.urls]
 Homepage = "https://github.com/gt-csse/RepoAuditorWeb"
