@@ -316,6 +316,15 @@ _STYLE = textwrap.dedent(
     .module-fields > summary .pill.skipped,
     .requirement-fields > summary .pill.skipped { color: var(--skipped); }
 
+    /* A module or requirement that does not run is muted, so that its state reads at a glance rather
+       than only from its pill. Colors are muted rather than the opacity lowered, since the disabled
+       controls within it are already dimmed and would otherwise be dimmed twice. */
+    .module-fields.disabled { background: transparent; border-style: dashed; }
+
+    .module-fields.disabled > summary .name,
+    .module-fields.disabled .query-fields > summary,
+    .requirement-fields.disabled > summary .name { color: var(--skipped); }
+
     input[type="text"], input[type="number"], select {
       width: 100%;
       /* Widening a control past what its value can occupy makes it harder to read, not easier. */
@@ -696,19 +705,21 @@ _SCRIPT = textwrap.dedent(
 
     // Whether a module or requirement runs is worth knowing while it is collapsed, so the pill
     // belongs to the summary and tracks the field that governs it rather than reading it once.
-    function AddPill(container, summary, toggle) {
+    function AddPill(container, details, summary, toggle) {
       const pill = document.createElement("span");
       pill.className = "pill";
       summary.appendChild(pill);
 
       const Refresh = () => {
-        const included = IsIncluded(container, toggle);
+        // A skipped module runs none of its requirements, whatever their own fields say.
+        const included = details.dataset.inherited !== "disabled" && IsIncluded(container, toggle);
         pill.textContent = included ? "included" : "skipped";
         pill.classList.toggle("included", included);
         pill.classList.toggle("skipped", !included);
       };
 
       toggle.addEventListener("change", Refresh);
+      details.addEventListener("refresh-disabling", Refresh);
       Refresh();
     }
 
@@ -783,7 +794,7 @@ _SCRIPT = textwrap.dedent(
       if (container.toggle) {
         const toggle = details.querySelector(`#${CSS.escape(container.toggle)}`);
 
-        AddPill(container, summary, toggle);
+        AddPill(container, details, summary, toggle);
 
         // Deferred so that a module disables the sections it holds, which are appended by the
         // caller after this returns.

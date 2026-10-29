@@ -262,9 +262,21 @@ def test_PillTracksTheFieldThatGovernsTheContainer():
 
     assert 'if (toggle instanceof HTMLSelectElement) return toggle.value !== "skip";' in page
     assert "return container.toggle_includes ? toggle.checked : !toggle.checked;" in page
-    assert "const included = IsIncluded(container, toggle);" in page
     assert 'pill.textContent = included ? "included" : "skipped";' in page
     assert 'toggle.addEventListener("change", Refresh);' in page
+
+
+# ----------------------------------------------------------------------
+# A requirement in a skipped module does not run, so its pill says so whatever its own field says.
+def test_PillFollowsTheModule():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        'const included = details.dataset.inherited !== "disabled" && IsIncluded(container, toggle);' in page
+    )
+
+    # Once for the pill and once for the disabling, so the pill is refreshed alongside the controls.
+    assert page.count('details.addEventListener("refresh-disabling", Refresh);') == 2
 
 
 # ----------------------------------------------------------------------
@@ -415,6 +427,26 @@ def test_DisabledControlsAreDimmed():
 
     assert ".field :disabled { opacity: 0.5; cursor: default; }" in page
     assert ".field:has(:disabled) > label { opacity: 0.5; }" in page
+
+
+# ----------------------------------------------------------------------
+# A module or requirement that does not run is muted, so that its state does not have to be read
+# from its pill alone.
+def test_ContainersThatDoNotRunAreMuted():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            .module-fields.disabled { background: transparent; border-style: dashed; }
+
+            .module-fields.disabled > summary .name,
+            .module-fields.disabled .query-fields > summary,
+            .requirement-fields.disabled > summary .name { color: var(--skipped); }
+            """,
+        )
+        in page
+    )
 
 
 # ----------------------------------------------------------------------
