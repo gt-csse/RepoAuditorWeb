@@ -48,7 +48,7 @@ def CreatePage(
         <header><h1><img src="/icon.svg" alt="">RepoAuditor</h1></header>
         <main>
         <section id="arguments">
-        <h2>Arguments</h2>
+        <h2>Options</h2>
         <form id="form" autocomplete="off"></form>
         <div class="actions">
         <button type="button" id="execute">Execute</button>
@@ -146,10 +146,12 @@ _STYLE = textwrap.dedent(
 
     section { margin-bottom: 24px; }
 
+    /* The page's sections are larger than the queries nested within them, which share their
+       uppercase style, so that the page's structure reads from the outside in. */
     section > h2 {
-      font-size: 13px;
+      font-size: 15px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: var(--muted);
       margin: 0 0 10px;
     }

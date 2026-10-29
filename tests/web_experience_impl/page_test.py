@@ -146,6 +146,17 @@ def test_ResetClearsTheGeneratedContent():
 
 
 # ----------------------------------------------------------------------
+# The form's section is named for what it is to the user rather than for the command line's
+# arguments, and the page's sections are larger than the queries that share their style.
+def test_SectionHeadingsLeadThePage():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "<h2>Options</h2>" in page
+    assert "<h2>Arguments</h2>" not in page
+    assert "section > h2 {\n  font-size: 15px;\n" in page
+
+
+# ----------------------------------------------------------------------
 # Nothing has been generated when the page loads, so the reset button starts out disabled and is
 # only enabled once a run has produced output or results.
 def test_ResetIsDisabledWhenThereIsNothingToReset():
