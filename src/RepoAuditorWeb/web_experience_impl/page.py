@@ -227,6 +227,10 @@ _STYLE = textwrap.dedent(
 
     .requirement-fields > summary { margin-left: -12px; padding: 7px 0; }
 
+    /* Measuring the labels opens and closes every section, after which WebKit (the engine behind
+       the window) keeps reserving the height of a collapsed section's contents. */
+    #form details:not([open]) > :not(summary) { display: none; }
+
     .module-fields > summary,
     .query-fields > summary,
     .requirement-fields > summary {
