@@ -305,6 +305,15 @@ def test_RequirementsAreGroupedByTheirCollapsedQuery():
 
 
 # ----------------------------------------------------------------------
+# Measuring the labels opens and closes every section, after which WebKit keeps reserving the height
+# of a collapsed section's contents unless they are removed from the layout.
+def test_CollapsedSectionsReserveNoSpace():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "#form details:not([open]) > :not(summary) { display: none; }" in page
+
+
+# ----------------------------------------------------------------------
 # A query has no toggle of its own, so a module disables the requirements nested within its queries.
 def test_ModuleDisablesRequirementsWithinQueries():
     page = CreatePage(_GROUPS, "my_token")
