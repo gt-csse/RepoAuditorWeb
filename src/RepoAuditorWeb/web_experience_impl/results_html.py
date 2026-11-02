@@ -113,7 +113,7 @@ def _RenderRequirements(
             f'<details class="requirement {name}" open>',
             (
                 f'<summary><span class="module">{html.escape(result.module.name)}</span>'
-                f'Requirement <span class="name">{html.escape(result.requirement.name)}</span>'
+                f'<span class="name">{html.escape(result.requirement.name)}</span>'
                 f'<span class="badge">{_RESULT_VALUE_DISPLAY_NAMES[result.result]}</span></summary>'
             ),
             '<div class="body">',

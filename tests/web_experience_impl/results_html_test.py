@@ -31,6 +31,15 @@ def test_ModuleIsRendered():
 
 
 # ----------------------------------------------------------------------
+# Every result is that of a requirement, so the heading names it without saying so.
+def test_RequirementIsNamedWithoutALabel():
+    html = RenderResults([_CreateResult()])
+
+    assert '<span class="module">MyModule</span><span class="name">MyRequirement</span>' in html
+    assert "Requirement <span" not in html
+
+
+# ----------------------------------------------------------------------
 def test_ModuleIsRenderedForEachResult():
     html = RenderResults(
         [
