@@ -184,6 +184,50 @@ def test_Execute():
 
 
 # ----------------------------------------------------------------------
+# The form can be several screens long, so its buttons stay at the bottom of the window while it is
+# scrolled, beneath the header when they pass it.
+def test_ActionsStayInViewWhileTheFormIsScrolled():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            .actions {
+              position: sticky;
+              bottom: 0;
+              z-index: 1;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              margin: 0 calc(-1 * var(--gutter));
+              padding: 12px var(--gutter);
+              border-top: 1px solid var(--border);
+              background: var(--bg);
+            }
+            """,
+        )
+        in page
+    )
+
+    assert (
+        textwrap.dedent(
+            """\
+            header {
+              padding: 12px 20px;
+              border-bottom: 1px solid var(--border);
+              position: sticky;
+              top: 0;
+              background: var(--bg);
+              /* Above the form's buttons, which also stay in view and pass beneath it on their way out. */
+              z-index: 2;
+            }
+            """,
+        )
+        in page
+    )
+
+
+# ----------------------------------------------------------------------
 # A collapsed section displays its summary and nothing else, so the pill must belong to the summary
 # for the state of the requirement to remain visible.
 def test_PillIsDisplayedBySummary():

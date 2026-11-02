@@ -128,7 +128,8 @@ _STYLE = textwrap.dedent(
       position: sticky;
       top: 0;
       background: var(--bg);
-      z-index: 1;
+      /* Above the form's buttons, which also stay in view and pass beneath it on their way out. */
+      z-index: 2;
     }
 
     header h1 {
@@ -142,7 +143,7 @@ _STYLE = textwrap.dedent(
 
     header h1 img { width: 24px; height: 24px; }
 
-    main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    main { --gutter: 20px; padding: var(--gutter); max-width: 1100px; margin: 0 auto; }
 
     section { margin-bottom: 24px; }
 
@@ -340,7 +341,21 @@ _STYLE = textwrap.dedent(
     /* The row centers the control against its label, so the checkbox needs no offset of its own. */
     input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
 
-    .actions { display: flex; align-items: center; gap: 10px; }
+    /* The form can be several screens long, so its buttons stay at the bottom of the window while
+       it is scrolled, the way the header stays at the top. They are held within the form's section,
+       so they are left behind rather than covering the output and results beneath it. */
+    .actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 calc(-1 * var(--gutter));
+      padding: 12px var(--gutter);
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
 
     button {
       padding: 7px 16px;
