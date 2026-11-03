@@ -396,6 +396,12 @@ _STYLE = textwrap.dedent(
       font: 12px/1.45 ui-monospace, "Cascadia Mono", monospace;
     }
 
+    /* A module's failure is reported only in the log, so its errors and warnings are marked. Only
+       the label is colored, since a message may span several lines and reads better uncolored. */
+    #output .error, #output .warning { font-weight: 600; }
+    #output .error { color: var(--error); }
+    #output .warning { color: var(--warning); }
+
     table.summary { border-collapse: collapse; margin-bottom: 18px; }
 
     table.summary th, table.summary td {
@@ -613,6 +619,7 @@ _SCRIPT = textwrap.dedent(
     const status = document.getElementById("status");
     const outputSection = document.getElementById("output-section");
     const output = document.getElementById("output");
+    const outputTail = output.appendChild(document.createElement("span"));
     const resultsSection = document.getElementById("results-section");
     const results = document.getElementById("results");
     const linkStatus = document.getElementById("link-status");
@@ -904,7 +911,8 @@ _SCRIPT = textwrap.dedent(
     // The form retains what the user entered; only what a run produced is discarded.
     function Reset() {
       outputSection.hidden = true;
-      output.textContent = "";
+      outputTail.textContent = "";
+      output.replaceChildren(outputTail);
       resultsSection.hidden = true;
       results.textContent = "";
 
@@ -956,6 +964,28 @@ _SCRIPT = textwrap.dedent(
       results.appendChild(div);
     }
 
+    function RenderLine(line) {
+      const match = /^(\\s*)(ERROR|WARNING):/.exec(line);
+      if (!match) return [line];
+
+      const [label, indent, level] = match;
+
+      const span = document.createElement("span");
+      span.className = level.toLowerCase();
+      span.textContent = label.slice(indent.length);
+      return [indent, span, line.slice(label.length)];
+    }
+
+    // Output arrives in chunks that may end mid-line, splitting a label, so only the unfinished
+    // last line is redrawn; redrawing the whole log would slow a long run with every chunk.
+    function AppendOutput(content) {
+      const lines = (outputTail.textContent + content).split("\\n");
+      const tail = lines.pop();
+
+      outputTail.before(...lines.flatMap((line) => [...RenderLine(line), "\\n"]));
+      outputTail.replaceChildren(...RenderLine(tail));
+    }
+
     function Stream() {
       const source = new EventSource(`/api/stream?token=${encodeURIComponent(config.token)}`);
 
@@ -964,7 +994,7 @@ _SCRIPT = textwrap.dedent(
 
         if (message.type === "output") {
           const atBottom = output.scrollHeight - output.scrollTop - output.clientHeight < 40;
-          output.textContent += message.content;
+          AppendOutput(message.content);
           if (atBottom) output.scrollTop = output.scrollHeight;
         } else if (message.type === "results") {
           resultsSection.hidden = false;
