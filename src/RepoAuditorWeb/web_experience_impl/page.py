@@ -381,6 +381,8 @@ _STYLE = textwrap.dedent(
 
     #status { color: var(--muted); }
 
+    #status.error { color: var(--error); }
+
     #output {
       margin: 0;
       padding: 12px;
@@ -915,9 +917,25 @@ _SCRIPT = textwrap.dedent(
       return args;
     }
 
+    // A run without a module produces no results, which would read as a clean audit rather than
+    // as nothing having been audited.
+    function RefreshExecuteButton() {
+      const noModule = !config.groups.some(
+        (group) => !group.toggle || IsIncluded(group, document.getElementById(group.toggle))
+      );
+
+      executeButton.disabled = noModule;
+      status.classList.toggle("error", noModule);
+      status.textContent = noModule ? "Include at least one module to execute." : "";
+    }
+
     function SetRunning(running) {
-      executeButton.disabled = running;
-      status.textContent = running ? "Executing..." : "";
+      if (running) {
+        executeButton.disabled = true;
+        status.classList.remove("error");
+        status.textContent = "Executing...";
+      } else RefreshExecuteButton();
+
       for (const element of form.elements) element.disabled = running;
 
       // Enabling every control is what a run ending would otherwise do, which would revive the
@@ -966,6 +984,8 @@ _SCRIPT = textwrap.dedent(
     }
 
     async function Execute() {
+      if (executeButton.disabled) return;
+
       Reset();
       outputSection.hidden = false;
 
@@ -1022,12 +1042,14 @@ _SCRIPT = textwrap.dedent(
 
     executeButton.addEventListener("click", Execute);
     resetButton.addEventListener("click", Reset);
+    form.addEventListener("change", RefreshExecuteButton);
 
     // The share of the form the column may claim depends on how wide the form is.
     window.addEventListener("resize", RefreshLabelWidth);
 
     BuildForm();
     RefreshResetButton();
+    RefreshExecuteButton();
 
     // The form must exist before its values can be submitted.
     if (config.execute) Execute();

@@ -157,6 +157,31 @@ def test_SectionHeadingsLeadThePage():
 
 
 # ----------------------------------------------------------------------
+# A run without a module would produce no results, which reads as a clean audit, so Execute is
+# disabled and an error is displayed beside the buttons until a module is included.
+def test_ExecuteRequiresAModule():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            function RefreshExecuteButton() {
+              const noModule = !config.groups.some(
+                (group) => !group.toggle || IsIncluded(group, document.getElementById(group.toggle))
+              );
+            """
+        )
+        in page
+    )
+    assert "executeButton.disabled = noModule;" in page
+    assert 'status.classList.toggle("error", noModule);' in page
+    assert 'status.textContent = noModule ? "Include at least one module to execute." : "";' in page
+    assert "#status.error { color: var(--error); }" in page
+    assert 'form.addEventListener("change", RefreshExecuteButton);' in page
+    assert "RefreshResetButton();\nRefreshExecuteButton();\n" in page
+
+
+# ----------------------------------------------------------------------
 # Nothing has been generated when the page loads, so the reset button starts out disabled and is
 # only enabled once a run has produced output or results.
 def test_ResetIsDisabledWhenThereIsNothingToReset():
