@@ -133,7 +133,8 @@ def test_ResetClearsTheGeneratedContent():
             """\
             function Reset() {
               outputSection.hidden = true;
-              output.textContent = "";
+              outputTail.textContent = "";
+              output.replaceChildren(outputTail);
               resultsSection.hidden = true;
               results.textContent = "";
 
@@ -179,6 +180,33 @@ def test_ExecuteRequiresAModule():
     assert "#status.error { color: var(--error); }" in page
     assert 'form.addEventListener("change", RefreshExecuteButton);' in page
     assert "RefreshResetButton();\nRefreshExecuteButton();\n" in page
+
+
+# ----------------------------------------------------------------------
+# A module's failure is reported only in the log, so the labels of its errors and warnings are
+# highlighted; the message is not, since it may span several lines.
+def test_OutputHighlightsErrorAndWarningLabels():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "const match = /^(\\s*)(ERROR|WARNING):/.exec(line);" in page
+    assert "span.textContent = label.slice(indent.length);" in page
+    assert "return [indent, span, line.slice(label.length)];" in page
+    assert "#output .error, #output .warning { font-weight: 600; }" in page
+    assert "#output .error { color: var(--error); }" in page
+    assert "#output .warning { color: var(--warning); }" in page
+
+
+# ----------------------------------------------------------------------
+# Output arrives in chunks that may end mid-line, so only the unfinished last line is redrawn rather
+# than the whole log, which would slow a long run with every chunk.
+def test_OutputAppendsCompleteLinesAndRedrawsOnlyTheTail():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'const outputTail = output.appendChild(document.createElement("span"));' in page
+    assert "AppendOutput(message.content);" in page
+    assert 'const lines = (outputTail.textContent + content).split("\\n");' in page
+    assert 'outputTail.before(...lines.flatMap((line) => [...RenderLine(line), "\\n"]));' in page
+    assert "outputTail.replaceChildren(...RenderLine(tail));" in page
 
 
 # ----------------------------------------------------------------------
