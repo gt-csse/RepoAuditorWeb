@@ -402,6 +402,14 @@ _STYLE = textwrap.dedent(
     #output .error { color: var(--error); }
     #output .warning { color: var(--warning); }
 
+    /* The webview disables selection across the page so that it behaves like an application, but
+       the output and results are meant to be copied elsewhere. */
+    #output, #results {
+      -webkit-user-select: text;
+      user-select: text;
+      cursor: auto;
+    }
+
     table.summary { border-collapse: collapse; margin-bottom: 18px; }
 
     table.summary th, table.summary td {
@@ -986,6 +994,11 @@ _SCRIPT = textwrap.dedent(
       outputTail.replaceChildren(...RenderLine(tail));
     }
 
+    function IsSelectingOutput() {
+      const selection = getSelection();
+      return !selection.isCollapsed && output.contains(selection.anchorNode);
+    }
+
     function Stream() {
       const source = new EventSource(`/api/stream?token=${encodeURIComponent(config.token)}`);
 
@@ -995,7 +1008,9 @@ _SCRIPT = textwrap.dedent(
         if (message.type === "output") {
           const atBottom = output.scrollHeight - output.scrollTop - output.clientHeight < 40;
           AppendOutput(message.content);
-          if (atBottom) output.scrollTop = output.scrollHeight;
+          // Scrolling would move selected text away before it is copied, or extend a selection in
+          // progress by moving the text beneath the pointer.
+          if (atBottom && !IsSelectingOutput()) output.scrollTop = output.scrollHeight;
         } else if (message.type === "results") {
           resultsSection.hidden = false;
           results.innerHTML = message.html;

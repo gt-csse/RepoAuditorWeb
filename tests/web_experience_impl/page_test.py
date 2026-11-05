@@ -557,3 +557,43 @@ def test_ControlsAreCenteredAgainstTheirDescription():
 
     # The row centers the control, so a checkbox needs no offset of its own to line up with it.
     assert 'input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }' in page
+
+
+# ----------------------------------------------------------------------
+# The webview disables selection across the page, so the output and results opt back in to it so
+# that they can be copied.
+def test_OutputAndResultsAreSelectable():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            #output, #results {
+              -webkit-user-select: text;
+              user-select: text;
+              cursor: auto;
+            }
+            """,
+        )
+        in page
+    )
+
+
+# ----------------------------------------------------------------------
+# Scrolling to new output would move selected text away before it is copied, or extend a selection
+# in progress.
+def test_OutputDoesNotScrollWhileSelecting():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            function IsSelectingOutput() {
+              const selection = getSelection();
+              return !selection.isCollapsed && output.contains(selection.anchorNode);
+            }
+            """,
+        )
+        in page
+    )
+    assert "if (atBottom && !IsSelectingOutput()) output.scrollTop = output.scrollHeight;" in page
