@@ -597,3 +597,28 @@ def test_OutputDoesNotScrollWhileSelecting():
         in page
     )
     assert "if (atBottom && !IsSelectingOutput()) output.scrollTop = output.scrollHeight;" in page
+
+
+# ----------------------------------------------------------------------
+# The macOS window ignores 'window.open', so a clicked link is marked to open elsewhere and followed.
+def test_ClickedLinksOpenElsewhere():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            document.addEventListener("click", (event) => {
+              const link = FindLink(event.target);
+              if (!link || !/^https?:$/.test(link.protocol)) return;
+
+              linkStatus.hidden = true;
+
+              // The macOS window ignores 'window.open' and hands only a clicked link that opens elsewhere to
+              // the browser, so the link is marked to open elsewhere and left to be followed.
+              link.target = "_blank";
+              link.rel = "noopener";
+            });
+            """,
+        )
+        in page
+    )

@@ -1080,9 +1080,12 @@ _SCRIPT = textwrap.dedent(
       const link = FindLink(event.target);
       if (!link || !/^https?:$/.test(link.protocol)) return;
 
-      event.preventDefault();
       linkStatus.hidden = true;
-      window.open(link.href, "_blank");
+
+      // The macOS window ignores 'window.open' and hands only a clicked link that opens elsewhere to
+      // the browser, so the link is marked to open elsewhere and left to be followed.
+      link.target = "_blank";
+      link.rel = "noopener";
     });
 
     executeButton.addEventListener("click", Execute);
