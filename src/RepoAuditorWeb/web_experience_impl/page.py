@@ -1062,8 +1062,7 @@ _SCRIPT = textwrap.dedent(
       return target instanceof Element ? target.closest("a[href]") : null;
     }
 
-    // The window has no address bar or back button, so the destination of a link is displayed on
-    // hover and following one is handed to the browser rather than navigating away from the results.
+    // The window has no address bar, so a link's destination is displayed on hover.
     document.addEventListener("mouseover", (event) => {
       const link = FindLink(event.target);
       if (!link) return;
@@ -1072,18 +1071,13 @@ _SCRIPT = textwrap.dedent(
       linkStatus.hidden = false;
     });
 
-    document.addEventListener("mouseout", (event) => {
+    // Following a link moves focus to the browser, so 'mouseout' may never fire.
+    function HideLinkStatus(event) {
       if (FindLink(event.target)) linkStatus.hidden = true;
-    });
+    }
 
-    document.addEventListener("click", (event) => {
-      const link = FindLink(event.target);
-      if (!link || !/^https?:$/.test(link.protocol)) return;
-
-      event.preventDefault();
-      linkStatus.hidden = true;
-      window.open(link.href, "_blank");
-    });
+    document.addEventListener("mouseout", HideLinkStatus);
+    document.addEventListener("click", HideLinkStatus);
 
     executeButton.addEventListener("click", Execute);
     resetButton.addEventListener("click", Reset);

@@ -597,3 +597,24 @@ def test_OutputDoesNotScrollWhileSelecting():
         in page
     )
     assert "if (atBottom && !IsSelectingOutput()) output.scrollTop = output.scrollHeight;" in page
+
+
+# ----------------------------------------------------------------------
+# Following a link moves focus to the browser, so 'mouseout' may never fire.
+def test_LinkStatusIsHiddenWhenALinkIsFollowed():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            function HideLinkStatus(event) {
+              if (FindLink(event.target)) linkStatus.hidden = true;
+            }
+
+            document.addEventListener("mouseout", HideLinkStatus);
+            document.addEventListener("click", HideLinkStatus);
+            """,
+        )
+        in page
+    )
+    assert "window.open" not in page

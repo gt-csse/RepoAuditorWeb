@@ -3,6 +3,7 @@
 import html
 
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from markdown_it import MarkdownIt
 
@@ -78,6 +79,18 @@ def _DemoteHeadings(tokens: list[Token]) -> None:
 
 
 # ----------------------------------------------------------------------
+# The macOS app window ignores 'window.open' and hands only a link that opens elsewhere to the
+# browser, so web links are marked to open elsewhere.
+def _OpenWebLinksElsewhere(tokens: list[Token]) -> None:
+    for token in tokens:
+        if token.children:
+            _OpenWebLinksElsewhere(token.children)
+        elif token.type == "link_open" and urlparse(str(token.attrGet("href"))).scheme in {"http", "https"}:
+            token.attrSet("target", "_blank")
+            token.attrSet("rel", "noopener")
+
+
+# ----------------------------------------------------------------------
 def _RenderSummary(summary: Summary) -> str:
     rows: list[str] = []
 
@@ -147,5 +160,6 @@ def _RenderRequirements(
 def _RenderMarkdown(content: Markdown) -> str:
     tokens = _markdown.parse(content)
     _DemoteHeadings(tokens)
+    _OpenWebLinksElsewhere(tokens)
 
     return _markdown.renderer.render(tokens, _markdown.options, {}).strip()
