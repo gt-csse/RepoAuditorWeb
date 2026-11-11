@@ -148,6 +148,19 @@ class TestHeadings:
 
 
 # ----------------------------------------------------------------------
+class TestLinks:
+    # ----------------------------------------------------------------------
+    @pytest.mark.parametrize("url", ["https://example.com", "http://example.com"])
+    def test_WebLinksOpenElsewhere(self, url):
+        html = RenderResults([_CreateResult(context=f"See [the docs]({url}) or <{url}>.")])
+
+        assert (
+            f'<div class="context"><p>See <a href="{url}" target="_blank" rel="noopener">the docs</a> '
+            f'or <a href="{url}" target="_blank" rel="noopener">{url}</a>.</p></div>'
+        ) in html
+
+
+# ----------------------------------------------------------------------
 class TestSummary:
     # ----------------------------------------------------------------------
     # The summary is rendered even when nothing ran so that the page is not blank.
