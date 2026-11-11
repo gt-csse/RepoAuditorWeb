@@ -210,6 +210,34 @@ def test_OutputAppendsCompleteLinesAndRedrawsOnlyTheTail():
 
 
 # ----------------------------------------------------------------------
+# The form can be several screens long, so executing brings the run into view, stopping beneath the
+# header rather than behind it.
+def test_ExecuteScrollsToTheOutput():
+    page = CreatePage(_GROUPS, "my_token")
+
+    # A hidden section has no position, so the output is shown before it is scrolled to.
+    assert (
+        textwrap.dedent(
+            """\
+            async function Execute() {
+              if (executeButton.disabled) return;
+
+              Reset();
+              outputSection.hidden = false;
+              ScrollToOutput();
+            """,
+        )
+        in page
+    )
+    assert '<div id="run">\n<section id="output-section" hidden>' in page
+    assert '<div id="results"></div>\n</section>\n</div>\n</main>' in page
+    assert (
+        "#run:has(> #output-section:not([hidden])) { min-height: calc(100vh - var(--header-clearance)); }"
+        in page
+    )
+
+
+# ----------------------------------------------------------------------
 # Nothing has been generated when the page loads, so the reset button starts out disabled and is
 # only enabled once a run has produced output or results.
 def test_ResetIsDisabledWhenThereIsNothingToReset():
