@@ -56,6 +56,7 @@ def CreatePage(
         <span id="status"></span>
         </div>
         </section>
+        <div id="run">
         <section id="output-section" hidden>
         <h2>Output</h2>
         <pre id="output"></pre>
@@ -64,6 +65,7 @@ def CreatePage(
         <h2>Results</h2>
         <div id="results"></div>
         </section>
+        </div>
         </main>
         <div id="link-status" hidden></div>
         <script id="config" type="application/json">{config}</script>
@@ -146,6 +148,16 @@ _STYLE = textwrap.dedent(
     main { --gutter: 20px; padding: var(--gutter); max-width: 1100px; margin: 0 auto; }
 
     section { margin-bottom: 24px; }
+
+    #run { --header-clearance: 64px; }
+
+    /* Scrolled into view when a run begins, the log stops beneath the header rather than behind it. */
+    #output-section { scroll-margin-top: var(--header-clearance); }
+
+    /* The log starts empty and is last on the page, so the run reserves a window's height beneath the
+       header; otherwise the page is too short for it to be scrolled to the top when a run begins. The
+       results share the reservation so that they arrive in view, directly beneath the log. */
+    #run:has(> #output-section:not([hidden])) { min-height: calc(100vh - var(--header-clearance)); }
 
     /* The page's sections are larger than the queries nested within them, which share their
        uppercase style, so that the page's structure reads from the outside in. */
@@ -999,6 +1011,12 @@ _SCRIPT = textwrap.dedent(
       return !selection.isCollapsed && output.contains(selection.anchorNode);
     }
 
+    // The form can be several screens long, so a run would otherwise begin out of sight.
+    function ScrollToOutput() {
+      const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      outputSection.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
+
     function Stream() {
       const source = new EventSource(`/api/stream?token=${encodeURIComponent(config.token)}`);
 
@@ -1033,6 +1051,7 @@ _SCRIPT = textwrap.dedent(
 
       Reset();
       outputSection.hidden = false;
+      ScrollToOutput();
 
       SetRunning(true);
 
