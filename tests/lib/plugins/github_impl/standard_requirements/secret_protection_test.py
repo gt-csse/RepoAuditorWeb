@@ -258,7 +258,7 @@ def test_MissingStatusWithoutPatResolution():
     result = _Evaluate({}, pat=None)
 
     assert result.resolution is not None
-    assert "`--GitHub-pat`" in result.resolution
+    assert "`--pat`" in result.resolution
 
 
 # ----------------------------------------------------------------------
