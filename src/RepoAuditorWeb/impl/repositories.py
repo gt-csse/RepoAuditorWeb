@@ -8,7 +8,6 @@ from urllib.parse import ParseResult, urlparse, urlunparse
 from urllib.request import url2pathname
 
 from RepoAuditorWeb.lib.plugins.shared.github_session import GetApiBaseUrl, GitHubApiSession, NAME_REGEX
-from RepoAuditorWeb.lib.plugins.shared.repository_arguments import ResolvePat
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -91,7 +90,7 @@ def ResolveRepositories(
             url,
             url_parts,
             parent_path,
-            ResolvePat(pat),
+            pat,
             include_archived=include_archived,
             include_forked=include_forked,
         )

@@ -34,7 +34,7 @@ def GetRepositoryParameters() -> dict[str, TyperParameter]:
         "pat": TyperParameter(
             str | None,
             None,
-            OptionInfo(help="GitHub Personal Access Token (PAT) or path to a local file containing the PAT."),
+            OptionInfo(help="Path to a local file containing a GitHub Personal Access Token (PAT)."),
         ),
         "branch": TyperParameter(
             str | None,
@@ -48,7 +48,7 @@ def GetRepositoryParameters() -> dict[str, TyperParameter]:
 def ResolveRepositoryArguments(
     module_data: dict[str, object],
 ) -> RepositoryArguments:
-    """Return the url, PAT, and branch, reading the PAT from a file when it names one."""
+    """Return the url, PAT, and branch, reading the PAT from the file it names."""
 
     # Get the URL
     url = module_data.get("url")
@@ -93,30 +93,36 @@ def ResolveRepositoryArguments(
 
 
 # ----------------------------------------------------------------------
-def ResolvePat(pat: str | None) -> str | None:
-    """Return the PAT, reading it from a file when it names one."""
+def ResolvePat(pat_filename: str | None) -> str | None:
+    """Return the PAT read from the named file."""
 
-    if pat is None:
+    if pat_filename is None:
         return None
 
-    potential_filename = Path(pat)
-    if potential_filename.is_file():
-        with potential_filename.open(encoding="utf-8") as f:
-            pat = f.read()
+    # Tokens entered directly would be visible in shell history, process listings, and the web
+    # page, so only a file is accepted. The value is not echoed in case it is a token.
+    msg = "'pat' must be the path to a file containing a Personal Access Token."
 
-        # The contents are sent to the repository's server as a credential, so a file that does
-        # not hold a single token (e.g. one named by mistake) is rejected without revealing it.
-        if len(pat.split()) > 1:
-            msg = f"'{potential_filename}' does not contain a Personal Access Token."
-            raise ValueError(msg)
+    # Values entered in the web form are not expanded by a shell.
+    try:
+        filename = Path(pat_filename).expanduser()
+    except RuntimeError as ex:
+        # Raised when the home directory of the '~' prefix cannot be determined.
+        raise ValueError(msg) from ex
 
-    # A blank PAT would otherwise be sent as an empty credential rather than being omitted.
-    pat = pat.strip()
-    if not pat:
-        msg = "'pat' must not be empty or contain only whitespace."
+    if not filename.is_file():
         raise ValueError(msg)
 
-    return pat
+    with filename.open(encoding="utf-8") as f:
+        pat = f.read()
+
+    # The contents are sent to the repository's server as a credential, so a file that does not
+    # hold a single token (e.g. one named by mistake, or a blank one) is rejected without revealing it.
+    if len(pat.split()) != 1:
+        msg = f"'{filename}' does not contain a Personal Access Token."
+        raise ValueError(msg)
+
+    return pat.strip()
 
 
 # ----------------------------------------------------------------------

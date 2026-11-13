@@ -45,11 +45,11 @@ def test_GetParameters():
 # ----------------------------------------------------------------------
 class TestGetModuleData:
     # ----------------------------------------------------------------------
-    def test_ReplacesModuleArguments(self):
+    def test_ReplacesModuleArguments(self, pat_filename):
         module_data = _CreateModule().GetModuleData(
             _CreateArguments(
                 url="https://github.com/gt-csse/RepoAuditorWeb",
-                pat="my_pat",
+                pat=pat_filename,
                 branch="my_branch",
             ),
         )
@@ -78,20 +78,6 @@ class TestGetModuleData:
         }
 
     # ----------------------------------------------------------------------
-    # A PAT that names an existing file is read from that file, so tokens need not appear on the
-    # command line.
-    def test_PatFromFile(self, tmp_path):
-        pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text("  my_file_pat\n", encoding="utf-8")
-
-        module_data = _CreateModule().GetModuleData(
-            _CreateArguments(url="https://github.com/gt-csse/RepoAuditorWeb", pat=str(pat_filename)),
-        )
-
-        assert module_data is not None
-        assert module_data[None]["pat"] == "my_file_pat"
-
-    # ----------------------------------------------------------------------
     def test_PreservesRequirementArguments(self):
         requirement_arguments: dict[str, object] = {"skip": False, "prohibit": False}
 
@@ -110,12 +96,13 @@ class TestGetModuleData:
             _CreateModule().GetModuleData(_CreateArguments(**values))
 
     # ----------------------------------------------------------------------
-    def test_ErrorWhitespacePat(self):
+    def test_ErrorPatNotFile(self):
         with pytest.raises(
-            ValueError, match=re.escape("'pat' must not be empty or contain only whitespace.")
+            ValueError,
+            match=re.escape("'pat' must be the path to a file containing a Personal Access Token."),
         ):
             _CreateModule().GetModuleData(
-                _CreateArguments(url="https://github.com/gt-csse/RepoAuditorWeb", pat="  "),
+                _CreateArguments(url="https://github.com/gt-csse/RepoAuditorWeb", pat="my_pat"),
             )
 
 

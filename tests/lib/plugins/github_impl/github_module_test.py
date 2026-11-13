@@ -166,11 +166,12 @@ class TestGetModuleData:
             GitHubModule().GetModuleData({None: {"include": True, "url": None, "pat": None}})
 
     # ----------------------------------------------------------------------
-    def test_ErrorWhitespacePat(self):
+    def test_ErrorPatNotFile(self):
         with pytest.raises(
-            ValueError, match=re.escape("'pat' must not be empty or contain only whitespace.")
+            ValueError,
+            match=re.escape("'pat' must be the path to a file containing a Personal Access Token."),
         ):
-            _GetSession(pat="  ")
+            _GetSession(pat="my_token")
 
 
 # ----------------------------------------------------------------------
@@ -205,24 +206,12 @@ class TestSession:
         assert "Authorization" not in session.headers
 
     # ----------------------------------------------------------------------
-    def test_Pat(self):
-        session = _GetSession(pat="my_token")
+    def test_PatFromFile(self, pat_filename):
+        session = _GetSession(pat=pat_filename)
 
-        assert session.headers["Authorization"] == "Bearer my_token"
-        assert session.github_pat == "my_token"
+        assert session.github_pat == "my_pat"
+        assert session.headers["Authorization"] == "Bearer my_pat"
         assert session.has_pat is True
-
-    # ----------------------------------------------------------------------
-    # A PAT that names an existing file is read from that file, so tokens need not appear on the
-    # command line.
-    def test_PatFromFile(self, tmp_path):
-        pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text("  my_file_token\n", encoding="utf-8")
-
-        session = _GetSession(pat=str(pat_filename))
-
-        assert session.github_pat == "my_file_token"
-        assert session.headers["Authorization"] == "Bearer my_file_token"
 
     # ----------------------------------------------------------------------
     def test_TrailingSlashIsRemoved(self):
@@ -261,8 +250,8 @@ class TestSession:
 
     # ----------------------------------------------------------------------
     # The PAT is never sent over an unencrypted connection.
-    def test_EnterpriseUrlWithPatUsesHttps(self):
-        session = _GetSession("http://github.mycompany.com/gt-csse/RepoAuditorWeb", pat="my_pat")
+    def test_EnterpriseUrlWithPatUsesHttps(self, pat_filename):
+        session = _GetSession("http://github.mycompany.com/gt-csse/RepoAuditorWeb", pat=pat_filename)
 
         assert session.api_url == "https://github.mycompany.com/api/v3/repos/gt-csse/RepoAuditorWeb"
 

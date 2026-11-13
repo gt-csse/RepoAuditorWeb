@@ -28,9 +28,13 @@ def test_GetRepositoryParameters():
 # ----------------------------------------------------------------------
 class TestResolveRepositoryArguments:
     # ----------------------------------------------------------------------
-    def test_Values(self):
+    def test_Values(self, pat_filename):
         assert ResolveRepositoryArguments(
-            {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "my_pat", "branch": "my_branch"},
+            {
+                "url": "https://github.com/gt-csse/RepoAuditorWeb",
+                "pat": pat_filename,
+                "branch": "my_branch",
+            },
         ) == RepositoryArguments("https://github.com/gt-csse/RepoAuditorWeb", "my_pat", "my_branch")
 
     # ----------------------------------------------------------------------
@@ -38,21 +42,6 @@ class TestResolveRepositoryArguments:
         assert ResolveRepositoryArguments(
             {"url": "https://github.com/gt-csse/RepoAuditorWeb"},
         ) == RepositoryArguments("https://github.com/gt-csse/RepoAuditorWeb", None, None)
-
-    # ----------------------------------------------------------------------
-    def test_PatIsStripped(self):
-        assert ResolveRepositoryArguments(
-            {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "  my_pat\n"},
-        ) == RepositoryArguments("https://github.com/gt-csse/RepoAuditorWeb", "my_pat", None)
-
-    # ----------------------------------------------------------------------
-    def test_PatFromFile(self, tmp_path):
-        pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text("  my_file_pat\n", encoding="utf-8")
-
-        assert ResolveRepositoryArguments(
-            {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": str(pat_filename)},
-        ) == RepositoryArguments("https://github.com/gt-csse/RepoAuditorWeb", "my_file_pat", None)
 
     # ----------------------------------------------------------------------
     # The url is passed to git, which would otherwise accept bare paths and other transports.
@@ -96,9 +85,10 @@ class TestResolveRepositoryArguments:
     # ----------------------------------------------------------------------
     # The contents are sent as a credential, so a file holding anything other than a single token is
     # rejected without its contents appearing in the error.
-    def test_ErrorPatFileWithMultipleValues(self, tmp_path):
+    @pytest.mark.parametrize("content", ["first_secret\nsecond_secret\n", "", " \t\n "])
+    def test_ErrorPatFileContent(self, tmp_path, content):
         pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text("first_secret\nsecond_secret\n", encoding="utf-8")
+        pat_filename.write_text(content, encoding="utf-8")
 
         with pytest.raises(ValueError) as exc_info:
             ResolveRepositoryArguments(
@@ -148,25 +138,15 @@ class TestResolveRepositoryArguments:
             ResolveRepositoryArguments(values)
 
     # ----------------------------------------------------------------------
-    @pytest.mark.parametrize("pat", ["", " ", " \t\n "])
-    def test_ErrorWhitespacePat(self, pat):
-        with pytest.raises(
-            ValueError, match=re.escape("'pat' must not be empty or contain only whitespace.")
-        ):
+    # The value is not echoed in the error, as it may be a token entered directly.
+    @pytest.mark.parametrize(
+        "pat", ["my_pat", "", " ", "does_not_exist.txt", ".", "~no_such_user_for_test/pat.txt"]
+    )
+    def test_ErrorPatNotFile(self, pat):
+        with pytest.raises(ValueError) as exc_info:
             ResolveRepositoryArguments({"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": pat})
 
-    # ----------------------------------------------------------------------
-    @pytest.mark.parametrize("content", ["", " \t\n "])
-    def test_ErrorWhitespacePatFromFile(self, tmp_path, content):
-        pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text(content, encoding="utf-8")
-
-        with pytest.raises(
-            ValueError, match=re.escape("'pat' must not be empty or contain only whitespace.")
-        ):
-            ResolveRepositoryArguments(
-                {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": str(pat_filename)},
-            )
+        assert str(exc_info.value) == "'pat' must be the path to a file containing a Personal Access Token."
 
 
 # ----------------------------------------------------------------------
@@ -176,12 +156,14 @@ class TestResolvePat:
         assert ResolvePat(None) is None
 
     # ----------------------------------------------------------------------
-    def test_Value(self):
-        assert ResolvePat(" my_pat\n") == "my_pat"
+    def test_File(self, pat_filename):
+        assert ResolvePat(pat_filename) == "my_pat"
 
     # ----------------------------------------------------------------------
-    def test_File(self, tmp_path):
-        pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text("  my_file_pat\n", encoding="utf-8")
+    def test_FileInHomeDirectory(self, tmp_path, monkeypatch):
+        # Windows resolves '~' with USERPROFILE and ignores HOME.
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        (tmp_path / "pat.txt").write_text("my_file_pat", encoding="utf-8")
 
-        assert ResolvePat(str(pat_filename)) == "my_file_pat"
+        assert ResolvePat("~/pat.txt") == "my_file_pat"

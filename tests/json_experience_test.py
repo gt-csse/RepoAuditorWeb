@@ -337,11 +337,11 @@ class TestArguments:
         }
 
     # ----------------------------------------------------------------------
-    # The document may be shared, so the PAT is never included.
-    def test_PatIsRedacted(self):
-        assert _Execute([], common_arguments={"pat": "my_pat"})["common_arguments"] == {
+    # Only a PAT file path is accepted, so the path is included rather than the PAT.
+    def test_PatFile(self):
+        assert _Execute([], common_arguments={"pat": "pat.txt"})["common_arguments"] == {
             "url": None,
-            "pat": "***",
+            "pat": "pat.txt",
         }
 
 
@@ -384,11 +384,11 @@ class TestCreateRepositoryEntry:
     def test_Error(self):
         assert CreateRepositoryEntry(
             {"MyModule": {None: {"skip": False}}},
-            {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "my_pat"},
+            {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "pat.txt"},
             error="My error.",
         ) == {
             "arguments": {"MyModule": {"module": {"skip": False}, "requirements": {}}},
-            "common_arguments": {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "***"},
+            "common_arguments": {"url": "https://github.com/gt-csse/RepoAuditorWeb", "pat": "pat.txt"},
             "error": "My error.",
             "summary": None,
             "results": None,
@@ -406,7 +406,7 @@ class TestDocument:
 
         assert output == textwrap.dedent(
             """            {
-              "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
+              "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v4.schema.json",
               "error": null,
               "repositories": [
                 {
@@ -467,7 +467,7 @@ class TestDocument:
             document = _ExecuteDocument([], expected_exception=RuntimeError)
 
         assert document == {
-            "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
+            "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v4.schema.json",
             "error": "My error.",
             "repositories": [],
         }
@@ -498,7 +498,7 @@ class TestSchema:
     @staticmethod
     def _Validate(document: dict) -> None:
         schema = json.loads(
-            (Path(json_experience.__file__).parent / "schemas" / "json_experience_v3.schema.json").read_text(
+            (Path(json_experience.__file__).parent / "schemas" / "json_experience_v4.schema.json").read_text(
                 encoding="utf-8"
             ),
         )
@@ -519,7 +519,7 @@ class TestSchema:
                     _CreateRequirement("Warning", EvaluateResultValue.Warning, resolution="My resolution."),
                     _CreateRequirement("Error", EvaluateResultValue.Error, rationale="My rationale."),
                 ],
-                common_arguments={"pat": "my_pat", "branch": "main"},
+                common_arguments={"pat": "pat.txt", "branch": "main"},
                 urls=["https://github.com/gt-csse/RepoAuditorWeb"],
             ),
         )

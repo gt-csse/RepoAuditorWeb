@@ -1,8 +1,9 @@
-"""Test doubles for the abstract Module, Query, and Requirement classes, and the GitHub session."""
+"""Test doubles for the abstract Module, Query, and Requirement classes, the GitHub session, and the PAT file."""
 
 from dataclasses import dataclass
 from typing import override
 
+import pytest
 import requests
 
 from RepoAuditorWeb.lib.dynamic_parameters import TyperParameter
@@ -153,6 +154,16 @@ class MyModule(Module):
     @override
     def CleanupModuleData(self, module_data: dict[str | None, dict[str, object]]) -> None:
         self.cleanup_module_data = module_data
+
+
+# ----------------------------------------------------------------------
+# The surrounding whitespace verifies that the PAT is stripped.
+@pytest.fixture
+def pat_filename(tmp_path) -> str:
+    filename = tmp_path / "pat.txt"
+    filename.write_text("  my_pat\n", encoding="utf-8")
+
+    return str(filename)
 
 
 # ----------------------------------------------------------------------
