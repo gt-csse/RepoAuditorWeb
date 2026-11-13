@@ -1,4 +1,4 @@
-<!-- python_development Version: 0.9.0 -->
+<!-- python_development Version: 0.10.0 -->
 
 # File Format
 Adhere to these principles when writing files.
@@ -23,6 +23,15 @@ Adhere to these principles when generating code comments or documentation.
 
 # Static Analysis/Linting Errors
 Do not suppress static analysis/linting-style errors; attempt to address the problem instead. Consult the human if the problem cannot be properly addressed.
+
+# Testing
+Adhere to these principles when writing or exercising automated tests.
+
+- All tests must exercise and validate functionality.
+- Each test must cover distinct behavior; do not exercise the same code path or assert the same outcome in more than one test.
+- Extract setup of calls to the system under test that repeat across tests into fixtures or helpers.
+- Never remove code to make tests pass.
+- Compare entire strings when asserting that strings are equal.
 
 # Python Development
 Adhere to these conventions when writing python code.
@@ -52,13 +61,10 @@ Use these conventions when managing python dependencies:
 - Upgrade an existing dependency via `uv add --upgrade <package name>`.
 
 ## Testing
-Use these conventions when writing or exercising tests:
+Use these conventions when writing or exercising python tests:
 
 - Run tests on the command line via `uv run pytest`; do not attempt to change the directory before running the tests.
 - Never write tests for private functionality or class members (these are entities whose name begins with `_`).
-- All tests must assert functionality.
-- Never remove code to make tests pass.
-- Compare entire strings when asserting that strings are equal.
 - Use `textwrap.dedent` to compare strings with multiple lines.
 
 ## Imports
