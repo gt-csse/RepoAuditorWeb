@@ -1,6 +1,7 @@
 import enum
 import inspect
 
+from pathlib import Path
 from types import UnionType
 
 import pytest
@@ -419,6 +420,7 @@ class TestFieldTypes:
             (list[str], FieldType.List),
             (tuple[str, ...], FieldType.List),
             (MyChoice, FieldType.Choice),
+            (Path, FieldType.FilePath),
         ],
     )
     def test_Types(self, parameter_type, expected):
