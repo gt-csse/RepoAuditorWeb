@@ -103,7 +103,7 @@ def _CreateNoPatResolution(access_level: AccessLevel) -> Markdown:
         1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
            with {access_level} access to the repository. A fine-grained token must grant the
            {_FINE_GRAINED_PERMISSIONS[access_level]} repository permission; a classic token must have the `repo` scope.
-        2) Provide it via the `--GitHub-pat` command line argument or the
+        2) Provide it via the `--pat` command line argument or the
            `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
 
         See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
