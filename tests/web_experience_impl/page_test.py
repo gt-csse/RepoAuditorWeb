@@ -646,3 +646,25 @@ def test_LinkStatusIsHiddenWhenALinkIsFollowed():
         in page
     )
     assert "window.open" not in page
+
+
+# ----------------------------------------------------------------------
+# Only the window can reveal the path of a chosen file, so the picker is hidden in a browser.
+def test_FilePickerIsShownByTheWindow():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'row.appendChild(field.type === "file_path" ? CreateFilePicker(control) : control);' in page
+    assert "button.hidden = !window.pywebview?.api;" in page
+    assert (
+        'window.addEventListener("pywebviewready", () => { button.hidden = false; }, { once: true });' in page
+    )
+    assert "const path = await window.pywebview.api.SelectFile();" in page
+
+
+# ----------------------------------------------------------------------
+# The button displays only an icon, so its name is provided for tooltips and screen readers.
+def test_FilePickerIsLabeled():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'button.title = "Browse...";' in page
+    assert 'button.setAttribute("aria-label", "Browse...");' in page

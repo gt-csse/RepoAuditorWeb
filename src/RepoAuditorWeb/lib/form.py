@@ -4,6 +4,7 @@ import enum
 import inspect
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import GenericAlias, UnionType
 from typing import get_args, get_origin, TYPE_CHECKING
 
@@ -22,6 +23,7 @@ class FieldType(enum.StrEnum):
     Integer = "integer"
     Number = "number"
     Text = "text"
+    FilePath = "file_path"
     Choice = "choice"
     List = "list"
     # Whether a requirement runs and what it then expects are two parameters that cannot be set
@@ -605,6 +607,9 @@ def _ResolveFieldType(resolved_type: type | GenericAlias, *, allows_none: bool =
 
     if resolved_type is float:
         return FieldType.Number
+
+    if resolved_type is Path:
+        return FieldType.FilePath
 
     return FieldType.Text
 

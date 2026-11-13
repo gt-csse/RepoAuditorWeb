@@ -380,7 +380,17 @@ _STYLE = textwrap.dedent(
       cursor: pointer;
     }
 
-    button#reset { background: transparent; color: var(--fg); border-color: var(--border); }
+    button#reset,
+    .file-path > button { background: transparent; color: var(--fg); border-color: var(--border); }
+
+    .file-path { display: flex; gap: 8px; }
+
+    .file-path > input { flex: 1; min-width: 0; }
+
+    .file-path > button { padding: 7px 10px; }
+
+    /* An inline icon would otherwise sit on the text baseline, leaving space beneath it. */
+    .file-path > button > svg { display: block; }
 
     button:disabled { opacity: 0.5; cursor: default; }
 
@@ -735,9 +745,34 @@ _SCRIPT = textwrap.dedent(
       control.name = field.name;
 
       row.appendChild(label);
-      row.appendChild(control);
+      row.appendChild(field.type === "file_path" ? CreateFilePicker(control) : control);
 
       return row;
+    }
+
+    // Only the window can open a native dialog that reveals the chosen file's path, so the button is
+    // hidden in a browser. The window injects its API after the page loads and announces it.
+    function CreateFilePicker(input) {
+      const button = document.createElement("button");
+      button.type = "button";
+      // An icon leaves more of the narrow field for the path; the label names it for tooltips and screen readers.
+      button.title = "Browse...";
+      button.setAttribute("aria-label", "Browse...");
+      button.innerHTML =
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+      button.hidden = !window.pywebview?.api;
+      window.addEventListener("pywebviewready", () => { button.hidden = false; }, { once: true });
+
+      button.addEventListener("click", async () => {
+        const path = await window.pywebview.api.SelectFile();
+        if (path) input.value = path;
+      });
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "file-path";
+      wrapper.append(input, button);
+
+      return wrapper;
     }
 
     // A requirement whose parameters were folded into one control is governed by a mode that names

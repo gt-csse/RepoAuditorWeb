@@ -124,7 +124,22 @@ def _ExecuteRepository(  # noqa: PLR0913
     # audit the next repository) and the server would otherwise keep its port.
     try:
         with dm.Nested(f"Serving content on http://{HOST}:{port}...") as serve_dm:
-            webview.create_window("RepoAuditor", f"http://{HOST}:{port}/?{urlencode({'token': token})}")
+            window = webview.create_window(
+                "RepoAuditor", f"http://{HOST}:{port}/?{urlencode({'token': token})}"
+            )
+
+            # None is returned only for a window created once the GUI loop is running on another thread.
+            assert window is not None
+
+            # ----------------------------------------------------------------------
+            def SelectFile() -> str | None:
+                # An <input type="file"> does not reveal the path of the file chosen, which is what the form needs.
+                filenames = window.create_file_dialog(webview.FileDialog.OPEN)
+                return filenames[0] if filenames else None
+
+            # ----------------------------------------------------------------------
+
+            window.expose(SelectFile)
 
             # Debug mode enables the web inspector within the window. The icon is an ICO file because
             # that is the only format the Windows backend loads.
