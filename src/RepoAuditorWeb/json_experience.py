@@ -108,11 +108,7 @@ def CreateRepositoryEntry(
             }
             for module_name, module_arguments in arguments.items()
         },
-        # The document is written where it may be shared, so the PAT is never included.
-        "common_arguments": {
-            **common_arguments,
-            **({"pat": _REDACTED} if common_arguments.get("pat") else {}),
-        },
+        "common_arguments": common_arguments,
         "error": error,
         "summary": None if results is None else _CreateSummary(results),
         "results": None
@@ -135,13 +131,11 @@ _INDENT = 2
 
 # Incremented whenever a change to the document would break a consumer that reads it, so that the
 # consumer can detect the change rather than misinterpret the content.
-_SCHEMA_VERSION = 3
+_SCHEMA_VERSION = 4
 
 # Each version has its own schema file so that a document continues to reference the schema it was
 # written against after the version is incremented.
 _SCHEMA_URI = f"https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v{_SCHEMA_VERSION}.schema.json"
-
-_REDACTED = "***"
 
 
 # ----------------------------------------------------------------------

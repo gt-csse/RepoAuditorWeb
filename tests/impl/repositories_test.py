@@ -241,7 +241,7 @@ class TestGitHubWildcard:
     # ----------------------------------------------------------------------
     # Repositories listed for a user are limited to public ones, so the owner of the PAT lists their
     # own repositories through the authenticated endpoint.
-    def test_UserWithOwnPat(self, monkeypatch, tmp_path):
+    def test_UserWithOwnPat(self, monkeypatch):
         fake = _FakeGitHub(
             monkeypatch,
             {
@@ -251,11 +251,7 @@ class TestGitHubWildcard:
             },
         )
 
-        # The PAT is read from a file when it names one, as it is for the modules.
-        pat_filename = tmp_path / "pat.txt"
-        pat_filename.write_text("my_pat\n", encoding="utf-8")
-
-        assert _Resolve("https://github.com/My-Owner/*", str(pat_filename))[0] == [
+        assert _Resolve("https://github.com/My-Owner/*", "my_pat")[0] == [
             "https://github.com/my-owner/Private",
         ]
 

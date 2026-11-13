@@ -239,7 +239,7 @@ class TestExperience:
 
         assert (
             document["$schema"]
-            == "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json"
+            == "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v4.schema.json"
         )
         assert document["error"] is None
         assert len(document["repositories"]) == 1
@@ -388,7 +388,6 @@ class TestCommonOptions:
         ("option", "parameter_name", "value"),
         [
             ("--url", "url", "https://github.com/gt-csse/RepoAuditorWeb"),
-            ("--pat", "pat", "my_pat"),
             ("--branch", "branch", "my_branch"),
         ],
     )
@@ -405,7 +404,6 @@ class TestCommonOptions:
         ("envvar", "parameter_name", "value"),
         [
             ("REPO_AUDITOR_WEB_GITHUB_URL", "url", "https://github.com/gt-csse/RepoAuditorWeb"),
-            ("REPO_AUDITOR_WEB_GITHUB_PAT", "pat", "my_pat"),
             ("REPO_AUDITOR_WEB_GITHUB_BRANCH", "branch", "my_branch"),
         ],
     )
@@ -413,6 +411,44 @@ class TestCommonOptions:
         _, common_arguments = self._InvokeAndCaptureArguments([], env={envvar: value})
 
         assert common_arguments[parameter_name] == value
+
+    # ----------------------------------------------------------------------
+    # The path is forwarded rather than the token so that the token is never displayed.
+    @pytest.mark.parametrize("use_envvar", [False, True])
+    def test_PatFile(self, pat_filename, use_envvar):
+        if use_envvar:
+            _, common_arguments = self._InvokeAndCaptureArguments(
+                [], env={"REPO_AUDITOR_WEB_GITHUB_PAT": pat_filename}
+            )
+        else:
+            _, common_arguments = self._InvokeAndCaptureArguments(["--pat", pat_filename])
+
+        assert common_arguments["pat"] == pat_filename
+
+    # ----------------------------------------------------------------------
+    # An invalid PAT fails before anything runs, however it is provided.
+    @pytest.mark.parametrize("source", ["option", "envvar", "config"])
+    def test_ErrorPatNotAFile(self, tmp_path, source):
+        config_filename = tmp_path / "config.yaml"
+        config_filename.write_text("pat: my_pat\n", encoding="utf-8")
+
+        args, env = {
+            "option": (["--pat", "my_pat"], {}),
+            "envvar": ([], {"REPO_AUDITOR_WEB_GITHUB_PAT": "my_pat"}),
+            "config": (["--config", str(config_filename)], {}),
+        }[source]
+
+        with mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock:
+            result = CliRunner().invoke(
+                app,
+                [*args, "--experience", "console"],
+                env={"REPO_AUDITOR_WEB_GITHUB_PAT": None, **env},
+            )
+
+        assert result.exit_code != 0
+        assert "'pat' must be the path to a file containing a Personal Access Token." in result.output
+        assert "my_pat" not in result.output
+        assert experience_mock.call_count == 0
 
     # ----------------------------------------------------------------------
     # Every module operates on the common value, so a module-specific value is rejected.
@@ -494,6 +530,21 @@ class TestRepositories:
         assert kwargs["common_arguments"] == {"pat": None, "branch": "main"}
 
     # ----------------------------------------------------------------------
+    # The repositories are listed with the PAT itself, while the experience receives its path.
+    def test_WildcardWithPatFile(self, pat_filename):
+        url = "https://github.com/gt-csse/*"
+
+        with (
+            mock.patch("RepoAuditorWeb.__main__.ResolveRepositories", return_value=[url]) as resolve_mock,
+            mock.patch("RepoAuditorWeb.__main__.ExecuteConsoleExperience") as experience_mock,
+        ):
+            result, output = _InvokeAndCapture([*_SKIP_NETWORK, "--url", url, "--pat", pat_filename])
+
+        assert result.exit_code == 0, output
+        assert resolve_mock.call_args.args[1:] == (url, "my_pat")
+        assert experience_mock.call_args.kwargs["common_arguments"]["pat"] == pat_filename
+
+    # ----------------------------------------------------------------------
     @pytest.mark.parametrize("option", ["--include-archived", "--include-forked"])
     def test_ErrorIncludeOptionWithoutWildcard(self, option):
         result, output = _InvokeAndCapture(
@@ -507,10 +558,10 @@ class TestRepositories:
 # ----------------------------------------------------------------------
 class TestJsonDocument:
     # ----------------------------------------------------------------------
-    def test_Repositories(self, tmp_path):
+    def test_Repositories(self, tmp_path, pat_filename):
         url = _CreateRepositories(tmp_path, ["First", "Second"])
 
-        result = CliRunner().invoke(app, ["--experience", "json", "--url", url, "--pat", "my_pat"])
+        result = CliRunner().invoke(app, ["--experience", "json", "--url", url, "--pat", pat_filename])
 
         assert result.exit_code == 0, result.output
 
@@ -518,7 +569,7 @@ class TestJsonDocument:
 
         assert document["error"] is None
         assert [repository["common_arguments"] for repository in document["repositories"]] == [
-            {"url": (tmp_path / name).resolve().as_uri(), "pat": "***", "branch": None}
+            {"url": (tmp_path / name).resolve().as_uri(), "pat": pat_filename, "branch": None}
             for name in ["First", "Second"]
         ]
 

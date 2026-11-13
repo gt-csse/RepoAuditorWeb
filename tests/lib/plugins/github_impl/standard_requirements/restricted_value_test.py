@@ -117,7 +117,7 @@ def test_AdminAccessLevelResolutionWithoutPat():
         1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
            with admin access to the repository. A fine-grained token must grant the
            `Administration: Read` repository permission; a classic token must have the `repo` scope.
-        2) Provide it via the `--pat` command line argument or the
+        2) Save it to a file and provide the file's path via the `--pat` command line argument or the
            `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
 
         See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
@@ -166,7 +166,7 @@ def test_NotVisibleWithoutPatResolution():
         1) Create a [Personal Access Token](https://github.com/settings/personal-access-tokens)
            with push access to the repository. A fine-grained token must grant the
            `Contents: Read and write` repository permission; a classic token must have the `repo` scope.
-        2) Provide it via the `--pat` command line argument or the
+        2) Save it to a file and provide the file's path via the `--pat` command line argument or the
            `REPO_AUDITOR_WEB_GITHUB_PAT` environment variable.
 
         See [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)

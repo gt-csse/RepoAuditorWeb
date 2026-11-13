@@ -76,7 +76,7 @@ def CreateApp(  # noqa: PLR0913
     # ----------------------------------------------------------------------
     @app.get("/", response_class=HTMLResponse)
     def Index(token_query: Annotated[str | None, Query(alias="token")] = None) -> str:
-        # The page embeds the token and the values entered (including the PAT), so it is gated as
+        # The page embeds the token and the values entered (including the PAT file path), so it is gated as
         # well; the window is opened with the token in its URL.
         VerifyToken(token_query)
 

@@ -16,6 +16,7 @@ from RepoAuditorWeb.json_experience import ExecuteExperience as ExecuteJsonExper
 from RepoAuditorWeb.web_experience import ExecuteExperience as ExecuteWebExperience
 from RepoAuditorWeb.lib.dynamic_parameters import DynamicParameters, TyperParameter
 from RepoAuditorWeb.lib.modules import MODULES
+from RepoAuditorWeb.lib.plugins.shared.repository_arguments import ResolvePat
 
 
 # ----------------------------------------------------------------------
@@ -46,7 +47,7 @@ class Experience(StrEnum):
 
 # ----------------------------------------------------------------------
 _URL_HELP = "GitHub URL (e.g. https://github.com/gt-csse/RepoAuditorWeb)."
-_PAT_HELP = "GitHub Personal Access Token (PAT) or path to a local file containing the PAT."
+_PAT_HELP = "Path to a local file containing a GitHub Personal Access Token (PAT)."
 _BRANCH_HELP = "Branch to evaluate. The default branch will be used if not specified."
 
 _dynamic_parameters = DynamicParameters(
@@ -171,11 +172,12 @@ def EntryPoint(  # noqa: PLR0913, PLR0917
     ) as dm:
         token = entry_point_utils.ResolveToken(token)
         arguments = _dynamic_parameters.Parse(kwargs)
+        resolved_pat = ResolvePat(pat)
 
         urls = ResolveRepositories(
             dm,
             url,
-            pat,
+            resolved_pat,
             include_archived=include_archived,
             include_forked=include_forked,
         )

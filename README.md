@@ -57,7 +57,7 @@ Click `Execute` to run the audit. The results summarize the outcome of each requ
 End `--url` with `/*` to audit every repository of a GitHub user or organization, or every git repository in a local directory:
 
 ```shell
-uvx repoauditorweb --url "https://github.com/<owner>/*" --pat <pat> --experience console --GitHub-include
+uvx repoauditorweb --url "https://github.com/<owner>/*" --pat <pat file> --experience console --GitHub-include
 uvx repoauditorweb --url "file:///<directory>/*" --experience json --CommunityStandards-include
 ```
 
@@ -81,16 +81,16 @@ Select the experience with `--experience`:
 `--execute` runs the audit immediately in the `web` experience.
 
 #### JSON Output
-The `json` experience writes a single document with an entry for each audited repository. `$schema` references the [JSON Schema](src/RepoAuditorWeb/schemas/json_experience_v3.schema.json) for the document; its version is incremented whenever a change would break an existing consumer, and it is also included in the installed package.
+The `json` experience writes a single document with an entry for each audited repository. `$schema` references the [JSON Schema](src/RepoAuditorWeb/schemas/json_experience_v4.schema.json) for the document; its version is incremented whenever a change would break an existing consumer, and it is also included in the installed package.
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v3.schema.json",
+  "$schema": "https://raw.githubusercontent.com/gt-csse/RepoAuditorWeb/main/src/RepoAuditorWeb/schemas/json_experience_v4.schema.json",
   "error": "<message or null>",
   "repositories": [
     {
       "arguments": {"<module name>": {"module": {}, "requirements": {"<requirement name>": {}}}},
-      "common_arguments": {"url": "<url>", "pat": "*** or null", "branch": "<branch or null>"},
+      "common_arguments": {"url": "<url>", "pat": "<pat file or null>", "branch": "<branch or null>"},
       "error": "<message or null>",
       "summary": {"skipped": 0, "does_not_apply": 0, "success": 0, "warning": 0, "error": 0, "total": 0},
       "results": [
@@ -120,7 +120,7 @@ Every module and requirement contributes command line options; run `repoauditorw
 | --- | --- |
 | `--url` | The GitHub repository to audit; applied to every included module. The URL must begin with `https://`, `http://`, or `file://` (a local clone). The `GitHub` module requires the form `<server>/<owner>/<repository>`, where the owner and repository names contain only letters, digits, `-`, `_`, and `.`. End the url with `/*` to audit multiple repositories; see [Auditing Multiple Repositories](#auditing-multiple-repositories). |
 | `--include-archived`, `--include-forked` | Include archived or forked repositories when a GitHub url ends with `/*`. |
-| `--pat` | A GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), or the path to a file containing only that token. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
+| `--pat` | The path to a file containing only a GitHub [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token itself is not accepted, which keeps it out of shell history and process listings. Some requirements can only be evaluated with a PAT; see [PAT Permissions](#pat-permissions). |
 | `--branch` | The branch to evaluate; the default branch is used if not specified. The name must be a valid git branch name; for example, it cannot contain `..`, `@{`, whitespace, or any of `~^:?*[\`. |
 | `--<Module>-include` | Include a module in the audit. |
 | `--<Module>-<Requirement>-skip` | Skip a requirement. |
