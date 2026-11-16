@@ -418,11 +418,12 @@ _STYLE = textwrap.dedent(
       font: 12px/1.45 ui-monospace, "Cascadia Mono", monospace;
     }
 
-    /* A module's failure is reported only in the log, so its errors and warnings are marked. Only
-       the label is colored, since a message may span several lines and reads better uncolored. */
-    #output .error, #output .warning { font-weight: 600; }
+    /* The log is colored where the console colors it, in bold as the console does, using the
+       page's colors rather than the terminal's. */
+    #output .error, #output .warning, #output .success { font-weight: 600; }
     #output .error { color: var(--error); }
     #output .warning { color: var(--warning); }
+    #output .success { color: var(--success); }
 
     /* The webview disables selection across the page so that it behaves like an application, but
        the output and results are meant to be copied elsewhere. */
@@ -650,6 +651,8 @@ _SCRIPT = textwrap.dedent(
     const outputSection = document.getElementById("output-section");
     const output = document.getElementById("output");
     const outputTail = output.appendChild(document.createElement("span"));
+    // The unfinished last line is kept as received, since rendering it drops the codes that color it.
+    let outputTailText = "";
     const resultsSection = document.getElementById("results-section");
     const results = document.getElementById("results");
     const linkStatus = document.getElementById("link-status");
@@ -966,6 +969,7 @@ _SCRIPT = textwrap.dedent(
     // The form retains what the user entered; only what a run produced is discarded.
     function Reset() {
       outputSection.hidden = true;
+      outputTailText = "";
       outputTail.textContent = "";
       output.replaceChildren(outputTail);
       resultsSection.hidden = true;
@@ -1019,26 +1023,36 @@ _SCRIPT = textwrap.dedent(
       results.appendChild(div);
     }
 
+    // The output carries the console's ANSI color codes, so the page colors whatever the console
+    // colors. Codes for anything other than these colors (e.g. inverse video) are dropped.
+    const ansiClasses = { 31: "error", 32: "success", 33: "warning" };
+
     function RenderLine(line) {
-      const match = /^(\\s*)(ERROR|WARNING):/.exec(line);
-      if (!match) return [line];
+      const parts = line.split(/\\x1b\\[([0-9;]*)m/);
 
-      const [label, indent, level] = match;
+      const nodes = [];
+      let className = null;
 
-      const span = document.createElement("span");
-      span.className = level.toLowerCase();
-      span.textContent = label.slice(indent.length);
-      return [indent, span, line.slice(label.length)];
+      for (const [index, part] of parts.entries()) {
+        if (index % 2) className = ansiClasses[part.split(";")[0]] ?? null;
+        else if (part)
+          nodes.push(
+            className ? Object.assign(document.createElement("span"), { className, textContent: part }) : part,
+          );
+      }
+
+      return nodes;
     }
 
-    // Output arrives in chunks that may end mid-line, splitting a label, so only the unfinished
+    // Output arrives in chunks that may end mid-line, so only the unfinished
     // last line is redrawn; redrawing the whole log would slow a long run with every chunk.
     function AppendOutput(content) {
-      const lines = (outputTail.textContent + content).split("\\n");
-      const tail = lines.pop();
+      const lines = (outputTailText + content).split("\\n");
+      outputTailText = lines.pop();
 
       outputTail.before(...lines.flatMap((line) => [...RenderLine(line), "\\n"]));
-      outputTail.replaceChildren(...RenderLine(tail));
+      // A chunk may also end mid-code, which would show until the next chunk completes it.
+      outputTail.replaceChildren(...RenderLine(outputTailText.replace(/\\x1b(\\[[0-9;]*)?$/, "")));
     }
 
     function IsSelectingOutput() {

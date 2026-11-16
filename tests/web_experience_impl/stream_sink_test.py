@@ -1,5 +1,7 @@
 import threading
 
+from dbrownell_Common.Streams.Capabilities import Capabilities
+
 from RepoAuditorWeb.web_experience_impl.stream_sink import StreamSink
 
 
@@ -53,9 +55,14 @@ class TestStreamInterface:
         assert _Drain(sink) == []
 
     # ----------------------------------------------------------------------
-    # Colors are not emitted because the consumer displays the content as text.
+    # DoneManager does not move the cursor, which the page cannot display.
     def test_IsNotATty(self):
         assert StreamSink().isatty() is False
+
+    # ----------------------------------------------------------------------
+    # The page renders the console's colors, so DoneManager emits them.
+    def test_SupportsColors(self):
+        assert Capabilities.Get(StreamSink()).supports_colors is True
 
     # ----------------------------------------------------------------------
     # Closing the stream terminates the enumeration, as nothing further can be written.

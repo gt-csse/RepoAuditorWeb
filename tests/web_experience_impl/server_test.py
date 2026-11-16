@@ -374,6 +374,16 @@ class TestExecution:
         assert "Executing module 'MyModule' (1 of 1)..." in output
 
     # ----------------------------------------------------------------------
+    # The page renders the console's colors, so the output carries them.
+    def test_OutputIsColored(self):
+        module = _CreateModule(evaluate_values=EvaluateValues(EvaluateResultValue.Error))
+        app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)
+
+        output = "".join(_GetContent(_Execute(app, {}), "output", "content"))
+
+        assert "Evaluating requirement 'MyRequirement' (1 of 1)...DONE! (\x1b[31;1m-1\x1b[0m, " in output
+
+    # ----------------------------------------------------------------------
     def test_ResultsAreRendered(self):
         module = _CreateModule(evaluate_values=EvaluateValues(EvaluateResultValue.Error))
         app = CreateApp([module], DynamicParameters([module]), {}, {}, _TOKEN)

@@ -133,6 +133,7 @@ def test_ResetClearsTheGeneratedContent():
             """\
             function Reset() {
               outputSection.hidden = true;
+              outputTailText = "";
               outputTail.textContent = "";
               output.replaceChildren(outputTail);
               resultsSection.hidden = true;
@@ -183,17 +184,22 @@ def test_ExecuteRequiresAModule():
 
 
 # ----------------------------------------------------------------------
-# A module's failure is reported only in the log, so the labels of its errors and warnings are
-# highlighted; the message is not, since it may span several lines.
-def test_OutputHighlightsErrorAndWarningLabels():
+# The output carries the console's color codes, so the page colors what the console colors, with its
+# own colors, and drops any other code.
+def test_OutputRendersTheConsoleColors():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert "const match = /^(\\s*)(ERROR|WARNING):/.exec(line);" in page
-    assert "span.textContent = label.slice(indent.length);" in page
-    assert "return [indent, span, line.slice(label.length)];" in page
-    assert "#output .error, #output .warning { font-weight: 600; }" in page
+    assert 'const ansiClasses = { 31: "error", 32: "success", 33: "warning" };' in page
+    assert "const parts = line.split(/\\x1b\\[([0-9;]*)m/);" in page
+    assert 'if (index % 2) className = ansiClasses[part.split(";")[0]] ?? null;' in page
+    assert (
+        'className ? Object.assign(document.createElement("span"), { className, textContent: part }) : part,'
+        in page
+    )
+    assert "#output .error, #output .warning, #output .success { font-weight: 600; }" in page
     assert "#output .error { color: var(--error); }" in page
     assert "#output .warning { color: var(--warning); }" in page
+    assert "#output .success { color: var(--success); }" in page
 
 
 # ----------------------------------------------------------------------
@@ -204,9 +210,13 @@ def test_OutputAppendsCompleteLinesAndRedrawsOnlyTheTail():
 
     assert 'const outputTail = output.appendChild(document.createElement("span"));' in page
     assert "AppendOutput(message.content);" in page
-    assert 'const lines = (outputTail.textContent + content).split("\\n");' in page
+    assert 'const lines = (outputTailText + content).split("\\n");' in page
+    assert "outputTailText = lines.pop();" in page
     assert 'outputTail.before(...lines.flatMap((line) => [...RenderLine(line), "\\n"]));' in page
-    assert "outputTail.replaceChildren(...RenderLine(tail));" in page
+    assert (
+        'outputTail.replaceChildren(...RenderLine(outputTailText.replace(/\\x1b(\\[[0-9;]*)?$/, "")));'
+        in page
+    )
 
 
 # ----------------------------------------------------------------------
