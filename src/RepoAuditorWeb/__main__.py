@@ -1,6 +1,7 @@
 import sys
 
 from enum import StrEnum
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -54,7 +55,8 @@ _dynamic_parameters = DynamicParameters(
     MODULES,
     {
         "url": TyperParameter(str | None, None, OptionInfo(help=_URL_HELP)),
-        "pat": TyperParameter(str | None, None, OptionInfo(help=_PAT_HELP)),
+        # Typed as a path so that the web form offers a file picker; the form still submits a string.
+        "pat": TyperParameter(Path | None, None, OptionInfo(help=_PAT_HELP)),
         "branch": TyperParameter(str | None, None, OptionInfo(help=_BRANCH_HELP)),
     },
 )

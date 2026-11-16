@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+import webview
 
 from dbrownell_Common.Streams.DoneManager import DoneManager, Flags as DoneManagerFlags
 
@@ -299,3 +300,24 @@ class TestApp:
 
         assert kwargs["verbose"] is True
         assert kwargs["debug"] is True
+
+
+# ----------------------------------------------------------------------
+# The page's file picker calls into the window, which only exposes the functions it is given.
+@pytest.mark.parametrize(
+    ("filenames", "expected"),
+    [
+        (("my/first", "my/second"), "my/first"),
+        (None, None),
+    ],
+)
+def test_WindowExposesTheFilePicker(filenames, expected):
+    webview_mock, _, _ = _Invoke([], {})
+
+    window = webview_mock.create_window.return_value
+    (select_file,) = window.expose.call_args.args
+
+    window.create_file_dialog.return_value = filenames
+
+    assert select_file() == expected
+    window.create_file_dialog.assert_called_once_with(webview.FileDialog.OPEN)
