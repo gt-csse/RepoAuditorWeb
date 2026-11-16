@@ -4,6 +4,7 @@ import threading
 
 from typing import override, TYPE_CHECKING
 
+from dbrownell_Common.Streams.Capabilities import Capabilities
 from dbrownell_Common.Streams.TextWriter import TextWriter
 
 if TYPE_CHECKING:
@@ -28,6 +29,9 @@ class StreamSink(TextWriter):
         self._is_closed = False
         self._condition = threading.Condition()
 
+        # The page renders the console's colors, so they are sent rather than reproduced from the text.
+        Capabilities.Set(self, Capabilities(stream=self, supports_colors=True))
+
     # ----------------------------------------------------------------------
     @override
     def write(self, content: str) -> int:
@@ -46,7 +50,7 @@ class StreamSink(TextWriter):
     # ----------------------------------------------------------------------
     @override
     def isatty(self) -> bool:
-        """Indicate that the stream is not a terminal so that colors are not emitted."""
+        """Indicate that the stream is not a terminal so that DoneManager does not move the cursor."""
 
         return False
 
