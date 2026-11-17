@@ -6,6 +6,8 @@ import textwrap
 
 from typing import TYPE_CHECKING
 
+from RepoAuditorWeb.lib.summary import RESULT_VALUE_NAMES
+
 if TYPE_CHECKING:
     from RepoAuditorWeb.lib.form import FormContainer, FormGroup
 
@@ -28,6 +30,9 @@ def CreatePage(
             "execute": execute,
             "common": None if common is None else dataclasses.asdict(common),
             "groups": [dataclasses.asdict(group) for group in groups],
+            # The values are declared with those needing attention last; sorting by result value
+            # leads with them so that what needs attention comes first.
+            "result_values": list(reversed(RESULT_VALUE_NAMES.values())),
         },
         # A value containing '</script>' would otherwise end the element and run as markup.
     ).replace("<", "\\u003c")
@@ -63,6 +68,12 @@ def CreatePage(
         </section>
         <section id="results-section" hidden>
         <h2>Results</h2>
+        <label class="results-order">Sort by
+        <select id="results-order">
+        <option value="run" selected>Run order</option>
+        <option value="result_value">Kind</option>
+        </select>
+        </label>
         <div id="results"></div>
         </section>
         </div>
@@ -433,6 +444,19 @@ _STYLE = textwrap.dedent(
       cursor: auto;
     }
 
+    /* The order sits beside the heading so that it does not push the results down. 'hidden' is
+       excluded since setting 'display' would otherwise reveal the section before there are results. */
+    #results-section:not([hidden]) { display: grid; grid-template-columns: 1fr auto; align-items: baseline; }
+
+    #results { grid-column: 1 / -1; }
+
+    .results-order { display: flex; align-items: baseline; gap: 8px; color: var(--muted); }
+
+    .results-order > select { width: auto; }
+
+    /* Only requirements are sorted, so a failed run or one with nothing to report has nothing to sort. */
+    #results-section:not(:has(.requirement)) .results-order { display: none; }
+
     table.summary { border-collapse: collapse; margin-bottom: 18px; }
 
     table.summary th, table.summary td {
@@ -655,6 +679,10 @@ _SCRIPT = textwrap.dedent(
     let outputTailText = "";
     const resultsSection = document.getElementById("results-section");
     const results = document.getElementById("results");
+    const resultsOrder = document.getElementById("results-order");
+    // Results arrive in the order they ran, which is recorded so that it can be restored after
+    // sorting by result value.
+    let runOrder = [];
     const linkStatus = document.getElementById("link-status");
 
     // Every control is registered with a reader so that collecting the arguments does not depend on
@@ -1055,6 +1083,28 @@ _SCRIPT = textwrap.dedent(
       outputTail.replaceChildren(...RenderLine(outputTailText.replace(/\\x1b(\\[[0-9;]*)?$/, "")));
     }
 
+    function ResultValueRank(requirement) {
+      return config.result_values.findIndex((value) => requirement.classList.contains(value));
+    }
+
+    function ShowResults(html) {
+      resultsSection.hidden = false;
+      results.innerHTML = html;
+      runOrder = [...results.querySelectorAll(":scope > .requirement")];
+
+      OrderResults();
+    }
+
+    // The sort is stable, so requirements of the same result value remain in the order they ran.
+    function OrderResults() {
+      let ordered = runOrder;
+
+      if (resultsOrder.value === "result_value")
+        ordered = [...runOrder].sort((a, b) => ResultValueRank(a) - ResultValueRank(b));
+
+      results.append(...ordered);
+    }
+
     function IsSelectingOutput() {
       const selection = getSelection();
       return !selection.isCollapsed && output.contains(selection.anchorNode);
@@ -1079,8 +1129,7 @@ _SCRIPT = textwrap.dedent(
           // progress by moving the text beneath the pointer.
           if (atBottom && !IsSelectingOutput()) output.scrollTop = output.scrollHeight;
         } else if (message.type === "results") {
-          resultsSection.hidden = false;
-          results.innerHTML = message.html;
+          ShowResults(message.html);
         } else if (message.type === "error") {
           ShowError(message.message);
         } else if (message.type === "done") {
@@ -1149,6 +1198,7 @@ _SCRIPT = textwrap.dedent(
 
     executeButton.addEventListener("click", Execute);
     resetButton.addEventListener("click", Reset);
+    resultsOrder.addEventListener("change", OrderResults);
     form.addEventListener("change", RefreshExecuteButton);
 
     // The share of the form the column may claim depends on how wide the form is.
