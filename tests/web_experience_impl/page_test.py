@@ -618,6 +618,68 @@ def test_OutputAndResultsAreSelectable():
 
 
 # ----------------------------------------------------------------------
+# Results are displayed in the order they ran unless sorting by result value is requested.
+def test_ResultsOrderDefaultsToRunOrder():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        textwrap.dedent(
+            """\
+            <label class="results-order">Sort by
+            <select id="results-order">
+            <option value="run" selected>Run order</option>
+            <option value="result_value">Kind</option>
+            </select>
+            </label>
+            <div id="results"></div>
+            """,
+        )
+        in page
+    )
+
+
+# ----------------------------------------------------------------------
+# The order is drawn from the result values so that a new value cannot be left unsorted.
+def test_ResultValuesAreOrderedByAttentionNeeded():
+    config = _GetConfig(CreatePage(_GROUPS, "my_token"))
+
+    assert config["result_values"] == ["error", "warning", "success", "does_not_apply", "skipped"]
+
+
+# ----------------------------------------------------------------------
+def test_ResultsAreOrderedWhenTheyArrive():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'if (message.type === "results") {\n      ShowResults(message.html);' in page
+
+
+# ----------------------------------------------------------------------
+def test_ResultsAreReorderedWhenTheOrderChanges():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'resultsOrder.addEventListener("change", OrderResults);' in page
+
+
+# ----------------------------------------------------------------------
+# The order sits beside the heading, and only once the section is shown.
+def test_ResultsOrderIsBesideTheHeading():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert (
+        "#results-section:not([hidden]) { display: grid; grid-template-columns: 1fr auto; align-items: baseline; }"
+        in page
+    )
+    assert "#results { grid-column: 1 / -1; }" in page
+
+
+# ----------------------------------------------------------------------
+def test_ResultsOrderIsHiddenWithoutRequirements():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert "#results-section:not(:has(.requirement)) .results-order { display: none; }" in page
+
+
+# ----------------------------------------------------------------------
 # Scrolling to new output would move selected text away before it is copied, or extend a selection
 # in progress.
 def test_OutputDoesNotScrollWhileSelecting():
