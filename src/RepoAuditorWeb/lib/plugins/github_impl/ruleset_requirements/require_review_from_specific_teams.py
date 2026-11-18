@@ -53,6 +53,7 @@ class RequireReviewFromSpecificTeamsRequirement(Requirement):
                 None,
                 OptionInfo(
                     help="Minimum number of reviewing teams the ruleset must name, overriding the value implied by the team size; 0 requires that no teams are named.",
+                    show_default=f"{DEFAULT_VALUES[TeamSize.Solo]} for '{TeamSize.Solo.value}', {DEFAULT_VALUES[TeamSize.Small]} for '{TeamSize.Small.value}', and {DEFAULT_VALUES[TeamSize.Large]} for '{TeamSize.Large.value}'",
                     min=0,
                     max=15,
                 ),

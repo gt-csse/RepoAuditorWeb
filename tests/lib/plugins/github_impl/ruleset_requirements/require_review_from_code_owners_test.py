@@ -110,6 +110,12 @@ def test_GetParameters():
     assert list(parameters.keys()) == ["skip", "require"]
     assert parameters["require"].type == (bool | None)
     assert parameters["require"].default is None
+    assert parameters["require"].info is not None
+    assert (
+        parameters["require"].info.help
+        == "Require review from code owners, overriding the value implied by the team size."
+    )
+    assert parameters["require"].info.show_default == "required only for a 'large' team size"
 
 
 # ----------------------------------------------------------------------

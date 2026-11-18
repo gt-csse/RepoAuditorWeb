@@ -125,6 +125,12 @@ def test_GetParameters():
     assert list(parameters.keys()) == ["skip", "value"]
     assert parameters["value"].type == (int | None)
     assert parameters["value"].default is None
+    assert parameters["value"].info is not None
+    assert (
+        parameters["value"].info.help
+        == "Minimum number of reviewing teams the ruleset must name, overriding the value implied by the team size; 0 requires that no teams are named."
+    )
+    assert parameters["value"].info.show_default == "0 for 'solo', 0 for 'small', and 1 for 'large'"
 
 
 # ----------------------------------------------------------------------

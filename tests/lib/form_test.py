@@ -406,6 +406,15 @@ class TestCreateGroups:
         assert field.required is False
         assert field.help == "My help. [REQUIRED]"
 
+    # ----------------------------------------------------------------------
+    # A default that cannot be stated as a value is described where the command line displays it.
+    def test_DefaultDescriptionIsAppendedToHelp(self):
+        field = _CreateField(
+            TyperParameter(int | None, None, OptionInfo(help="My help.", show_default="it depends"))
+        )
+
+        assert field.help == "My help. Default: it depends."
+
 
 # ----------------------------------------------------------------------
 class TestFieldTypes:
@@ -743,11 +752,16 @@ def _CreateModeDynamicParameters(
     extra_parameters: dict[str, TyperParameter] | None = None,
     boolean_type: type | UnionType = bool,
     boolean_default: object = False,
+    boolean_show_default: bool | str = True,
 ) -> DynamicParameters:
     """Create parameters for a requirement whose expectation is stated by a single boolean."""
 
     parameters = {
-        boolean_name: TyperParameter(boolean_type, boolean_default, OptionInfo(help="Help.")),
+        boolean_name: TyperParameter(
+            boolean_type,
+            boolean_default,
+            OptionInfo(help="Help.", show_default=boolean_show_default),
+        ),
     }
     parameters.update(extra_parameters or {})
 
@@ -986,12 +1000,14 @@ class TestOptionalRequirementMode:
         boolean_name: str,
         *,
         requires_explicit_include: bool = False,
+        boolean_show_default: bool | str = True,
     ) -> DynamicParameters:
         return _CreateModeDynamicParameters(
             boolean_name,
             requires_explicit_include=requires_explicit_include,
             boolean_type=bool | None,
             boolean_default=None,
+            boolean_show_default=boolean_show_default,
         )
 
     # ----------------------------------------------------------------------
@@ -1021,6 +1037,19 @@ class TestOptionalRequirementMode:
         assert field.help == (
             "Whether the requirement is skipped (skip), left to the value the module implies (use "
             "default), enforced as enabled (require), or enforced as disabled (prohibit)."
+        )
+
+    # ----------------------------------------------------------------------
+    # 'use default' is meaningful only once the default is known, and the parameter the mode stands
+    # in for is what describes it.
+    def test_HelpDescribesTheDefault(self):
+        field = _GetModeField(self._CreateParameters("require", boolean_show_default="it depends"))
+
+        assert field is not None
+        assert field.help == (
+            "Whether the requirement is skipped (skip), left to the value the module implies (use "
+            "default), enforced as enabled (require), or enforced as disabled (prohibit). Default: "
+            "it depends."
         )
 
     # ----------------------------------------------------------------------
