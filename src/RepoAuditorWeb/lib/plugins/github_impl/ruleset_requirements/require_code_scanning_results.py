@@ -24,7 +24,7 @@ DEFAULT_VALUE = 1
 
 # ----------------------------------------------------------------------
 class RequireCodeScanningResultsRequirement(Requirement):
-    """Validates whether a ruleset requires named code scanning tools to report results below their alert thresholds before branches matching its pattern can be merged."""
+    """Validates whether a ruleset requires named code scanning tools to report results below their alert thresholds before changes to the evaluated branch can be merged."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

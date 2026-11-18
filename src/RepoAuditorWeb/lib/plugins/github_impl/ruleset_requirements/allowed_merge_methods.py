@@ -49,7 +49,7 @@ DEFAULT_PARAMETERS: dict[str, object] = {
 
 # ----------------------------------------------------------------------
 class AllowedMergeMethodsRequirement(Requirement):
-    """Validates which merge methods a ruleset permits when a pull request targeting branches matching its pattern is merged."""
+    """Validates which merge methods a ruleset permits when a pull request targeting the evaluated branch is merged."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
@@ -68,7 +68,7 @@ class AllowedMergeMethodsRequirement(Requirement):
                 list[Values],
                 [Values.Merge],
                 OptionInfo(
-                    help="Merge method the ruleset allows; repeat the option to allow more than one.",
+                    help="Merge method the ruleset allows (merge, squash, or rebase); repeat the option to allow more than one.",
                 ),
             ),
         }

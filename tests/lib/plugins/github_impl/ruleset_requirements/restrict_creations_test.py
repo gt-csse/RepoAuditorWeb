@@ -108,7 +108,7 @@ def test_Construct():
     assert requirement.name == "RestrictCreations"
     assert (
         requirement.description
-        == "Validates whether a ruleset restricts creation of branches matching its pattern, so that only those with bypass permissions can create them."
+        == "Validates whether a ruleset restricts creating a branch with the evaluated branch's name, so that only those with bypass permissions can create it."
     )
     assert requirement.requires_explicit_include is False
 

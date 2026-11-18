@@ -160,7 +160,7 @@ def test_Construct():
     assert requirement.name == "RequireStatusChecksToPass"
     assert (
         requirement.description
-        == "Validates whether a ruleset requires named status checks to pass before changes to branches matching its pattern can be merged."
+        == "Validates whether a ruleset requires named status checks to pass before changes to the evaluated branch can be merged."
     )
     assert requirement.requires_explicit_include is False
 

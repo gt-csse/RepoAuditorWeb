@@ -31,7 +31,7 @@ DEFAULT_VALUES: dict[TeamSize, int] = {
 
 # ----------------------------------------------------------------------
 class RequiredApprovalsRequirement(Requirement):
-    """Validates the number of approving reviews that a ruleset requires before a pull request targeting branches matching its pattern can be merged."""
+    """Validates the number of approving reviews that a ruleset requires before a pull request targeting the evaluated branch can be merged."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

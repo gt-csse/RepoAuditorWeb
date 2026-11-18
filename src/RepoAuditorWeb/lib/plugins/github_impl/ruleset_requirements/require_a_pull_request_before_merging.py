@@ -19,7 +19,7 @@ RULE_TYPE = "pull_request"
 
 # ----------------------------------------------------------------------
 class RequireAPullRequestBeforeMergingRequirement(Requirement):
-    """Validates whether a ruleset requires that changes to branches matching its pattern arrive through a pull request rather than a direct push."""
+    """Validates whether a ruleset requires that changes to the evaluated branch arrive through a pull request rather than a direct push."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

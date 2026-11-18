@@ -109,7 +109,7 @@ def test_Construct():
     assert requirement.name == "RestrictUpdates"
     assert (
         requirement.description
-        == "Validates whether a ruleset restricts pushes to branches matching its pattern, so that only those with bypass permissions can update them."
+        == "Validates whether a ruleset restricts pushes to the evaluated branch, so that only those with bypass permissions can update it."
     )
     assert requirement.requires_explicit_include is False
 

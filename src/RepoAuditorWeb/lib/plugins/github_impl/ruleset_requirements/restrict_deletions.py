@@ -18,7 +18,7 @@ RULE_TYPE = "deletion"
 
 # ----------------------------------------------------------------------
 class RestrictDeletionsRequirement(Requirement):
-    """Validates whether a ruleset restricts deletion of the branch, so that only those with bypass permissions can delete it."""
+    """Validates whether a ruleset restricts deletion of the evaluated branch, so that only those with bypass permissions can delete it."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

@@ -129,7 +129,7 @@ def test_Construct():
     assert requirement.name == "RequireAPullRequestBeforeMerging"
     assert (
         requirement.description
-        == "Validates whether a ruleset requires that changes to branches matching its pattern arrive through a pull request rather than a direct push."
+        == "Validates whether a ruleset requires that changes to the evaluated branch arrive through a pull request rather than a direct push."
     )
     assert requirement.requires_explicit_include is False
 

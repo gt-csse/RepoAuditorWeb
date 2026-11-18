@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class AllowRebaseMergingRequirement(Requirement):
-    """Validates whether pull requests can be merged by rebasing; the method replays commits onto the base branch as new commits, dropping their signatures."""
+    """Validates whether the repository allows pull requests to be merged by rebasing; the method replays commits onto the base branch as new commits, dropping their signatures."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

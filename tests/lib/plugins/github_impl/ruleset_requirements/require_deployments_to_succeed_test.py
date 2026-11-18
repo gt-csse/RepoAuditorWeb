@@ -131,7 +131,7 @@ def test_Construct():
     assert requirement.name == "RequireDeploymentsToSucceed"
     assert (
         requirement.description
-        == "Validates whether a ruleset requires changes to deploy successfully to named environments before branches matching its pattern can be merged."
+        == "Validates whether a ruleset requires changes to deploy successfully to named environments before they can be merged into the evaluated branch."
     )
     assert requirement.requires_explicit_include is True
 

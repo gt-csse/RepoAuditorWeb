@@ -108,7 +108,7 @@ def test_Construct():
     assert requirement.name == "RestrictDeletions"
     assert (
         requirement.description
-        == "Validates whether a ruleset restricts deletion of the branch, so that only those with bypass permissions can delete it."
+        == "Validates whether a ruleset restricts deletion of the evaluated branch, so that only those with bypass permissions can delete it."
     )
     assert requirement.requires_explicit_include is False
 

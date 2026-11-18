@@ -110,7 +110,7 @@ def test_Construct():
     assert requirement.name == "BlockForcePushes"
     assert (
         requirement.description
-        == "Validates whether a ruleset blocks force pushes to the branch, so that its history can only move forward and cannot be rewritten."
+        == "Validates whether a ruleset blocks force pushes to the evaluated branch, so that its history can only move forward and cannot be rewritten."
     )
     assert requirement.requires_explicit_include is False
 
