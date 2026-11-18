@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class DefaultBranchRequirement(Requirement):
-    """Validates the repository's default branch, the branch that is checked out on clone and used as the base branch for new pull requests."""
+    """Validates the name of the repository's default branch, the branch that is checked out on clone and used as the base branch for new pull requests."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

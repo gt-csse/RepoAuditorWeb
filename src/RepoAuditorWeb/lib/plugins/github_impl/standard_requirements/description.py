@@ -24,7 +24,7 @@ class Values(StrEnum):
 
 # ----------------------------------------------------------------------
 class DescriptionRequirement(Requirement):
-    """Validates the repository's description, the About section text searched alongside the name and topics when no qualifier is given."""
+    """Validates the repository's description, the short summary shown in the About section of the repository's home page."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

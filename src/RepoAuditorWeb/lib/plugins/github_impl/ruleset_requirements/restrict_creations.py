@@ -18,7 +18,7 @@ RULE_TYPE = "creation"
 
 # ----------------------------------------------------------------------
 class RestrictCreationsRequirement(Requirement):
-    """Validates whether a ruleset restricts creation of branches matching its pattern, so that only those with bypass permissions can create them."""
+    """Validates whether a ruleset restricts creating a branch with the evaluated branch's name, so that only those with bypass permissions can create it."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

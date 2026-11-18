@@ -116,7 +116,7 @@ def test_Construct():
     assert requirement.name == "RequireLinearHistory"
     assert (
         requirement.description
-        == "Validates whether a ruleset requires a linear history for branches matching its pattern, which prevents merge commits and forces squash or rebase merges."
+        == "Validates whether a ruleset requires a linear history for the evaluated branch, which prevents merge commits and forces squash or rebase merges."
     )
     assert requirement.requires_explicit_include is False
 

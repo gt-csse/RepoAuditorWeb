@@ -141,7 +141,7 @@ def test_Construct():
     assert requirement.name == "AllowedMergeMethods"
     assert (
         requirement.description
-        == "Validates which merge methods a ruleset permits when a pull request targeting branches matching its pattern is merged."
+        == "Validates which merge methods a ruleset permits when a pull request targeting the evaluated branch is merged."
     )
     assert requirement.requires_explicit_include is False
 

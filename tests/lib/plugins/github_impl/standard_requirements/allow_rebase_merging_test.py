@@ -91,7 +91,7 @@ def test_Construct():
     assert requirement.name == "AllowRebaseMerging"
     assert (
         requirement.description
-        == "Validates whether pull requests can be merged by rebasing; the method replays commits onto the base branch as new commits, dropping their signatures."
+        == "Validates whether the repository allows pull requests to be merged by rebasing; the method replays commits onto the base branch as new commits, dropping their signatures."
     )
     assert requirement.requires_explicit_include is False
 

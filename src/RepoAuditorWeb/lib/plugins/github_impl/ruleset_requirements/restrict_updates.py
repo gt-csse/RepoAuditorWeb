@@ -18,7 +18,7 @@ RULE_TYPE = "update"
 
 # ----------------------------------------------------------------------
 class RestrictUpdatesRequirement(Requirement):
-    """Validates whether a ruleset restricts pushes to branches matching its pattern, so that only those with bypass permissions can update them."""
+    """Validates whether a ruleset restricts pushes to the evaluated branch, so that only those with bypass permissions can update it."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

@@ -24,7 +24,7 @@ DEFAULT_VALUE = 1
 
 # ----------------------------------------------------------------------
 class RequireDeploymentsToSucceedRequirement(Requirement):
-    """Validates whether a ruleset requires changes to deploy successfully to named environments before branches matching its pattern can be merged."""
+    """Validates whether a ruleset requires changes to deploy successfully to named environments before they can be merged into the evaluated branch."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

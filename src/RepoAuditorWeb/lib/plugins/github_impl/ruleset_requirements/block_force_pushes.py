@@ -18,7 +18,7 @@ RULE_TYPE = "non_fast_forward"
 
 # ----------------------------------------------------------------------
 class BlockForcePushesRequirement(Requirement):
-    """Validates whether a ruleset blocks force pushes to the branch, so that its history can only move forward and cannot be rewritten."""
+    """Validates whether a ruleset blocks force pushes to the evaluated branch, so that its history can only move forward and cannot be rewritten."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

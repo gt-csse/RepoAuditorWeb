@@ -163,7 +163,7 @@ def test_Construct():
     assert requirement.name == "RequireCodeScanningResults"
     assert (
         requirement.description
-        == "Validates whether a ruleset requires named code scanning tools to report results below their alert thresholds before branches matching its pattern can be merged."
+        == "Validates whether a ruleset requires named code scanning tools to report results below their alert thresholds before changes to the evaluated branch can be merged."
     )
     assert requirement.requires_explicit_include is False
 

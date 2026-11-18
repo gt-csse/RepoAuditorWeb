@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------
 class AllowMergeCommitsRequirement(Requirement):
-    """Validates whether pull requests can be merged with a merge commit; the method merges with `--no-ff`, preserving the branch's individual commits."""
+    """Validates whether the repository allows pull requests to be merged with a merge commit; the method merges with `--no-ff`, preserving the branch's individual commits."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

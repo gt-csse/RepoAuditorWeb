@@ -74,7 +74,7 @@ def test_Construct():
     assert requirement.name == "DefaultBranch"
     assert (
         requirement.description
-        == "Validates the repository's default branch, the branch that is checked out on clone and used as the base branch for new pull requests."
+        == "Validates the name of the repository's default branch, the branch that is checked out on clone and used as the base branch for new pull requests."
     )
     assert requirement.requires_explicit_include is False
 

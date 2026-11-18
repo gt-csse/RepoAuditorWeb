@@ -125,7 +125,7 @@ def test_Construct():
     assert requirement.name == "RequireSignedCommits"
     assert (
         requirement.description
-        == "Validates whether a ruleset requires that commits pushed to branches matching its pattern carry a signature that GitHub has verified against a known identity."
+        == "Validates whether a ruleset requires that commits pushed to the evaluated branch carry a signature that GitHub has verified against a known identity."
     )
     assert requirement.requires_explicit_include is False
 

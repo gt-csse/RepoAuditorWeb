@@ -95,7 +95,7 @@ def test_Construct():
     assert requirement.name == "RequiredApprovals"
     assert (
         requirement.description
-        == "Validates the number of approving reviews that a ruleset requires before a pull request targeting branches matching its pattern can be merged."
+        == "Validates the number of approving reviews that a ruleset requires before a pull request targeting the evaluated branch can be merged."
     )
     assert requirement.requires_explicit_include is False
 

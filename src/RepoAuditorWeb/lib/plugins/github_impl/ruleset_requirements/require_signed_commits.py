@@ -18,7 +18,7 @@ RULE_TYPE = "required_signatures"
 
 # ----------------------------------------------------------------------
 class RequireSignedCommitsRequirement(Requirement):
-    """Validates whether a ruleset requires that commits pushed to branches matching its pattern carry a signature that GitHub has verified against a known identity."""
+    """Validates whether a ruleset requires that commits pushed to the evaluated branch carry a signature that GitHub has verified against a known identity."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

@@ -25,7 +25,7 @@ DEFAULT_VALUE = 1
 
 # ----------------------------------------------------------------------
 class RequireStatusChecksToPassRequirement(Requirement):
-    """Validates whether a ruleset requires named status checks to pass before changes to branches matching its pattern can be merged."""
+    """Validates whether a ruleset requires named status checks to pass before changes to the evaluated branch can be merged."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:

@@ -18,7 +18,7 @@ RULE_TYPE = "required_linear_history"
 
 # ----------------------------------------------------------------------
 class RequireLinearHistoryRequirement(Requirement):
-    """Validates whether a ruleset requires a linear history for branches matching its pattern, which prevents merge commits and forces squash or rebase merges."""
+    """Validates whether a ruleset requires a linear history for the evaluated branch, which prevents merge commits and forces squash or rebase merges."""
 
     # ----------------------------------------------------------------------
     def __init__(self) -> None:
