@@ -321,6 +321,7 @@ Guidelines for requirements:
 - Keep the description to roughly 25 words or less.
 - Author `context`, `resolution`, and `rationale` as Markdown; every experience renders it.
 - Return a rationale only when `UsesDefaultValues` is `True`, as it justifies the defaults rather than an overridden configuration.
+- When a parameter's default is not a single value (for example, one derived from other data), describe it with `OptionInfo(show_default="...")`; the command line and the web form both display it.
 - Use `EvaluateResultValue.Warning` for conditions that limit the evaluation (such as a missing PAT), and `DoesNotApply` when the requirement is not relevant to the repository.
 - A `Skipped` result must provide `context` explaining why the requirement did not run; `EvaluateResult` raises `ValueError` otherwise.
 

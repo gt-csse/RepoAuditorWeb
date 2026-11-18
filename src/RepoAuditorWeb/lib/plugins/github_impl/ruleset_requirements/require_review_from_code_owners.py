@@ -53,6 +53,7 @@ class RequireReviewFromCodeOwnersRequirement(Requirement):
                 None,
                 OptionInfo(
                     help="Require review from code owners, overriding the value implied by the team size.",
+                    show_default=f"required only for a '{TeamSize.Large.value}' team size",
                 ),
             ),
         }

@@ -51,6 +51,7 @@ class RequiredApprovalsRequirement(Requirement):
                 None,
                 OptionInfo(
                     help="Number of approving reviews required, overriding the value implied by the team size.",
+                    show_default=f"{DEFAULT_VALUES[TeamSize.Solo]} for '{TeamSize.Solo.value}', {DEFAULT_VALUES[TeamSize.Small]} for '{TeamSize.Small.value}', and {DEFAULT_VALUES[TeamSize.Large]} for '{TeamSize.Large.value}'",
                     min=0,
                     max=10,
                 ),

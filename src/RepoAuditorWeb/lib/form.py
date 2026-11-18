@@ -424,7 +424,10 @@ def _CreateModeField(
         label=_MODE_LABEL,
         type=FieldType.RequirementMode,
         value=_CreateModeValue(mode_parameters, toggle_value, boolean_value),
-        help=_OPTIONAL_MODE_HELP if allows_none else _MODE_HELP,
+        help=_AppendDefaultHelp(
+            _OPTIONAL_MODE_HELP if allows_none else _MODE_HELP,
+            dynamic_parameters.dynamic_parameters[mode_parameters.boolean_name].info,
+        ),
         choices=list(_OPTIONAL_MODE_CHOICES if allows_none else _MODE_CHOICES),
     )
 
@@ -524,6 +527,18 @@ def _CreateContainer[ContainerT: FormContainer](
 
 
 # ----------------------------------------------------------------------
+def _AppendDefaultHelp(help_text: str, info: object) -> str:
+    # A default that cannot be stated as a value (such as one implied by the team size) is described
+    # in 'show_default', which the command line displays apart from the help as well.
+    show_default = getattr(info, "show_default", None)
+
+    if not isinstance(show_default, str):
+        return help_text
+
+    return f"{help_text} Default: {show_default}.".lstrip()
+
+
+# ----------------------------------------------------------------------
 def _CreateField(
     name: str,
     label: str,
@@ -540,6 +555,8 @@ def _CreateField(
     required = help_text.startswith(_REQUIRED_HELP_PREFIX)
     if required:
         help_text = help_text[len(_REQUIRED_HELP_PREFIX) :].strip()
+
+    help_text = _AppendDefaultHelp(help_text, info)
 
     choices: list[str] = []
 

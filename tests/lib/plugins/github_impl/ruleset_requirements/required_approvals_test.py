@@ -107,6 +107,12 @@ def test_GetParameters():
     assert list(parameters.keys()) == ["skip", "value"]
     assert parameters["value"].type == (int | None)
     assert parameters["value"].default is None
+    assert parameters["value"].info is not None
+    assert (
+        parameters["value"].info.help
+        == "Number of approving reviews required, overriding the value implied by the team size."
+    )
+    assert parameters["value"].info.show_default == "0 for 'solo', 1 for 'small', and 2 for 'large'"
 
 
 # ----------------------------------------------------------------------
