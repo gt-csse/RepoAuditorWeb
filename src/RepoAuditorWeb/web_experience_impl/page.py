@@ -291,7 +291,7 @@ _STYLE = textwrap.dedent(
     .requirement-fields[open] > summary::before { transform: rotate(90deg); }
 
     /* The description accompanies the name rather than competing with it, and yields its width to
-       the name and the pill so that neither is displaced by a long one. */
+       the name and the switch so that neither is displaced by a long one. */
     .module-fields > summary .description,
     .requirement-fields > summary .description {
       font-size: 12px;
@@ -312,7 +312,7 @@ _STYLE = textwrap.dedent(
       white-space: normal;
     }
 
-    /* The marker, the name and the pill remain on the first line of a wrapped description rather
+    /* The marker, the name and the switch remain on the first line of a wrapped description rather
        than being centered against the block it becomes. */
     .module-fields[open] > summary,
     .requirement-fields[open] > summary { align-items: baseline; }
@@ -320,28 +320,58 @@ _STYLE = textwrap.dedent(
     .module-fields[open] > summary::before,
     .requirement-fields[open] > summary::before { align-self: center; }
 
-    /* The pill is pushed to the trailing edge so that the state of every module and requirement can
-       be read down a single column rather than at the end of names of differing length. */
-    .module-fields > summary .pill,
-    .requirement-fields > summary .pill {
-      margin-left: auto;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 2px 8px;
-      border: 1px solid currentColor;
-      border-radius: 10px;
+    /* The switch is pushed to the trailing edge so that the state of every module and requirement can
+       be read down a single column rather than at the end of names of differing length. Requirement
+       switches are faded so that a long list of them stays quiet beside the module's. */
+    input[type="checkbox"].switch {
+      --size: 16px;
+      position: relative;
+      flex: none;
+      width: calc(var(--size) * 2 + 4px);
+      height: calc(var(--size) + 4px);
+      margin: 0 0 0 auto;
+      border: 1px solid var(--muted);
+      border-radius: var(--size);
+      background: transparent;
+      appearance: none;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
     }
 
-    .module-fields > summary .pill.included,
-    .requirement-fields > summary .pill.included { color: var(--success); }
+    input[type="checkbox"].switch::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: var(--size);
+      height: var(--size);
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.15s;
+    }
 
-    .module-fields > summary .pill.skipped,
-    .requirement-fields > summary .pill.skipped { color: var(--skipped); }
+    input[type="checkbox"].switch:checked {
+      border-color: transparent;
+      background: color-mix(in srgb, var(--success) 40%, var(--bg));
+    }
+
+    input[type="checkbox"].switch:checked::after {
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      transform: translateX(var(--size));
+    }
+
+    .module-fields > summary > input[type="checkbox"].switch { --size: 18px; }
+
+    .module-fields > summary > input[type="checkbox"].switch:checked { background: var(--success); }
+
+    /* A switch inside a module that does not run has no effect, so it is gray rather than green. */
+    input[type="checkbox"].switch:disabled { cursor: default; }
+
+    input[type="checkbox"].switch:disabled:checked { background: color-mix(in srgb, var(--muted) 50%, var(--bg)); }
 
     /* A module or requirement that does not run is muted, so that its state reads at a glance rather
-       than only from its pill. Colors are muted rather than the opacity lowered, since the disabled
+       than only from its switch. Colors are muted rather than the opacity lowered, since the disabled
        controls within it are already dimmed and would otherwise be dimmed twice. */
     .module-fields.disabled { background: transparent; border-style: dashed; }
 
@@ -706,11 +736,7 @@ _SCRIPT = textwrap.dedent(
         return input;
       }
 
-      if (
-        field.type === "choice" ||
-        field.type === "optional_boolean" ||
-        field.type === "requirement_mode"
-      ) {
+      if (field.type === "choice" || field.type === "optional_boolean") {
         const select = document.createElement("select");
 
         for (const choice of field.choices) {
@@ -806,42 +832,34 @@ _SCRIPT = textwrap.dedent(
       return wrapper;
     }
 
-    // A requirement whose parameters were folded into one control is governed by a mode that names
-    // the state it selects, rather than by a checkbox whose polarity decides it.
-    function IsIncluded(container, toggle) {
-      if (toggle instanceof HTMLSelectElement) return toggle.value !== "skip";
-      return container.toggle_includes ? toggle.checked : !toggle.checked;
-    }
+    // Whether a module or requirement runs is worth changing while it is collapsed, so its toggle is
+    // a switch in the summary. The switch is on while the container runs, whichever way the field
+    // behind it is phrased.
+    function CreateSwitch(container, field) {
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.className = "switch";
+      input.id = field.name;
+      input.name = field.name;
+      input.title = `Run ${container.name}`;
+      input.setAttribute("role", "switch");
+      input.setAttribute("aria-label", input.title);
+      input.checked = container.toggle_includes === Boolean(field.value);
 
-    // Whether a module or requirement runs is worth knowing while it is collapsed, so the pill
-    // belongs to the summary and tracks the field that governs it rather than reading it once.
-    function AddPill(container, details, summary, toggle) {
-      const pill = document.createElement("span");
-      pill.className = "pill";
-      summary.appendChild(pill);
+      readers.set(field.name, () => container.toggle_includes === input.checked);
 
-      const Refresh = () => {
-        // A skipped module runs none of its requirements, whatever their own fields say.
-        const included = details.dataset.inherited !== "disabled" && IsIncluded(container, toggle);
-        pill.textContent = included ? "included" : "skipped";
-        pill.classList.toggle("included", included);
-        pill.classList.toggle("skipped", !included);
-      };
-
-      toggle.addEventListener("change", Refresh);
-      details.addEventListener("refresh-disabling", Refresh);
-      Refresh();
+      return input;
     }
 
     // What a module or requirement expects has no effect while it does not run, so its remaining
     // controls are disabled rather than left to be set to no purpose. The toggle itself stays
     // enabled, since it is what reverses the state.
-    function AddDisabling(container, details, toggle) {
+    function AddDisabling(details, toggle) {
       const Refresh = () => {
         // A skipped module runs none of its requirements, so a container inside a disabled one
         // stays disabled whatever its own toggle says.
         const inherited = details.dataset.inherited === "disabled";
-        const disabled = inherited || !IsIncluded(container, toggle);
+        const disabled = inherited || !toggle.checked;
 
         for (const element of details.querySelectorAll("input, select")) {
           // A control governed by a nested container is disabled by that container's own refresh,
@@ -899,17 +917,17 @@ _SCRIPT = textwrap.dedent(
 
       details.appendChild(summary);
 
-      for (const field of container.fields) details.appendChild(CreateRow(field));
+      for (const field of container.fields) {
+        if (field.name !== container.toggle) {
+          details.appendChild(CreateRow(field));
+          continue;
+        }
 
-      if (container.toggle) {
-        const toggle = details.querySelector(`#${CSS.escape(container.toggle)}`);
-
-        AddPill(container, details, summary, toggle);
+        const toggle = summary.appendChild(CreateSwitch(container, field));
 
         // Deferred so that a module disables the sections it holds, which are appended by the
         // caller after this returns.
-        details.dataset.toggle = container.toggle;
-        pendingDisabling.push(() => AddDisabling(container, details, toggle));
+        pendingDisabling.push(() => AddDisabling(details, toggle));
       }
 
       return details;
@@ -1016,7 +1034,7 @@ _SCRIPT = textwrap.dedent(
     // as nothing having been audited.
     function RefreshExecuteButton() {
       const noModule = !config.groups.some(
-        (group) => !group.toggle || IsIncluded(group, document.getElementById(group.toggle))
+        (group) => !group.toggle || document.getElementById(group.toggle).checked
       );
 
       executeButton.disabled = noModule;
