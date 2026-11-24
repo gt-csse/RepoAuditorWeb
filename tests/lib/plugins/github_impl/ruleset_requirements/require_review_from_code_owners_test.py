@@ -115,25 +115,25 @@ def test_GetParameters():
 # ----------------------------------------------------------------------
 # The team size decides only when the parameter is absent, so the web experience must offer a choice
 # that submits the absent value rather than one that collapses it to False.
-def test_ParameterIsDisplayedAsAModeThatDefersToTheTeamSize():
+def test_ParameterIsDisplayedAsAnOptionalBooleanThatDefersToTheTeamSize():
     requirement = RequireReviewFromCodeOwnersRequirement()
 
     dynamic_parameters = DynamicParameters([_CreateModule(requirement)])
 
-    groups = CreateGroups(dynamic_parameters, {})
-
     field = next(
         field
-        for group in groups
-        for section in group.sections
-        for field in section.fields
-        if field.type == FieldType.RequirementMode
+        for field in CreateGroups(dynamic_parameters, {})[0].sections[0].fields
+        if field.label == "require"
     )
 
-    assert field.choices == ["skip", "use default", "require", "prohibit"]
+    info = requirement.GetParameters()["require"].info
+
+    assert info is not None
+    assert field.type == FieldType.OptionalBoolean
+    assert field.help == info.help
 
     # The parameter is absent by default, so that is the choice the control starts on.
-    assert field.value == "use default"
+    assert field.value == "default"
 
     arguments = ParseValues(dynamic_parameters, {field.name: field.value})
 

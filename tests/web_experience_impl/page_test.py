@@ -169,7 +169,7 @@ def test_ExecuteRequiresAModule():
             """\
             function RefreshExecuteButton() {
               const noModule = !config.groups.some(
-                (group) => !group.toggle || IsIncluded(group, document.getElementById(group.toggle))
+                (group) => !group.toggle || document.getElementById(group.toggle).checked
               );
             """
         )
@@ -319,13 +319,13 @@ def test_ActionsStayInViewWhileTheFormIsScrolled():
 
 
 # ----------------------------------------------------------------------
-# A collapsed section displays its summary and nothing else, so the pill must belong to the summary
-# for the state of the requirement to remain visible.
-def test_PillIsDisplayedBySummary():
+# A collapsed section displays its summary and nothing else, so the switch must belong to the
+# summary for the state of the requirement to remain visible and changeable.
+def test_ToggleIsASwitchInTheSummary():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert 'pill.className = "pill";' in page
-    assert "summary.appendChild(pill);" in page
+    assert 'input.className = "switch";' in page
+    assert "const toggle = summary.appendChild(CreateSwitch(container, field));" in page
 
 
 # ----------------------------------------------------------------------
@@ -391,27 +391,12 @@ def test_DescriptionWrapsWhenTheContainerIsExpanded():
 
 
 # ----------------------------------------------------------------------
-# The value of the field may change after the pill is created, so the pill follows it.
-def test_PillTracksTheFieldThatGovernsTheContainer():
+# The switch is on while the container runs, whether its field is phrased as 'include' or 'skip'.
+def test_SwitchIsOnWhileTheContainerRuns():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert 'if (toggle instanceof HTMLSelectElement) return toggle.value !== "skip";' in page
-    assert "return container.toggle_includes ? toggle.checked : !toggle.checked;" in page
-    assert 'pill.textContent = included ? "included" : "skipped";' in page
-    assert 'toggle.addEventListener("change", Refresh);' in page
-
-
-# ----------------------------------------------------------------------
-# A requirement in a skipped module does not run, so its pill says so whatever its own field says.
-def test_PillFollowsTheModule():
-    page = CreatePage(_GROUPS, "my_token")
-
-    assert (
-        'const included = details.dataset.inherited !== "disabled" && IsIncluded(container, toggle);' in page
-    )
-
-    # Once for the pill and once for the disabling, so the pill is refreshed alongside the controls.
-    assert page.count('details.addEventListener("refresh-disabling", Refresh);') == 2
+    assert "input.checked = container.toggle_includes === Boolean(field.value);" in page
+    assert "readers.set(field.name, () => container.toggle_includes === input.checked);" in page
 
 
 # ----------------------------------------------------------------------
@@ -508,7 +493,7 @@ def test_ModuleNameIsMoreProminentThanQueryName():
 def test_ControlsAreDisabledWhenTheContainerDoesNotRun():
     page = CreatePage(_GROUPS, "my_token")
 
-    assert "const disabled = inherited || !IsIncluded(container, toggle);" in page
+    assert "const disabled = inherited || !toggle.checked;" in page
     assert 'details.classList.toggle("disabled", disabled);' in page
     assert 'details.addEventListener("refresh-disabling", Refresh);' in page
 
@@ -566,7 +551,7 @@ def test_DisabledControlsAreDimmed():
 
 # ----------------------------------------------------------------------
 # A module or requirement that does not run is muted, so that its state does not have to be read
-# from its pill alone.
+# from its switch alone.
 def test_ContainersThatDoNotRunAreMuted():
     page = CreatePage(_GROUPS, "my_token")
 
@@ -740,3 +725,12 @@ def test_FilePickerIsLabeled():
 
     assert 'button.title = "Browse...";' in page
     assert 'button.setAttribute("aria-label", "Browse...");' in page
+
+
+# ----------------------------------------------------------------------
+# The switch is drawn from a checkbox, so assistive technology is told it is an on/off switch and what it runs.
+def test_SwitchIsAnnounced():
+    page = CreatePage(_GROUPS, "my_token")
+
+    assert 'input.setAttribute("role", "switch");' in page
+    assert 'input.setAttribute("aria-label", input.title);' in page
