@@ -39,7 +39,15 @@ class ClonedRepositoryQuery(Query):
         from git import Repo  # noqa: PLC0415
 
         try:
-            Repo.clone_from(url, module_data["repo_dir"].name, branch=module_data["branch"], depth=1)
+            # git would otherwise prompt for credentials on the server's terminal or through an askpass program (e.g. VS Code's),
+            # neither of which the web user can see or answer. An empty GIT_ASKPASS also overrides core.askPass and SSH_ASKPASS.
+            Repo.clone_from(
+                url,
+                module_data["repo_dir"].name,
+                branch=module_data["branch"],
+                depth=1,
+                env={"GIT_ASKPASS": "", "GIT_TERMINAL_PROMPT": "0"},
+            )
         except Exception as ex:
             # CleanupQueryData is only invoked for returned query data, so the partial clone is removed here.
             module_data["repo_dir"].cleanup()
@@ -53,15 +61,21 @@ class ClonedRepositoryQuery(Query):
                 f"""\
                 An error occurred while attempting to clone the target repository.
 
+                Please ensure that the repository URL is correct{
+                    " and that the branch exists" if module_data["branch"] is not None else ""
+                }.
+
                 If you are auditing a private repository, {
                     "please ensure your PAT has access to the repository."
                     if pat is not None
                     else "please provide a PAT with access to the repository."
                 } A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
 
-                Error: {error}
                 """,
             )
+
+            # Appended after dedenting because git's multi-line output would otherwise prevent dedenting.
+            msg += f"Error: {error}\n"
 
             # The original exception is not chained when a PAT is present, as tracebacks would display the PAT within its message.
             raise RuntimeError(msg) from (ex if pat is None else None)

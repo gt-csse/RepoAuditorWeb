@@ -68,7 +68,7 @@ class TestGetQueryData:
             (
                 "https://github.com/gt-csse/RepoAuditorWeb",
                 repo_dir.name,
-                {"branch": None, "depth": 1},
+                {"branch": None, "depth": 1, "env": {"GIT_ASKPASS": "", "GIT_TERMINAL_PROMPT": "0"}},
             ),
         ]
 
@@ -80,7 +80,7 @@ class TestGetQueryData:
         assert query_data is not None
         query.CleanupQueryData(query_data)
 
-        assert clone_recorder.calls[0][2] == {"branch": "my_branch", "depth": 1}
+        assert clone_recorder.calls[0][2]["branch"] == "my_branch"
 
     # ----------------------------------------------------------------------
     # The PAT is embedded in the url so that private repositories can be cloned without prompting.
@@ -180,12 +180,55 @@ class TestGetQueryData:
             """\
             An error occurred while attempting to clone the target repository.
 
+            Please ensure that the repository URL is correct.
+
             If you are auditing a private repository, please provide a PAT with access to the repository. A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
 
             Error: My clone error.
             """,
         )
         assert exc_info.value.__cause__ is clone_recorder.exception
+
+    # ----------------------------------------------------------------------
+    # The branch is only a possible cause when one was requested; otherwise the default branch is cloned.
+    def test_ErrorCloneWithBranch(self, clone_recorder):
+        clone_recorder.exception = ValueError("My clone error.")
+
+        with pytest.raises(RuntimeError) as exc_info:
+            _CreateQuery().GetQueryData(_CreateModuleData(branch="my_branch"))
+
+        assert str(exc_info.value) == textwrap.dedent(
+            """\
+            An error occurred while attempting to clone the target repository.
+
+            Please ensure that the repository URL is correct and that the branch exists.
+
+            If you are auditing a private repository, please provide a PAT with access to the repository. A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
+
+            Error: My clone error.
+            """,
+        )
+
+    # ----------------------------------------------------------------------
+    # git's errors span multiple lines with little indentation, which must not prevent the message from being dedented.
+    def test_ErrorCloneMultilineError(self, clone_recorder):
+        clone_recorder.exception = ValueError("Cmd('git') failed\n  stderr: 'fatal: repository not found'")
+
+        with pytest.raises(RuntimeError) as exc_info:
+            _CreateQuery().GetQueryData(_CreateModuleData())
+
+        assert str(exc_info.value) == textwrap.dedent(
+            """\
+            An error occurred while attempting to clone the target repository.
+
+            Please ensure that the repository URL is correct.
+
+            If you are auditing a private repository, please provide a PAT with access to the repository. A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
+
+            Error: Cmd('git') failed
+              stderr: 'fatal: repository not found'
+            """,
+        )
 
     # ----------------------------------------------------------------------
     # git includes the clone url in its output, so the PAT embedded in that url must not reach the user.
@@ -200,6 +243,8 @@ class TestGetQueryData:
         assert str(exc_info.value) == textwrap.dedent(
             """\
             An error occurred while attempting to clone the target repository.
+
+            Please ensure that the repository URL is correct.
 
             If you are auditing a private repository, please ensure your PAT has access to the repository. A fine-grained PAT must grant the `Contents: Read` repository permission; a classic PAT must have the `repo` scope.
 
